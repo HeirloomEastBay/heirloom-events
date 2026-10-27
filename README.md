@@ -94,7 +94,7 @@ The residents' copy of an event includes the submitter's contact info and notes.
 2. **Extensions → Apps Script**. Delete what's there, paste in all of `apps-script/Code.gs`, and save.
 3. Click the ⚙️ **Project Settings** and check the time zone is **(GMT-08:00) Pacific Time - Los Angeles**.
 4. Back in the editor, pick **setup** in the function dropdown and click **▶ Run**. Google will ask for permissions (Sheets, Calendar, Drive, Gmail sending). Click through: *Advanced → Go to project → Allow*.
-5. A popup confirms both calendars connected. You'll now have **Submissions**, **RSVPs**, **Settings**, **Keywords** and **Partners** tabs.
+5. A popup confirms both calendars connected. You'll now have **Submissions**, **RSVPs**, **Settings**, **Keywords**, **Partners**, **Locations** and **Discord channels** tabs.
 6. **Deploy → New deployment → ⚙️ Web app**
    - Execute as: **Me (community@…)**
    - Who has access: **Anyone**
@@ -165,7 +165,7 @@ The page's "Add to your calendar" button follows whatever the Settings tab says,
 | Take an event down | Unpublish button in the FYI email, or set Status to *Unpublished* |
 | Change an event's time or title | Edit it in Google Calendar (both copies if it's on both) |
 | Add a preset photo | Upload it to `images/` on GitHub, then add a row on the **Keywords** tab |
-| Change form location suggestions | `LOCATIONS` in `config.js` |
+| Add or reorder places in "Where on the farm?" | **Locations** tab, one per row (people can always pick "Somewhere else" and type their own) |
 | See who's coming | **RSVPs** tab (filter by Event), or the guest-list link in the host's emails |
 | Change an event's spot limit | **Spots** column on the Submissions tab |
 | Turn off host emails or reminders | **Settings** tab |

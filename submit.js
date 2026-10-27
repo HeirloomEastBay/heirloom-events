@@ -25,7 +25,27 @@
 
   if (!C.API_URL) $("#demoBanner").hidden = false;
   $("#footLine").textContent = `${C.ADDRESS} · ${C.EMAIL}`;
-  $("#locations").innerHTML = C.LOCATIONS.map(l => `<option value="${esc(l)}">`).join("");
+  /* ---------- Where on the farm: tappable places + "Somewhere else" ---------- */
+  let places = (C.LOCATIONS || []).slice();
+  function renderPlaces() {
+    const cur = form.querySelector('input[name="place"]:checked');
+    const keep = cur ? cur.value : "";
+    $("#places").innerHTML = places.concat(["Somewhere else"]).map((p, i) => {
+      const v = p === "Somewhere else" ? "__other" : p;
+      return `<label><input type="radio" name="place" id="pl${i}" value="${esc(v)}"${v === keep ? " checked" : ""}>${esc(p)}</label>`;
+    }).join("");
+    $("#places").querySelectorAll("input").forEach(r => {
+      // Tapping the chosen place again clears it
+      r.addEventListener("click", () => {
+        if (r.dataset.was === "1") { r.checked = false; r.dataset.was = ""; }
+        else $("#places").querySelectorAll("input").forEach(x => x.dataset.was = x === r ? "1" : "");
+        $("#otherPlace").hidden = !(r.checked && r.value === "__other");
+        if (!$("#otherPlace").hidden) $("#location").focus();
+        update();
+      });
+    });
+  }
+  renderPlaces();
 
   // Today in farm time = earliest date allowed
   const t = H.parts(new Date());
@@ -44,6 +64,7 @@
     fetch(C.API_URL + "?action=presets").then(r => r.json()).then(d => {
       if (d.ok && d.partners) { partners = d.partners; renderHosts(); }
       if (d.ok && d.types) { types = d.types; renderTypes(); }
+      if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
       if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); update(); }
     }).catch(() => {});
   }
@@ -143,7 +164,7 @@
       allDay: $("#allDay").checked,
       repeat: fd.get("repeat"),
       until: fd.get("until") || "",
-      location: (fd.get("location") || "").trim(),
+      location: fd.get("place") === "__other" ? ($("#location").value || "").trim() : (fd.get("place") || ""),
       cost: (fd.get("cost") || "").trim(),
       host: fd.get("host") || "",
       types: fd.getAll("types"),

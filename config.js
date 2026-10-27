@@ -35,16 +35,10 @@ window.HEIRLOOM = {
   // channel). Once live, the "Discord channels" tab in the Sheet takes over.
   TYPES: ["Church", "Animals", "Garden", "Land", "Hospitality", "Workday"],
 
-  // Suggestions that pop up under "Where on the farm?" in the form.
-  // Edit freely — people can still type anything.
-  LOCATIONS: [
-    "Heirloom (main farmhouse)",
-    "The big lawn",
-    "The garden",
-    "Goat pen",
-    "Chicken coop",
-    "Meet at the parking area"
-  ],
+  // Places people can tap under "Where on the farm?" in the form (they can
+  // also pick "Somewhere else" and type their own). Once the backend is
+  // live, the "Locations" tab in the Google Sheet takes over from this list.
+  LOCATIONS: ["Farmhouse", "Autoshop", "Yurt", "Meadow", "The big lawn", "The garden", "Goat pen", "Chicken coop"],
 
   // Photos people can pick in the form, and the keywords that
   // auto-match a photo when nobody uploads one. Once the backend is

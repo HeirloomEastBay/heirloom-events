@@ -224,10 +224,13 @@
         <fieldset>
           <legend><span class="step">3</span><h2>Where &amp; how</h2></legend>
           <div class="field">
-            <label for="location">Where on the farm?</label>
-            <input type="text" id="location" name="location" list="locations" maxlength="120" placeholder="The goat pen">
-            <datalist id="locations"></datalist>
-            <p class="hint">Leave blank if it's just "at Heirloom."</p>
+            <span class="lbl">Where on the farm?</span>
+            <div class="type-chips" id="places" role="radiogroup" aria-label="Where on the farm"></div>
+            <div id="otherPlace" hidden style="margin-top:10px">
+              <label class="visually-hidden" for="location">Where is it?</label>
+              <input type="text" id="location" maxlength="120" placeholder="Type the place, or an address if it's off the farm">
+            </div>
+            <p class="hint">Skip it if it's just "at Heirloom." Tap again to unselect.</p>
           </div>
           <div class="field">
             <label for="cost">Cost</label>
