@@ -172,26 +172,30 @@
       : `<span class="chip full">Full · waitlist open</span>`);
     const link = safeUrl(e.link);
     byId[e.id] = e;
+    const more = e.hasDetails || e.details;
     return `<article class="card">
       <div class="card-media">
         <img src="${esc(e.image)}" alt="" loading="lazy">
+        <button type="button" class="media-btn" data-open="${esc(e.id)}" aria-label="See the photo and details for ${esc(e.title)}"></button>
         <div class="date-tile" aria-hidden="true">
           <div class="dow">${esc(p.wd)}</div><div class="num">${p.d}</div><div class="mon">${esc(H.fmt(e.start, { month: "short" }))}</div>
         </div>
       </div>
       <div class="card-body">
-        <h4>${esc(e.title)}</h4>
+        <h4><button type="button" class="title-btn" data-open="${esc(e.id)}">${esc(e.title)}</button></h4>
         <div class="meta">
           <span>${ICON.clock}<span class="visually-hidden">${esc(H.fmt(e.start, { weekday: "long", month: "long", day: "numeric" }))}, </span>${esc(H.fmtTimeRange(e.start, e.end, e.allDay))}</span>
           ${e.location ? `<span>${ICON.pin}${esc(e.location)}</span>` : ""}
         </div>
         ${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}
         ${e.later && e.later.length ? `<p class="also"><b>Also:</b> ${esc(e.later.slice(0, 4).map(d => H.fmt(d, { month: "short", day: "numeric" })).join(", "))}${e.later.length > 4 ? " and more" : ""}</p>` : ""}
-        ${e.description ? `<p class="desc">${esc(e.description)}</p><button class="more" type="button" hidden>Read more</button>` : ""}
+        ${e.description ? `<p class="desc">${esc(e.description)}</p>` : ""}
+        <button class="more" type="button" data-open="${esc(e.id)}"${more ? "" : " hidden"}>${more ? "More details" : "Read more"}</button>
         <div class="card-actions">
           ${e.rsvp ? `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
           ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
           <a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
+          <a class="btn btn-ghost btn-sm" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
         </div>
       </div>
     </article>`;
@@ -199,12 +203,10 @@
 
   function wireCards(root) {
     root.querySelectorAll("[data-rsvp]").forEach(b => b.onclick = () => openRsvp(byId[b.dataset.rsvp], b));
+    root.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openEvent(byId[b.dataset.open], b));
     root.querySelectorAll(".desc").forEach(d => {
       const btn = d.nextElementSibling;
-      if (d.scrollHeight > d.clientHeight + 2) {
-        btn.hidden = false;
-        btn.onclick = () => { const open = d.classList.toggle("open"); btn.textContent = open ? "Show less" : "Read more"; resize(); };
-      }
+      if (btn && btn.classList.contains("more") && d.scrollHeight > d.clientHeight + 2) btn.hidden = false;
     });
   }
 
@@ -395,12 +397,68 @@
     }
   });
 
-  // Links like events.html?rsvp=EV-123 open the RSVP popup straight away
+  /* ---------- Event details popup (photo uncropped + "More details") ---------- */
+  const pop = $("#eventDialog");
+  const detailsCache = {};
+  function openEvent(e, fromButton) {
+    if (!e) return;
+    $("#popImg").src = e.image || ""; $("#popImg").alt = e.title;
+    $("#popMedia").hidden = !e.image;
+    $("#popWhen").textContent = `${H.fmt(e.start, { weekday: "long", month: "long", day: "numeric" })} · ${H.fmtTimeRange(e.start, e.end, e.allDay)}`;
+    $("#popTitle").textContent = e.title;
+    $("#popMeta").innerHTML = e.location ? `<span>${ICON.pin}${esc(e.address && e.address !== C.ADDRESS && e.address !== e.location ? e.location + " · " + e.address : e.location)}</span>` : "";
+    // Same chips as the card
+    const tmp = document.createElement("div"); tmp.innerHTML = cardHTML(e);
+    const chips = tmp.querySelector(".chips"), also = tmp.querySelector(".also");
+    $("#popChips").innerHTML = (chips ? chips.innerHTML : "") ;
+    $("#popChips").hidden = !chips;
+    $("#popDesc").textContent = e.description || "";
+    if (also) $("#popDesc").textContent += (e.description ? "\n\n" : "") + also.textContent;
+    $("#popDesc").hidden = !$("#popDesc").textContent;
+    const link = safeUrl(e.link);
+    $("#popActions").innerHTML = `
+      ${e.rsvp ? `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
+      ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
+      <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
+      <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>`;
+    if ($("#popRsvp")) $("#popRsvp").onclick = () => { closePop(); openRsvp(e, fromButton); };
+    // Long description: from the sample data, or fetched once from the Sheet
+    const box = $("#popDetails");
+    box.innerHTML = "";
+    if (e.details) box.innerHTML = H.sanitize(e.details);
+    else if (e.hasDetails && e.ref && C.API_URL) {
+      if (detailsCache[e.ref] != null) box.innerHTML = H.sanitize(detailsCache[e.ref]);
+      else {
+        box.innerHTML = `<p class="loading">Loading details…</p>`;
+        fetch(C.API_URL + "?action=details&id=" + encodeURIComponent(e.ref)).then(r => r.json()).then(d => {
+          detailsCache[e.ref] = d.ok ? d.html : "";
+          if ($("#popTitle").textContent === e.title) box.innerHTML = H.sanitize(detailsCache[e.ref]);
+          resize();
+        }).catch(() => { box.innerHTML = ""; });
+      }
+    }
+    if (EMBED && fromButton) {
+      pop.style.position = "absolute"; pop.style.margin = "0 auto";
+      pop.style.top = Math.max(8, fromButton.getBoundingClientRect().top + window.scrollY - 200) + "px";
+    }
+    if (pop.showModal) pop.showModal(); else pop.setAttribute("open", "");
+    pop.scrollTop = 0;
+    resize();
+  }
+  const closePop = () => { pop.close ? pop.close() : pop.removeAttribute("open"); };
+  $("#popClose").onclick = closePop;
+  pop.addEventListener("click", ev => { if (ev.target === pop) closePop(); });
+
+  // Links: ?rsvp=EV-123 opens the RSVP popup; ?event=<id> opens an event's details
   function openFromLink() {
-    const id = params.get("rsvp");
-    if (!id) return;
-    const e = events.find(x => x.rsvp && x.eventId === id && +(x.end || x.start) >= +now);
-    if (e) openRsvp(e);
+    const id = params.get("rsvp"), ev = params.get("event");
+    if (id) {
+      const e = events.find(x => x.rsvp && x.eventId === id && +(x.end || x.start) >= +now);
+      if (e) openRsvp(e);
+    } else if (ev) {
+      const e = events.find(x => String(x.id).split("_")[0] === ev && +(x.end || x.start) >= +now);
+      if (e) openEvent(e);
+    }
   }
 
   /* ---------- Tell the parent page how tall we are (embed) ---------- */

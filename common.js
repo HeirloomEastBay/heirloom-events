@@ -65,11 +65,44 @@
       text: ev.title,
       dates: `${gcalStamp(ev.start, ev.allDay)}/${gcalStamp(endForAllDay, ev.allDay)}`,
       details: [ev.description, ev.link ? "More info: " + ev.link : ""].filter(Boolean).join("\n\n"),
-      location: ev.address || (ev.location && ev.location !== "Heirloom" ? ev.location + ", Heirloom, " + C.ADDRESS : C.ADDRESS),
+      location: ev.address && ev.address !== C.ADDRESS ? ev.address : (ev.location && ev.location !== "Heirloom" ? ev.location + ", Heirloom, " + C.ADDRESS : C.ADDRESS),
       ctz: TZ
     });
     return "https://calendar.google.com/calendar/render?" + q;
   }
+  // Directions: the event's own address if it's off the farm, otherwise Heirloom
+  function directionsLink(ev) {
+    let dest = ev.address;
+    if (!dest) dest = /\d/.test(ev.location || "") && /,/.test(ev.location || "") ? ev.location : C.ADDRESS;
+    return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(dest);
+  }
+
+  // "More details" HTML: keep only simple, safe tags before showing it
+  const SAFE_TAGS = { P: 1, BR: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, UL: 1, OL: 1, LI: 1, A: 1, IMG: 1, H3: 1, H4: 1, BLOCKQUOTE: 1 };
+  function sanitize(html) {
+    const doc = new DOMParser().parseFromString("<div>" + (html || "") + "</div>", "text/html");
+    const root = doc.body.firstChild;
+    (function walk(node) {
+      [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) return;
+        if (n.nodeType !== 1 || !SAFE_TAGS[n.tagName]) {
+          if (n.nodeType === 1 && !/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|SVG|MATH|TEMPLATE)$/.test(n.tagName)) { walk(n); n.replaceWith(...n.childNodes); }
+          else n.remove();
+          return;
+        }
+        [...n.attributes].forEach(a => {
+          const keep = (n.tagName === "A" && a.name === "href" && /^(https?:|mailto:)/i.test(a.value)) ||
+                       (n.tagName === "IMG" && (a.name === "alt" || (a.name === "src" && /^(https:|data:image\/|blob:)/i.test(a.value))));
+          if (!keep) n.removeAttribute(a.name);
+        });
+        if (n.tagName === "A") { n.setAttribute("target", "_blank"); n.setAttribute("rel", "noopener"); }
+        if (n.tagName === "IMG" && !n.getAttribute("src")) { n.remove(); return; }
+        walk(n);
+      });
+    })(root);
+    return root.innerHTML;
+  }
+
   function subscribeLink() {
     return "https://calendar.google.com/calendar/u/0?cid=" + btoa(C.PUBLIC_CALENDAR_ID).replace(/=+$/, "");
   }
@@ -109,7 +142,8 @@
       cost: "$5 per family, suggested", location: "Chicken coop", rsvp: true, eventId: "EV-demo-chickens", spotsLeft: 0 });
     add({ title: "Painting in the Farmhouse", start: at(nextDow(0) + 7, 14), end: at(nextDow(0) + 7, 16, 30),
       description: "An unhurried afternoon of painting the farm. All supplies provided; no experience needed.",
-      cost: "$25", rsvp: true, eventId: "EV-demo-painting", spotsLeft: 3 });
+      cost: "$25", rsvp: true, eventId: "EV-demo-painting", spotsLeft: 3,
+      details: "<h3>What we'll do</h3><p>We'll set up easels on the porch and in the sunroom and paint whatever catches your eye: the farmhouse, the hills, the goats if they hold still.</p><ul><li>All paints, brushes and canvases provided</li><li>Tea and cookies from the farm kitchen</li><li>Kids 10+ welcome with a grown-up</li></ul><p><b>Bring:</b> an apron or clothes you don't mind getting paint on.</p><img src=\"images/painting.jpg\" alt=\"Painting at an easel\"><p>Questions? <a href=\"mailto:staff@heirloomeastbay.com\">Email us</a>.</p>" });
     add({ title: "Fall Harvest Potluck", start: at(nextDow(6) + 21, 17), end: at(nextDow(6) + 21, 20),
       description: "Bring a dish to share and settle in at the long tables on the lawn. We'll supply cider, plates and a bonfire.",
       cost: "Free", location: "The big lawn" });
@@ -143,5 +177,5 @@
     return out.sort((a, b) => a.start - b.start);
   }
 
-  window.HL = { parts, zoned, dayKey, fmt, fmtTimeRange, matchImage, addToGoogleLink, subscribeLink, icsLink, sampleEvents, pad };
+  window.HL = { parts, zoned, dayKey, fmt, fmtTimeRange, matchImage, addToGoogleLink, directionsLink, sanitize, subscribeLink, icsLink, sampleEvents, pad };
 })();

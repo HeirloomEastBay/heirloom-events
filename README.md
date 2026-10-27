@@ -22,6 +22,14 @@ Until `API_URL` is filled in, both pages run in **preview mode** with sample eve
 6. Every 6 hours the backend imports **partner events** (see below) onto the public calendar.
 7. The public page reads the **public calendar** through the backend, so anything added straight into that Google Calendar shows up too.
 
+### Event details popup
+
+Tapping an event's photo or title opens a popup with the **whole photo, uncropped** (good for flyers), the short description, and the **More details** section if the poster filled it in. Each event also has a **Directions** button: Heirloom's address for farm spots, or the event's own address if it's off-site (typed under "Somewhere else", or a partner's venue).
+
+**More details** is an optional box in the form with headings, bold/italic, bulleted lists, links and up to 6 inline photos. It shows only in the popup and in the Google Calendar event, where photos become links because Google Calendar can't show images. Everything is cleaned to a short list of safe formatting before it's saved and again before it's shown.
+
+Links like `…/heirloom-events/?event=<id>` open an event's popup directly. Discord posts use these links.
+
 ### Editing or cancelling
 
 Every confirmation email (and the "Thanks!" screen after posting) has an **Edit or cancel your event** button. It opens the form already filled in. Only the person who posted gets the link, and it only works for their event.

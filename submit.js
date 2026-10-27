@@ -158,6 +158,76 @@
   $("#repeat").addEventListener("change", () => { $("#untilField").hidden = $("#repeat").value === "none"; update(); });
   refreshRepeatLabels();
 
+  /* ---------- "More details": a small rich-text editor ---------- */
+  const rte = $("#details");
+  let savedRange = null;
+  const saveRange = () => { const s = getSelection(); if (s.rangeCount && rte.contains(s.anchorNode)) savedRange = s.getRangeAt(0).cloneRange(); };
+  const restoreRange = () => { rte.focus(); if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); } };
+  ["keyup", "mouseup", "input", "focus"].forEach(ev => rte.addEventListener(ev, saveRange));
+  document.execCommand("defaultParagraphSeparator", false, "p");
+  $(".rte-bar").addEventListener("mousedown", e => e.preventDefault()); // keep the text selected
+  $(".rte-bar").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const cmd = b.dataset.cmd;
+    restoreRange();
+    if (cmd === "heading") {
+      const cur = (document.queryCommandValue("formatBlock") || "").toLowerCase();
+      document.execCommand("formatBlock", false, cur === "h3" ? "p" : "h3");
+    } else if (cmd === "link") {
+      $("#rteLink").hidden = false; $("#rteLinkUrl").value = ""; $("#rteLinkUrl").focus();
+    } else if (cmd === "image") {
+      if (rte.querySelectorAll("img").length >= 6) { $("#detailsStatus").textContent = "That's the limit of 6 photos."; return; }
+      $("#detailsPhoto").click();
+    } else document.execCommand(cmd);
+    saveRange();
+  }));
+  $("#rteLinkAdd").onclick = () => {
+    let url = $("#rteLinkUrl").value.trim();
+    if (!url) return;
+    if (!/^(https?:|mailto:)/i.test(url)) url = (/@/.test(url) && !/\//.test(url) ? "mailto:" : "https://") + url;
+    restoreRange();
+    const sel = getSelection();
+    if (sel.isCollapsed) document.execCommand("insertHTML", false, `<a href="${esc(url)}">${esc(url.replace(/^mailto:/, ""))}</a>&nbsp;`);
+    else document.execCommand("createLink", false, url);
+    $("#rteLink").hidden = true; saveRange();
+  };
+  $("#rteLinkCancel").onclick = () => { $("#rteLink").hidden = true; restoreRange(); };
+  $("#rteLinkUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#rteLinkAdd").click(); } });
+  $("#detailsPhoto").addEventListener("change", async e => {
+    const file = e.target.files[0]; if (!file) return;
+    $("#detailsStatus").textContent = "Adding your photo…";
+    try {
+      const img = await loadImage(file);
+      const max = 1400, scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      restoreRange();
+      document.execCommand("insertHTML", false, `<img src="${c.toDataURL("image/jpeg", 0.8)}" alt=""><p><br></p>`);
+      $("#detailsStatus").textContent = "";
+      saveRange();
+    } catch (err) { $("#detailsStatus").textContent = "We couldn't read that photo. Try a different one."; }
+    e.target.value = "";
+  });
+  // Pasting from Word or Google Docs: keep the simple formatting, drop the rest
+  rte.addEventListener("paste", e => {
+    const html = e.clipboardData.getData("text/html"), text = e.clipboardData.getData("text/plain");
+    e.preventDefault();
+    if (html) document.execCommand("insertHTML", false, H.sanitize(html).replace(/<img[^>]*>/g, ""));
+    else document.execCommand("insertText", false, text);
+  });
+  // What gets sent: cleaned HTML, with new photos split out as uploads
+  function detailsPayload() {
+    const html = H.sanitize(rte.innerHTML).trim();
+    const box = document.createElement("div"); box.innerHTML = html;
+    if (!box.textContent.trim() && !box.querySelector("img")) return { details: "", detailImages: [] };
+    const detailImages = [];
+    box.querySelectorAll("img").forEach(im => {
+      const src = im.getAttribute("src") || "";
+      if (src.startsWith("data:image/")) { const id = detailImages.length; detailImages.push({ id, data: src.split(",")[1] }); im.setAttribute("src", "cid:img" + id); }
+    });
+    return { details: box.innerHTML, detailImages };
+  }
+
   /* ---------- Gather + preview ---------- */
   function values() {
     const fd = new FormData(form);
@@ -275,7 +345,7 @@
       return;
     }
     if (v.imageMode === "upload" && !upload) v.imageMode = "auto";
-    const payload = Object.assign({}, v, {
+    const payload = Object.assign({}, v, detailsPayload(), {
       imageData: v.imageMode === "upload" ? upload.data : "",
       elapsed: Date.now() - openedAt
     }, EDIT ? { action: "update", id: EDIT.id, by: EDIT.by, sig: EDIT.sig } : {});
@@ -357,6 +427,7 @@
     set("spots", e.spots); set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
     form.querySelectorAll('input[name="calendars"]').forEach(c => c.checked = (e.calendars || []).includes(c.value));
     set("name", e.name); set("email", e.email); set("phone", e.phone); set("notes", e.notes);
+    rte.innerHTML = H.sanitize(e.details || "");
     $("#email").readOnly = true; $("#email").title = "Edits stay linked to the email that shared the event";
     if (e.image) {
       $("#keepImg").src = e.image; $("#keepPhoto").hidden = false; $("#m-keep").checked = true; setPanel("keep");

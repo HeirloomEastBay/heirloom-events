@@ -262,6 +262,20 @@
   </footer>
 
 
+  <dialog class="event-pop" id="eventDialog" aria-labelledby="popTitle">
+    <div class="pop-close"><button type="button" class="x" id="popClose" aria-label="Close">×</button></div>
+    <figure class="pop-media" id="popMedia"><img id="popImg" alt=""></figure>
+    <div class="pop-body">
+      <span class="label" id="popWhen"></span>
+      <h2 id="popTitle"></h2>
+      <div class="meta" id="popMeta"></div>
+      <div class="chips" id="popChips"></div>
+      <p class="pop-desc" id="popDesc"></p>
+      <div class="pop-details" id="popDetails"></div>
+      <div class="card-actions" id="popActions"></div>
+    </div>
+  </dialog>
+
   <dialog class="rsvp" id="rsvpDialog" aria-labelledby="rsvpTitle">
     <form id="rsvpForm" method="dialog" novalidate>
       <button type="button" class="x" id="rsvpClose" aria-label="Close">×</button>

@@ -114,6 +114,23 @@
   .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* "More details" editor */
+  .rte { border: 1.5px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+  .rte:focus-within { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .rte-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: #faf8f3; }
+  .rte-bar button { display: inline-flex; align-items: center; gap: 5px; min-width: 38px; min-height: 36px; padding: 4px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .rte-bar button:hover, .rte-bar button[aria-pressed="true"] { background: var(--sage-soft); }
+  .rte-bar svg { width: 18px; height: 18px; }
+  .rte-link { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); background: #faf8f3; }
+  .rte-link input { flex: 1 1 200px; min-height: 40px !important; }
+  .rte-area { min-height: 140px; max-height: 520px; overflow-y: auto; padding: 12px 14px; outline: none; font-size: 16px; line-height: 1.55; }
+  .rte-area:empty::before { content: attr(data-placeholder); color: #a9a293; }
+  .rte-area img { max-width: 100%; height: auto; border-radius: 10px; margin: 8px 0; display: block; }
+  .rte-area h3 { font-family: var(--f-title); font-size: 20px; margin: 12px 0 4px; }
+  .rte-area p { margin: 0 0 8px; }
+  .rte-area ul, .rte-area ol { margin: 0 0 8px; padding-left: 22px; }
+  .rte-area a { color: var(--forest); }
+
   /* Editing */
   .keep-photo { margin-bottom: 12px; position: relative; }
   .keep-photo input { position: absolute; opacity: 0; }
@@ -148,7 +165,6 @@
         <img class="wordmark" src="images/logo-wordmark.svg" alt="Heirloom East Bay">
       </a>
       <nav class="nav" aria-label="Main">
-        <a class="nav-text" href="index.html">Events calendar</a>
         <a class="btn btn-outline btn-sm" href="index.html">See the calendar</a>
       </nav>
     </div>
@@ -196,7 +212,32 @@
             <label for="description">Tell people about it <span class="req">*</span></label>
             <textarea id="description" name="description" maxlength="1500" placeholder="BYOB, we'll provide the goats. Wear shoes you don't mind getting muddy." required></textarea>
             <div class="err">Add a short description.</div>
-            <p class="hint">What to expect, what to bring, who it's for.</p>
+            <p class="hint">A few sentences for the calendar: what to expect, what to bring, who it's for.</p>
+          </div>
+          <div class="field">
+            <span class="lbl" id="detailsLbl">More details <span class="opt">(optional)</span></span>
+            <p class="hint" style="margin:0 0 8px">Shows when people tap the event. Add headings, lists, links or photos, like a schedule or a flyer.</p>
+            <div class="rte">
+              <div class="rte-bar" role="toolbar" aria-label="Formatting">
+                <button type="button" data-cmd="bold" aria-label="Bold" title="Bold"><b>B</b></button>
+                <button type="button" data-cmd="italic" aria-label="Italic" title="Italic"><i>I</i></button>
+                <button type="button" data-cmd="heading" aria-label="Heading" title="Heading">H</button>
+                <button type="button" data-cmd="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg></button>
+                <button type="button" data-cmd="link" aria-label="Add a link" title="Add a link">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg> Link</button>
+                <button type="button" data-cmd="image" aria-label="Add a photo" title="Add a photo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg> Photo</button>
+              </div>
+              <div class="rte-link" id="rteLink" hidden>
+                <input type="url" id="rteLinkUrl" placeholder="https://" inputmode="url" aria-label="Link address">
+                <button type="button" class="btn btn-forest btn-sm" id="rteLinkAdd">Add link</button>
+                <button type="button" class="btn btn-outline btn-sm" id="rteLinkCancel">Cancel</button>
+              </div>
+              <div class="rte-area" id="details" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="detailsLbl" data-placeholder="Schedule, what to bring, parking, a flyer…"></div>
+            </div>
+            <input type="file" id="detailsPhoto" accept="image/*" class="visually-hidden">
+            <p class="hint" id="detailsStatus"></p>
           </div>
         </fieldset>
 
