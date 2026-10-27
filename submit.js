@@ -13,9 +13,12 @@
   let partners = (C.PARTNERS || []).slice();
   function renderHosts() {
     const cur = $("#host").value;
+    // Partners whose events are imported automatically (Plantify, Soundbird) don't need to be here;
+    // only partners set to Import type "None" on the Partners tab post through the form
+    const formPartners = partners.filter(p => p.formOnly);
     $("#host").innerHTML = `<option value="">Heirloom (residents &amp; staff)</option><option value="community">Community member</option>` +
-      (partners.length ? `<optgroup label="Community partners">${partners.map(p => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("")}</optgroup>` : "");
-    $("#host").value = cur === "community" || partners.some(p => p.slug === cur) ? cur : "";
+      (formPartners.length ? `<optgroup label="Community partners">${formPartners.map(p => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("")}</optgroup>` : "");
+    $("#host").value = cur === "community" || formPartners.some(p => p.slug === cur) ? cur : "";
     $("#hostNameField").hidden = $("#host").value !== "community";
   }
   renderHosts();
