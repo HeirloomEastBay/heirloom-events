@@ -57,29 +57,47 @@
     : events.filter(e => e.source === source.slice(2));
 
   /* ---------- Load ---------- */
+  // The last events we loaded are kept in the visitor's browser, so a repeat
+  // visit shows them instantly while the latest list loads in the background.
+  const STORE = "heirloom-feed-v1";
+  let linkOpened = false;
+  function applyFeed(data) {
+    if (data.partners) partners = data.partners;
+    if (data.publicCalendarId) { // the Sheet decides which calendar is live
+      C.PUBLIC_CALENDAR_ID = data.publicCalendarId;
+      document.querySelectorAll(".subscribe").forEach(a => a.href = H.subscribeLink());
+    }
+    events = data.events.map(e => Object.assign({}, e, {
+      start: new Date(e.start), end: e.end ? new Date(e.end) : null,
+      image: e.image || H.matchImage(e.title + " " + (e.description || ""), null, null, e.title)
+    })).sort((a, b) => a.start - b.start);
+  }
+  function openLinkOnce() { if (!linkOpened) { linkOpened = true; openFromLink(); } }
+
   async function load() {
-    renderSkeleton();
     if (!C.API_URL) {
+      renderSkeleton();
       $("#demoBanner").hidden = false;
       events = H.sampleEvents();
       render(); return openFromLink();
     }
+    let shown = false;
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORE) || "null");
+      if (saved && saved.ok && Date.now() - saved.savedAt < 7 * 86400000) { applyFeed(saved); render(); shown = true; }
+    } catch (e) { /* no saved copy; that's fine */ }
+    if (!shown) renderSkeleton();
     try {
       const res = await fetch(C.API_URL + "?action=events", { redirect: "follow" });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Could not load events");
-      if (data.partners) partners = data.partners;
-      if (data.publicCalendarId) { // the Sheet decides which calendar is live
-        C.PUBLIC_CALENDAR_ID = data.publicCalendarId;
-        document.querySelectorAll(".subscribe").forEach(a => a.href = H.subscribeLink());
-      }
-      events = data.events.map(e => Object.assign({}, e, {
-        start: new Date(e.start), end: e.end ? new Date(e.end) : null,
-        image: e.image || H.matchImage(e.title + " " + (e.description || ""), null, null, e.title)
-      })).sort((a, b) => a.start - b.start);
-      render(); openFromLink();
+      try { localStorage.setItem(STORE, JSON.stringify(Object.assign({}, data, { savedAt: Date.now() }))); } catch (e) { /* storage off */ }
+      applyFeed(data);
+      if (!$("#rsvpDialog").open) render(); // don't redraw under someone mid-RSVP
+      openLinkOnce();
     } catch (err) {
       console.error(err);
+      if (shown) { openLinkOnce(); return; } // keep showing the saved list
       $("#view").innerHTML = `<div class="empty"><h3>We couldn't load the calendar</h3>
         <p>Please try again in a minute, or <a href="${esc(H.subscribeLink())}" target="_blank" rel="noopener">view it in Google Calendar</a>.</p></div>`;
       resize();
