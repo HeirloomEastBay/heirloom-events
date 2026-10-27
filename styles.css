@@ -1,0 +1,182 @@
+/* ============================================================
+   Heirloom Events — shared styles
+   Recoleta / Brown / Archive Antique are Heirloom's brand fonts.
+   If their licenses don't allow web use, delete the @font-face
+   blocks and the Google fallbacks (Fraunces, Figtree) take over.
+   ============================================================ */
+@font-face { font-family: "Recoleta"; src: url("fonts/Recoleta-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Recoleta"; src: url("fonts/Recoleta-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Brown"; src: url("fonts/Brown-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Archive Antique"; src: url("fonts/ArchiveAntiqueExtended.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+:root {
+  color-scheme: light;
+  --cream: #f4efe3;
+  --paper: #fbf8f1;
+  --ink: #1f2a22;
+  --ink-soft: #4b5a4f;
+  --muted: #6f7a70;
+  --line: #e1d8c6;
+  --forest: #2e4a36;
+  --forest-deep: #1c3024;
+  --sage: #c9d3bb;
+  --sage-soft: #e6eadc;
+  --barn: #8e2f27;
+  --barn-dark: #73241e;
+  --wheat: #d8b56f;
+
+  --f-title: "Recoleta", "Fraunces", Georgia, serif;
+  --f-label: "Brown", "Figtree", system-ui, sans-serif;
+  --f-stamp: "Archive Antique", "Courier Prime", "Courier New", monospace;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(31, 42, 34, .06), 0 6px 24px rgba(31, 42, 34, .07);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--f-body);
+}
+img { max-width: 100%; display: block; }
+a { color: var(--forest); }
+h1, h2, h3 { font-family: var(--f-title); font-weight: 600; line-height: 1.12; margin: 0; letter-spacing: -.01em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.kicker {
+  font-family: var(--f-label);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.label {
+  font-family: var(--f-label);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 10px 20px;
+  border-radius: 999px; border: 1.5px solid transparent;
+  font-family: var(--f-label); font-weight: 700; font-size: 14px; letter-spacing: .02em;
+  text-decoration: none; cursor: pointer; transition: background .15s, color .15s, border-color .15s, transform .15s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--barn); color: #fff; }
+.btn-primary:hover { background: var(--barn-dark); }
+.btn-forest { background: var(--forest); color: #fff; }
+.btn-forest:hover { background: var(--forest-deep); }
+.btn-outline { background: transparent; color: var(--forest); border-color: var(--forest); }
+.btn-outline:hover { background: var(--forest); color: #fff; }
+.btn-light { background: var(--paper); color: var(--forest-deep); }
+.btn-light:hover { background: #fff; }
+.btn-ghost-light { background: transparent; color: #fff; border-color: rgba(255,255,255,.7); }
+.btn-ghost-light:hover { background: rgba(255,255,255,.14); }
+.btn-sm { min-height: 38px; padding: 7px 14px; font-size: 13px; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+:focus-visible { outline: 3px solid var(--wheat); outline-offset: 2px; }
+
+/* ---------- Header ---------- */
+.site-header { background: var(--cream); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+.brand img.badge { width: 46px; height: 46px; }
+.brand img.wordmark { height: 26px; width: auto; }
+.nav { display: flex; align-items: center; gap: 22px; }
+.nav a:not(.btn) { color: var(--ink); text-decoration: none; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .04em; }
+.nav a:not(.btn):hover { color: var(--barn); }
+@media (max-width: 760px) {
+  .nav a.nav-text { display: none; }
+  .brand img.wordmark { height: 18px; }
+}
+
+/* ---------- Footer ---------- */
+.site-footer { background: var(--forest-deep); color: #e9ece4; padding: 56px 0 32px; margin-top: 72px; }
+.site-footer a { color: #fff; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
+.footer-grid h4 { font-family: var(--f-label); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 12px; color: var(--sage); }
+.footer-grid p, .footer-grid li { margin: 0 0 6px; font-size: 15px; }
+.footer-grid ul { list-style: none; padding: 0; margin: 0; }
+.footer-grid ul a { text-decoration: none; }
+.footer-grid ul a:hover { text-decoration: underline; }
+.footer-wordmark { width: 200px; margin-bottom: 14px; }
+.footer-small { border-top: 1px solid rgba(255,255,255,.15); margin-top: 40px; padding-top: 20px; font-size: 13px; color: #bfc8bb; line-height: 1.6; }
+.footer-small p { margin: 0 0 8px; }
+@media (max-width: 860px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .footer-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Demo banner ---------- */
+.demo-banner { background: var(--wheat); color: var(--forest-deep); text-align: center; font-size: 13px; padding: 8px 16px; font-family: var(--f-label); font-weight: 700; letter-spacing: .02em; }
+
+/* ---------- Event cards (calendar + form preview) ---------- */
+  .cards { display: grid; gap: 18px; }
+.card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; background: var(--paper); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.card-media { position: relative; min-height: 220px; background: var(--sage-soft); }
+.card-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.date-tile { position: absolute; top: 14px; left: 14px; background: var(--paper); border-radius: 10px; width: 64px; text-align: center; padding: 7px 0 8px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.date-tile .dow { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .1em; color: var(--barn); text-transform: uppercase; }
+.date-tile .num { font-family: var(--f-title); font-weight: 600; font-size: 30px; line-height: 1; margin: 2px 0; }
+.date-tile .mon { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+.card-body { padding: 22px 24px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-body h4 { font-family: var(--f-title); font-weight: 600; font-size: 25px; line-height: 1.15; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-soft); font-size: 15px; }
+.meta span { display: inline-flex; align-items: center; gap: 6px; }
+.meta svg { width: 16px; height: 16px; color: var(--forest); flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--f-label); font-weight: 700; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: var(--sage-soft); color: var(--forest-deep); }
+.chip.cost { background: #f3e5c4; color: #6b4a12; }
+.desc { margin: 0; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.desc.open { -webkit-line-clamp: unset; display: block; }
+.more { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--forest); font-weight: 600; text-decoration: underline; cursor: pointer; font-size: 14px; }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+@media (max-width: 680px) {
+  .card { grid-template-columns: 1fr; }
+  .card-media { min-height: 0; aspect-ratio: 16 / 10; }
+  .card-body { padding: 18px 18px 20px; }
+  .card-body h4 { font-size: 23px; }
+}
+
+
+.also { font-size: 14px; color: var(--ink-soft); margin: 0; }
+.also b { font-weight: 600; color: var(--forest-deep); }
+.chip.partner { background: color-mix(in srgb, var(--c) 16%, #fff); color: color-mix(in srgb, var(--c) 80%, #000); }
+
+.chip.spots { background: #f7dcd6; color: var(--barn-dark); }
+.chip.full { background: #ebe5d8; color: var(--ink-soft); }
+
+/* ---------- RSVP popup ---------- */
+dialog.rsvp { border: 0; border-radius: 20px; padding: 0; width: min(460px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px -20px rgba(0,0,0,.45); }
+dialog.rsvp::backdrop { background: rgba(20, 34, 25, .55); }
+dialog.rsvp form, .rsvp-done { padding: 28px 24px 24px; display: grid; gap: 14px; position: relative; }
+dialog.rsvp h2 { font-size: 26px; padding-right: 30px; text-wrap: balance; }
+dialog.rsvp .label { color: var(--barn); }
+dialog.rsvp .when { margin: -6px 0 2px; color: var(--ink-soft); }
+dialog.rsvp .field { display: grid; gap: 6px; }
+dialog.rsvp label { font-weight: 600; font-size: 15px; }
+dialog.rsvp .opt { font-weight: 400; color: var(--muted); }
+dialog.rsvp input, dialog.rsvp select, dialog.rsvp textarea { width: 100%; min-height: 46px; padding: 10px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; }
+dialog.rsvp textarea { min-height: 70px; resize: vertical; }
+dialog.rsvp input:focus, dialog.rsvp select:focus, dialog.rsvp textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+dialog.rsvp .hint { margin: 0; font-size: 13px; color: var(--muted); }
+dialog.rsvp .btn { width: 100%; min-height: 50px; font-size: 15px; }
+dialog.rsvp .x { position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--sage-soft); font-size: 24px; line-height: 1; cursor: pointer; color: var(--forest-deep); }
+dialog.rsvp .form-error { margin: 0; background: #f7e1dd; color: var(--barn-dark); border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 14px; }
+.rsvp-done { text-align: center; justify-items: center; }
+.rsvp-done .tick { width: 64px; height: 64px; border-radius: 50%; background: var(--sage-soft); color: var(--forest); display: grid; place-items: center; }
+.rsvp-done .tick svg { width: 32px; height: 32px; }
+.rsvp-done p { margin: 0; color: var(--ink-soft); }
+.hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; }
+.spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
