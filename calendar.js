@@ -47,7 +47,9 @@
   let selectedDay = null;
   let source = "all";
   let partners = (C.PARTNERS || []).slice();
-  const partnerOf = e => partners.find(p => p.slug === e.source);
+  // Neighbors and friends hosting something: grouped with community partners
+  const COMMUNITY = { slug: "community", label: "Community members", name: "Community member", color: "#4f7a64" };
+  const partnerOf = e => e.source === "community" ? COMMUNITY : partners.find(p => p.slug === e.source);
   const byId = {};
   // source: "all" | "heirloom" | "partners" (every community partner) | "p:<slug>" (one partner)
   const isPartner = e => (e.source || "heirloom") !== "heirloom";
@@ -116,7 +118,7 @@
   // All · Heirloom · one tab per partner that has upcoming events
   // All · Heirloom · Community partners (with a row to narrow to one partner)
   function renderSourceTabs() {
-    const live = partners.filter(p => events.some(e => e.source === p.slug && +(e.end || e.start) >= +now));
+    const live = partners.concat([COMMUNITY]).filter(p => events.some(e => e.source === p.slug && +(e.end || e.start) >= +now));
     $("#sourceWrap").hidden = !live.length;
     if (!live.length) { $("#partnerBar").hidden = true; source = "all"; return; }
     if (source.startsWith("p:") && !live.some(p => "p:" + p.slug === source)) source = "partners";
@@ -161,7 +163,8 @@
     const p = H.parts(e.start);
     const chips = [];
     const partner = partnerOf(e);
-    if (partner) chips.push(`<span class="chip partner" style="--c:${esc(partner.color)}" title="Community partner event">With ${esc(partner.label)}</span>`);
+    if (e.source === "community") chips.push(`<span class="chip partner" style="--c:${esc(COMMUNITY.color)}" title="Hosted by a member of the wider Heirloom community">Hosted by ${esc(e.hostName || "a community member")}</span>`);
+    else if (partner) chips.push(`<span class="chip partner" style="--c:${esc(partner.color)}" title="Community partner event">With ${esc(partner.label)}</span>`);
     if (e.recurring) chips.push(`<span class="chip">${esc(e.recurring)}</span>`);
     if (e.cost) chips.push(`<span class="chip cost">${esc(e.cost)}</span>`);
     if (e.rsvp && e.spotsLeft != null) chips.push(e.spotsLeft > 0

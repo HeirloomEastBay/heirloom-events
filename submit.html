@@ -114,6 +114,21 @@
   .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Editing */
+  .keep-photo { margin-bottom: 12px; position: relative; }
+  .keep-photo input { position: absolute; opacity: 0; }
+  .keep-photo label { display: flex; align-items: center; gap: 14px; padding: 10px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; }
+  .keep-photo img { width: 96px; height: 64px; object-fit: cover; border-radius: 8px; flex: none; }
+  .keep-photo input:checked + label { border-color: var(--forest); background: var(--sage-soft); box-shadow: inset 0 0 0 1px var(--forest); }
+  .keep-photo input:focus-visible + label { outline: 3px solid var(--wheat); outline-offset: 2px; }
+  .edit-note { background: #f3e5c4; color: #5a3f10; border-radius: 10px; padding: 12px 14px; font-size: 14.5px; margin: 0 0 18px; }
+  .cancel-area { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 14px; text-align: center; }
+  .link-btn { background: none; border: 0; padding: 6px; color: var(--barn); font-weight: 600; text-decoration: underline; cursor: pointer; font-size: 15px; }
+  .cancel-confirm { background: #f7e1dd; border-radius: 12px; padding: 14px; text-align: left; }
+  .cancel-confirm p { margin: 0 0 10px; color: var(--barn-dark); font-size: 15px; }
+  .cancel-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .loading-card { max-width: 620px; margin: 40px auto 0; background: var(--paper); border-radius: 20px; box-shadow: var(--shadow); padding: 36px 28px; text-align: center; color: var(--ink-soft); }
+
   /* Done screen */
   .done { max-width: 620px; margin: 40px auto 0; background: var(--paper); border-radius: 20px; box-shadow: var(--shadow); padding: 40px 28px; text-align: center; }
   .done .tick { width: 72px; height: 72px; border-radius: 50%; background: var(--sage-soft); color: var(--forest); display: grid; place-items: center; margin: 0 auto 18px; }
@@ -143,8 +158,8 @@
     <svg class="sprig" viewBox="380 190 400 250" fill="#fff" aria-hidden="true"><use href="images/logo-wordmark-white.svg#Layer_1-2"/></svg>
     <div class="wrap">
       <span class="kicker">Heirloom events</span>
-      <h1>Share an event</h1>
-      <p>Moonlight hike on Tuesday? Happy hour with the goats? Tell us what's happening and we'll put it on the calendar. Takes about two minutes.</p>
+      <h1 id="pageTitle">Share an event</h1>
+      <p id="pageIntro">Moonlight hike on Tuesday? Happy hour with the goats? Tell us what's happening and we'll put it on the calendar. Takes about two minutes.</p>
     </div>
   </section>
 
@@ -158,9 +173,14 @@
           <div class="field">
             <label for="host">Who's hosting?</label>
             <select id="host" name="host">
-              <option value="">Heirloom or a resident</option>
+              <option value="">Heirloom (residents &amp; staff)</option>
             </select>
-            <p class="hint" id="hostHint">Partner events get their own label and tab on the calendar.</p>
+            <p class="hint" id="hostHint">Pick "Community member" if you're hosting as a neighbor or friend of Heirloom.</p>
+          </div>
+          <div class="field" id="hostNameField" hidden>
+            <label for="hostName">Name to show as the host <span class="opt">(optional)</span></label>
+            <input type="text" id="hostName" name="hostName" maxlength="60" placeholder="Jane Doe, or East Bay Knitting Circle">
+            <p class="hint">Shown on the event as "Hosted by …". Leave blank to just say "community member."</p>
           </div>
           <div class="field" data-f="title">
             <label for="title">Event name <span class="req">*</span></label>
@@ -270,6 +290,10 @@
 
         <fieldset>
           <legend><span class="step">4</span><h2>Add a photo</h2></legend>
+          <div class="keep-photo" id="keepPhoto" hidden>
+            <input type="radio" name="imageMode" id="m-keep" value="keep">
+            <label for="m-keep"><img id="keepImg" alt=""><span><strong>Keep the current photo</strong><br><span class="hint">Or pick another option below</span></span></label>
+          </div>
           <div class="photo-modes" role="radiogroup" aria-label="Photo">
             <div class="mode"><input type="radio" name="imageMode" id="m-upload" value="upload"><label for="m-upload">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>My own photo</label></div>
@@ -340,7 +364,17 @@
         <div class="submit-row">
           <div class="form-error" id="formError" role="alert"></div>
           <button type="submit" class="btn btn-primary" id="submitBtn">Send it in</button>
-          <p class="hint" style="text-align:center;margin:0">We'll email you when it's on the calendar.</p>
+          <p class="hint" id="submitHint" style="text-align:center;margin:0">We'll email you when it's on the calendar.</p>
+          <div class="cancel-area" id="cancelArea" hidden>
+            <button type="button" class="link-btn" id="cancelBtn">Cancel this event</button>
+            <div class="cancel-confirm" id="cancelConfirm" hidden>
+              <p>Cancel <b id="cancelName"></b>? It comes off the calendar, and anyone who RSVP'd gets an email.</p>
+              <div class="cancel-btns">
+                <button type="button" class="btn btn-primary btn-sm" id="cancelYes">Yes, cancel it</button>
+                <button type="button" class="btn btn-outline btn-sm" id="cancelNo">Keep it</button>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </form>

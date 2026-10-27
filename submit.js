@@ -5,12 +5,18 @@
   const form = $("#eventForm");
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const openedAt = Date.now();
+  // Edit mode: opened from the "Edit or cancel your event" link in an email
+  const qs = new URLSearchParams(location.search);
+  const EDIT = qs.get("edit") && qs.get("sig") ? { id: qs.get("edit"), by: qs.get("by") || "", sig: qs.get("sig") } : null;
+  let original = null;
   let presets = C.PRESETS.slice();
   let partners = (C.PARTNERS || []).slice();
   function renderHosts() {
     const cur = $("#host").value;
-    $("#host").innerHTML = `<option value="">Heirloom or a resident</option>` + partners.map(p => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("");
-    $("#host").value = partners.some(p => p.slug === cur) ? cur : "";
+    $("#host").innerHTML = `<option value="">Heirloom (residents &amp; staff)</option><option value="community">Community member</option>` +
+      (partners.length ? `<optgroup label="Community partners">${partners.map(p => `<option value="${esc(p.slug)}">${esc(p.name)}</option>`).join("")}</optgroup>` : "");
+    $("#host").value = cur === "community" || partners.some(p => p.slug === cur) ? cur : "";
+    $("#hostNameField").hidden = $("#host").value !== "community";
   }
   renderHosts();
   let types = (C.TYPES || []).slice();
@@ -60,14 +66,13 @@
     $("#gallery").querySelectorAll("input").forEach(r => r.addEventListener("change", update));
   }
   renderGallery();
-  if (C.API_URL) {
+  const presetsReady = !C.API_URL ? Promise.resolve() :
     fetch(C.API_URL + "?action=presets").then(r => r.json()).then(d => {
       if (d.ok && d.partners) { partners = d.partners; renderHosts(); }
       if (d.ok && d.types) { types = d.types; renderTypes(); }
       if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
       if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); update(); }
     }).catch(() => {});
-  }
 
   /* ---------- Photo mode switching ---------- */
   form.querySelectorAll('input[name="imageMode"]').forEach(r => r.addEventListener("change", () => {
@@ -120,7 +125,8 @@
 
   // Partners usually sell tickets on their own site (Eventbrite etc.)
   $("#host").addEventListener("change", () => {
-    if ($("#host").value && $("#r-none").checked) {
+    $("#hostNameField").hidden = $("#host").value !== "community";
+    if ($("#host").value && $("#host").value !== "community" && $("#r-none").checked) {
       $("#r-link").checked = true; $("#linkLabel").value = "Get tickets";
       document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== "link");
     }
@@ -167,6 +173,7 @@
       location: fd.get("place") === "__other" ? ($("#location").value || "").trim() : (fd.get("place") || ""),
       cost: (fd.get("cost") || "").trim(),
       host: fd.get("host") || "",
+      hostName: fd.get("host") === "community" ? (fd.get("hostName") || "").trim() : "",
       types: fd.getAll("types"),
       rsvpMode: fd.get("rsvpMode") || "none",
       spots: fd.get("spots") || "",
@@ -184,6 +191,7 @@
   }
 
   function chosenImage(v) {
+    if (v.imageMode === "keep" && original) return original.image;
     if (v.imageMode === "upload" && upload) return upload.url;
     if (v.imageMode === "preset" && v.presetImage) return v.presetImage;
     return H.matchImage(v.title + " " + v.description, presets, fallbacks, v.title || "heirloom");
@@ -210,6 +218,7 @@
     const chips = [];
     const hp = partners.find(p => p.slug === v.host);
     if (hp) chips.push(`<span class="chip partner" style="--c:${esc(hp.color)}">With ${esc(hp.label)}</span>`);
+    if (v.host === "community") chips.push(`<span class="chip partner" style="--c:#4f7a64">Hosted by ${esc(v.hostName || "a community member")}</span>`);
     const rt = repeatText(v); if (rt) chips.push(`<span class="chip">${esc(rt)}</span>`);
     if (v.cost) chips.push(`<span class="chip cost">${esc(v.cost)}</span>`);
     if (v.rsvpMode === "form" && v.spots) chips.push(`<span class="chip spots">${esc(v.spots)} spots</span>`);
@@ -238,7 +247,7 @@
     const bad = [];
     if (!v.title) bad.push("title");
     if (!v.description) bad.push("description");
-    if (!v.date || v.date < todayStr) bad.push("date");
+    if (!v.date || (v.date < todayStr && !(original && v.date === original.date))) bad.push("date");
     if (!v.allDay && !v.startTime) bad.push("startTime");
     if (!v.allDay && v.startTime && v.endTime && v.endTime <= v.startTime) bad.push("endTime");
     if (v.repeat !== "none" && (!v.until || v.until <= v.date)) bad.push("until");
@@ -269,10 +278,10 @@
     const payload = Object.assign({}, v, {
       imageData: v.imageMode === "upload" ? upload.data : "",
       elapsed: Date.now() - openedAt
-    });
+    }, EDIT ? { action: "update", id: EDIT.id, by: EDIT.by, sig: EDIT.sig } : {});
 
     const btn = $("#submitBtn");
-    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Sending…`;
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${EDIT ? "Saving…" : "Sending…"}`;
     try {
       let result;
       if (!C.API_URL) {
@@ -286,25 +295,125 @@
       showDone(result, v);
     } catch (err) {
       console.error(err);
-      $("#formError").textContent = (err && err.message && err.message.length < 140 ? err.message + ". " : "") + "Your event wasn't sent. Please try again, or email " + C.EMAIL + ".";
+      $("#formError").textContent = (err && err.message && err.message.length < 140 ? err.message + ". " : "") + (EDIT ? "Your changes weren't saved." : "Your event wasn't sent.") + " Please try again, or email " + C.EMAIL + ".";
       $("#formError").classList.add("on");
-      btn.disabled = false; btn.textContent = "Send it in";
+      btn.disabled = false; btn.textContent = EDIT ? "Save changes" : "Send it in";
     }
   });
 
+  function doneCard(title, msg, extra) {
+    $("#formWrap").innerHTML = `<div class="done">
+      <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2>${esc(title)}</h2><p>${esc(msg)}</p>${extra || ""}
+      <div class="btns"><a class="btn btn-primary" href="submit.html">Share another event</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
+    </div>`;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function showDone(r, v) {
+    if (EDIT) {
+      const msgs = {
+        updated: ["Saved!", `Your changes to "${v.title}" are on the calendar.`],
+        pending: ["Saved!", `"${v.title}" is updated and still waiting for a quick review before it goes on the calendar.`],
+        changesPending: ["Thanks! We got your changes.", `Someone from the Heirloom team will take a quick look. Until then, the calendar shows the current version of "${v.title}". We'll email you once they're up.`]
+      };
+      const [t, m] = msgs[r.status] || msgs.updated;
+      return doneCard(t, m, `<p class="hint"><a href="${esc(location.href)}">Make more changes</a></p>`);
+    }
     const live = r.status === "published";
     const onlyPrivate = v.calendars.length === 1 && v.calendars[0] === "private";
     const title = live ? "It's on the calendar!" : "Thanks! We got it.";
     const msg = live
       ? (onlyPrivate ? `"${v.title}" is on the residents' calendar.` : `"${v.title}" is live on the Heirloom calendar. We sent a confirmation to ${v.email}.`)
       : `Someone from the Heirloom team will take a quick look and add "${v.title}" to the calendar. We'll email ${v.email} as soon as it's up.`;
-    $("#formWrap").innerHTML = `<div class="done">
-      <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-      <h2>${esc(title)}</h2><p>${esc(msg)}</p>
-      ${r.demo ? `<p class="hint">(Preview mode: nothing was actually sent.)</p>` : ""}
-      <div class="btns"><a class="btn btn-primary" href="submit.html">Share another event</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
-    </div>`;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    doneCard(title, msg,
+      (r.editUrl ? `<p class="hint">Need to change something later? <a href="${esc(r.editUrl)}">Edit or cancel your event</a>. The link is in your email too.</p>` : "") +
+      (r.demo ? `<p class="hint">(Preview mode: nothing was actually sent.)</p>` : ""));
   }
+
+  /* ---------- Edit mode ---------- */
+  function setPanel(name) { document.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("on", p.dataset.panel === name)); }
+  form.querySelectorAll('input[name="imageMode"]').forEach(r => r.addEventListener("change", () => { if (r.value === "keep") setPanel("keep"); }));
+
+  function prefill(e) {
+    const set = (id, val) => { const el = $("#" + id); if (el) el.value = val == null ? "" : val; };
+    set("title", e.title); set("description", e.description); set("date", e.date);
+    set("startTime", e.startTime); set("endTime", e.endTime);
+    $("#allDay").checked = !!e.allDay; $("#allDay").dispatchEvent(new Event("change"));
+    if (e.date < todayStr) $("#date").min = e.date;
+    refreshRepeatLabels();
+    set("repeat", e.repeat || "none"); $("#untilField").hidden = $("#repeat").value === "none"; set("until", e.until);
+    // Place
+    const placeVal = places.includes(e.location) ? e.location : (e.location ? "__other" : "");
+    form.querySelectorAll('input[name="place"]').forEach(r => { r.checked = r.value === placeVal; r.dataset.was = r.checked ? "1" : ""; });
+    $("#otherPlace").hidden = placeVal !== "__other";
+    if (placeVal === "__other") $("#location").value = e.location;
+    set("cost", e.cost); set("host", e.host || ""); set("hostName", e.hostName || "");
+    $("#hostNameField").hidden = $("#host").value !== "community";
+    form.querySelectorAll('input[name="types"]').forEach(c => c.checked = (e.types || []).includes(c.value));
+    const mode = ["none", "form", "link"].includes(e.rsvpMode) ? e.rsvpMode : "none";
+    $("#r-" + mode).checked = true;
+    document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== mode);
+    set("spots", e.spots); set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
+    form.querySelectorAll('input[name="calendars"]').forEach(c => c.checked = (e.calendars || []).includes(c.value));
+    set("name", e.name); set("email", e.email); set("phone", e.phone); set("notes", e.notes);
+    $("#email").readOnly = true; $("#email").title = "Edits stay linked to the email that shared the event";
+    if (e.image) {
+      $("#keepImg").src = e.image; $("#keepPhoto").hidden = false; $("#m-keep").checked = true; setPanel("keep");
+    }
+    update();
+  }
+
+  async function startEdit() {
+    $("#pageTitle").textContent = "Edit your event";
+    $("#pageIntro").textContent = "Change anything below and save, or cancel the event at the bottom.";
+    document.title = "Edit your event · Heirloom";
+    const formEl = $("#eventForm");
+    formEl.hidden = true;
+    const loading = document.createElement("div");
+    loading.className = "loading-card"; loading.textContent = "Loading your event…";
+    formEl.before(loading);
+    await presetsReady;
+    try {
+      const res = await fetch(C.API_URL + "?action=getEvent&id=" + encodeURIComponent(EDIT.id) + "&by=" + encodeURIComponent(EDIT.by) + "&sig=" + encodeURIComponent(EDIT.sig));
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error);
+      original = d.event;
+      loading.remove(); formEl.hidden = false;
+      prefill(original);
+      $("#submitBtn").textContent = "Save changes";
+      $("#submitHint").textContent = "We'll email you a confirmation.";
+      $("#cancelArea").hidden = false; $("#cancelName").textContent = original.title;
+      if (original.changesPending) {
+        const note = document.createElement("p");
+        note.className = "edit-note";
+        note.textContent = "Your last changes are still waiting for a quick review. Saving again replaces them.";
+        $(".form-col").prepend(note);
+      }
+    } catch (err) {
+      loading.innerHTML = `<h2 style="font-family:var(--f-title);color:var(--forest);margin:0 0 8px">We couldn't open this event</h2>
+        <p style="margin:0 0 18px">${esc(err.message || "Please try the link in your email again.")}</p>
+        <a class="btn btn-primary" href="submit.html">Share a new event</a>`;
+    }
+  }
+
+  $("#cancelBtn").onclick = () => { $("#cancelBtn").hidden = true; $("#cancelConfirm").hidden = false; };
+  $("#cancelNo").onclick = () => { $("#cancelBtn").hidden = false; $("#cancelConfirm").hidden = true; };
+  $("#cancelYes").onclick = async () => {
+    const btn = $("#cancelYes");
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Cancelling…`;
+    try {
+      const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "cancelEvent", id: EDIT.id, by: EDIT.by, sig: EDIT.sig }) });
+      const r = await res.json();
+      if (!r.ok) throw new Error(r.error || "Something went wrong");
+      doneCard("Your event is cancelled", `"${original.title}" is off the calendar.${original.rsvpMode === "form" ? " Anyone who RSVP'd has been let know." : ""} We sent you a confirmation email.`);
+    } catch (err) {
+      $("#formError").textContent = (err.message || "Something went wrong") + ". It wasn't cancelled. Please try again, or email " + C.EMAIL + ".";
+      $("#formError").classList.add("on");
+      btn.disabled = false; btn.textContent = "Yes, cancel it";
+    }
+  };
+
+  if (EDIT && C.API_URL) startEdit();
 })();

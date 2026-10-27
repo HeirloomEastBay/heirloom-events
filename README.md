@@ -22,6 +22,15 @@ Until `API_URL` is filled in, both pages run in **preview mode** with sample eve
 6. Every 6 hours the backend imports **partner events** (see below) onto the public calendar.
 7. The public page reads the **public calendar** through the backend, so anything added straight into that Google Calendar shows up too.
 
+### Editing or cancelling
+
+Every confirmation email (and the "Thanks!" screen after posting) has an **Edit or cancel your event** button. It opens the form already filled in. Only the person who posted gets the link, and it only works for their event.
+
+- **Trusted posters:** changes go live right away. Approvers get an FYI.
+- **Anyone else:** if the event is already live, their changes wait for an approver ("Approve changes / Decline changes" email showing what's changing). The calendar keeps the current version until then.
+- If the time, date or place changes, everyone who RSVP'd gets an update email.
+- **Cancel this event** (bottom of the form) takes it off both calendars, emails anyone who RSVP'd, and sets its Status to *Cancelled*.
+
 ### RSVPs
 
 When someone shares an event they choose **Just show up**, **Collect RSVPs here**, or **Use my own link**. With *Collect RSVPs here*:
@@ -47,6 +56,8 @@ Groups like Plantify and The Soundbird Sanctuary are listed on the **Partners** 
 | Location name / Address | Where their events are, when the import doesn't say |
 | Partner emails | These people are trusted posters, and the form's "Who's hosting?" list includes the partner |
 | Active | Untick to hide a partner without deleting the row |
+
+**Community members** (neighbors and friends who aren't part of a partner group) pick "Community member" under *Who's hosting?* and can add a name to show as "Hosted by …". Their events sit under the Community partners tab with their own chip. Whether a post goes live right away still depends only on the poster's email (trusted list or not), not on what they pick here.
 
 Each partner gets its own tab on the calendar (All · Heirloom · Plantify · Soundbird…), shown only when they have upcoming events. Imported events keep their own photo, price and ticket link (Eventbrite's **Get tickets**). Imports add, update and remove only the events they created. A partner without an automatic feed can still post through the form by choosing themselves under **Who's hosting?**
 

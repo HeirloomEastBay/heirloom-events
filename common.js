@@ -126,6 +126,11 @@
       link: "https://bigdudd3.github.io/plantify-schedule/", linkLabel: "Plantify schedule"
     }));
 
+    // A neighbor hosting something
+    add({ id: "community_1", source: "community", hostName: "The Castro Valley Knitters", title: "Knit & Sip on the Porch",
+      start: at(nextDow(3) + 7, 18), end: at(nextDow(3) + 7, 20), location: "Farmhouse",
+      description: "Bring a project (or learn to cast on) and a mug. Tea and yarn scraps provided.", cost: "Free" });
+
     // The Soundbird Sanctuary (imported from Eventbrite once live)
     [["Full Moon Sound Bath", 19, 18, 30, 20, 0, "From $35"], ["Sound Healing for Beginners", 12, 10, 0, 11, 30, "From $25"]].forEach(([t, d, h1, m1, h2, m2, cost]) => add({
       id: "soundbird_" + d, source: "soundbird-sanctuary", title: t, start: at(d, h1, m1), end: at(d, h2, m2),
