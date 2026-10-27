@@ -1,4 +1,4 @@
-/* Heirloom Events — "Share an event" form */
+/* Heirloom Events — "Submit an event" form */
 (function () {
   const C = window.HEIRLOOM, H = window.HL;
   const $ = (s, el = document) => el.querySelector(s);
@@ -378,7 +378,7 @@
     $("#formWrap").innerHTML = `<div class="done">
       <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <h2>${esc(title)}</h2><p>${esc(msg)}</p>${extra || ""}
-      <div class="btns"><a class="btn btn-primary" href="submit.html">Share another event</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
+      <div class="btns"><a class="btn btn-primary" href="submit.html">Submit another event</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
     </div>`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -467,7 +467,7 @@
     } catch (err) {
       loading.innerHTML = `<h2 style="font-family:var(--f-title);color:var(--forest);margin:0 0 8px">We couldn't open this event</h2>
         <p style="margin:0 0 18px">${esc(err.message || "Please try the link in your email again.")}</p>
-        <a class="btn btn-primary" href="submit.html">Share a new event</a>`;
+        <a class="btn btn-primary" href="submit.html">Submit a new event</a>`;
     }
   }
 
