@@ -33,12 +33,15 @@ window.HEIRLOOM = {
 
   // "What kind of event?" choices in the form (each matches a Discord
   // channel). Once live, the "Discord channels" tab in the Sheet takes over.
-  TYPES: ["Church", "Animals", "Garden", "Land", "Hospitality", "Workday"],
+  TYPES: ["Community", "Church", "Animals", "Garden", "Land", "Hospitality", "Workday"],
+
+  // Areas people can pick on the volunteer form (volunteer.html). "Other" is added automatically.
+  VOLUNTEER_AREAS: ["Land", "Animals", "Garden", "Workshops"],
 
   // Places people can tap under "Where on the farm?" in the form (they can
   // also pick "Somewhere else" and type their own). Once the backend is
   // live, the "Locations" tab in the Google Sheet takes over from this list.
-  LOCATIONS: ["Farmhouse", "Autoshop", "Yurt", "Meadow", "The big lawn", "The garden", "Goat pen", "Chicken coop"],
+  LOCATIONS: ["Farmhouse", "Autoshop", "Yurt", "Meadow", "Hills", "Prayer Labyrinth", "The big lawn", "The garden", "Goat pen", "Chicken coop"],
 
   // Photos people can pick in the form, and the keywords that
   // auto-match a photo when nobody uploads one. Once the backend is

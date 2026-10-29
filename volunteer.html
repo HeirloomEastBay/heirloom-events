@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volunteer · Heirloom Activities</title>
+<meta name="description" content="Apply to volunteer at Heirloom: land, animals, garden and workshops.">
+<link rel="icon" href="images/logo-badge.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .intro { position: relative; color: #fff; background: var(--forest-deep); overflow: hidden; isolation: isolate; }
+  .intro .photo { position: absolute; inset: 0 0 0 35%; z-index: -1; }
+  .intro .photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 40%; }
+  .intro .photo::before { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, var(--forest-deep) 0%, rgba(28,48,36,.85) 35%, rgba(28,48,36,.35) 75%, rgba(28,48,36,.15) 100%); }
+  .intro .wrap { padding-block: 52px 48px; }
+  .intro .kicker { color: var(--sage); }
+  .intro h1 { font-size: clamp(36px, 5.6vw, 56px); margin: 8px 0 12px; }
+  .intro p { margin: 0; max-width: 32em; color: #e1e8dc; font-size: 17px; }
+  @media (max-width: 760px) { .intro .photo { inset: 0; } .intro .photo::before { background: linear-gradient(180deg, rgba(28,48,36,.75), rgba(28,48,36,.92)); } }
+
+  .vol { max-width: 720px; margin: 0 auto; padding-top: 32px; }
+  .card-form { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; display: grid; gap: 20px; }
+  @media (max-width: 520px) { .card-form { padding: 22px 16px; } }
+  .field > label, .field .lbl { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .req { color: var(--barn); }
+  .opt { font-weight: 400; color: var(--muted); }
+  .hint { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  input[type=text], input[type=email], input[type=tel], textarea {
+    width: 100%; min-height: 48px; padding: 11px 14px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px;
+  }
+  textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
+  input:focus, textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .invalid input, .invalid textarea { border-color: var(--barn); }
+  .invalid .areas label { border-color: var(--barn); }
+  .err { display: none; color: var(--barn); font-size: 13.5px; margin-top: 6px; font-weight: 600; }
+  .invalid .err { display: block; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+  .areas { display: flex; flex-wrap: wrap; gap: 8px; }
+  .areas label { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; cursor: pointer; font-weight: 600; font-size: 15px; }
+  .areas input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+  .areas label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); color: var(--forest-deep); }
+  .areas label:has(input:checked)::before { content: "✓"; margin-right: 6px; font-weight: 700; }
+  .areas label:has(input:focus-visible) { outline: 3px solid var(--wheat); outline-offset: 2px; }
+
+  .notice { display: flex; gap: 12px; align-items: flex-start; background: #f3e5c4; color: #5a3f10; border-radius: 12px; padding: 14px 16px; font-size: 15px; line-height: 1.5; }
+  .notice svg { width: 20px; height: 20px; flex: none; margin-top: 2px; }
+  .notice p { margin: 0; }
+  .submit { width: 100%; min-height: 54px; font-size: 16px; }
+  .form-error { display: none; background: #f7e1dd; color: var(--barn-dark); border-radius: 10px; padding: 12px 14px; font-weight: 600; font-size: 14.5px; }
+  .form-error.on { display: block; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  .done { background: var(--paper); border-radius: 20px; box-shadow: var(--shadow); padding: 40px 28px; text-align: center; }
+  .done .tick { width: 72px; height: 72px; border-radius: 50%; background: var(--sage-soft); color: var(--forest); display: grid; place-items: center; margin: 0 auto 18px; }
+  .done .tick svg { width: 36px; height: 36px; }
+  .done h2 { font-size: 34px; margin-bottom: 10px; }
+  .done p { color: var(--ink-soft); font-size: 17px; margin: 0 auto 24px; max-width: 30em; }
+  .done .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="demo-banner" id="demoBanner" hidden>Preview mode. Applications won't be sent until the calendar is connected.</div>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Heirloom Activities">
+        <img class="badge" src="images/logo-badge.png" alt="">
+        <img class="wordmark" src="images/logo-wordmark.svg" alt="Heirloom East Bay">
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a class="btn btn-outline btn-sm" href="index.html">See the calendar</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="intro">
+    <div class="photo" aria-hidden="true"><img src="images/squash-tunnel.jpg" alt=""></div>
+    <div class="wrap">
+      <span class="kicker">Heirloom Activities</span>
+      <h1>Volunteer with us</h1>
+      <p>Tell us where you'd like to lend a hand: tending the land, caring for the animals, working in the garden or helping with workshops. We'll reach out about opportunities that fit.</p>
+    </div>
+  </section>
+
+  <main class="wrap vol">
+    <div id="volWrap">
+      <form id="volForm" class="card-form" novalidate>
+        <div class="row">
+          <div class="field" data-f="first">
+            <label for="first">First name <span class="req">*</span></label>
+            <input type="text" id="first" name="first" autocomplete="given-name" maxlength="60" required>
+            <div class="err">Add your first name.</div>
+          </div>
+          <div class="field" data-f="last">
+            <label for="last">Last name <span class="req">*</span></label>
+            <input type="text" id="last" name="last" autocomplete="family-name" maxlength="60" required>
+            <div class="err">Add your last name.</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field" data-f="phone">
+            <label for="phone">Phone <span class="req">*</span></label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="30" required>
+            <div class="err">Add a phone number.</div>
+          </div>
+          <div class="field" data-f="email">
+            <label for="email">Email <span class="req">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" maxlength="120" required>
+            <div class="err">Add an email we can reach you at.</div>
+          </div>
+        </div>
+
+        <div class="field" data-f="areas">
+          <span class="lbl" id="areasLbl">I'd like to volunteer with… <span class="req">*</span></span>
+          <div class="areas" id="areas" role="group" aria-labelledby="areasLbl"></div>
+          <div id="otherRow" hidden style="margin-top:10px">
+            <label class="visually-hidden" for="otherArea">Other</label>
+            <input type="text" id="otherArea" maxlength="120" placeholder="What else would you like to help with?">
+          </div>
+          <div class="err" id="areasErr">Pick at least one.</div>
+          <p class="hint">Pick as many as you like.</p>
+        </div>
+
+        <div class="field">
+          <label for="enjoy">Anything in particular you'd enjoy? <span class="opt">(optional)</span></label>
+          <textarea id="enjoy" name="enjoy" maxlength="1500" placeholder="Milking the goats, building trails, teaching a class, weekday mornings…"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="heard">How did you hear about volunteering with us? <span class="opt">(optional)</span></label>
+          <input type="text" id="heard" name="heard" maxlength="200" placeholder="A friend, Instagram, Supper Church…">
+        </div>
+
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
+
+        <div class="notice" role="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>
+          <p><b>Please note:</b> this application does not guarantee approval. You'll be sent an email to authorize a background check in the next 2 business days.</p>
+        </div>
+
+        <div class="form-error" id="formError" role="alert"></div>
+        <button type="submit" class="btn btn-primary submit" id="submitBtn">Send my application</button>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-small" style="border:0;margin:0;padding:0">
+        <p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p>
+        <p id="footLine"></p>
+      </div>
+    </div>
+  </footer>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="volunteer.js"></script>
+</body>
+</html>

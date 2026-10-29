@@ -99,6 +99,7 @@
       upload = { data: dataUrl.split(",")[1], url: dataUrl };
       $("#uploadImg").src = dataUrl;
       $("#uploadPanel").classList.add("has-upload");
+      $("#savePhotoRow").hidden = false;
       $("#m-upload").checked = true;
       document.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("on", p.dataset.panel === "upload"));
       $("#photoStatus").textContent = canvas.width < canvas.height ? "Tip: tall photos get cropped to fit. Wide ones look best." : "";
@@ -118,8 +119,52 @@
     });
   }
   $("#removePhoto").addEventListener("click", () => {
-    upload = null; $("#photo").value = ""; $("#uploadPanel").classList.remove("has-upload"); $("#photoStatus").textContent = ""; update();
+    upload = null; $("#photo").value = ""; $("#uploadPanel").classList.remove("has-upload"); $("#photoStatus").textContent = "";
+    $("#savePhotoRow").hidden = true; $("#savePhoto").checked = false; update();
   });
+
+  /* ---------- Cost: Free / Suggested donation / Materials fee / Other ---------- */
+  const COST_PER = { donation: "suggested donation per person", materials: "materials fee per person" };
+  function showCostRows() {
+    const r = form.querySelector('input[name="costType"]:checked');
+    const t = r ? r.value : "";
+    $("#costAmountRow").hidden = !COST_PER[t];
+    if (COST_PER[t]) $("#costPer").textContent = COST_PER[t];
+    $("#costOtherRow").hidden = t !== "other";
+  }
+  form.querySelectorAll('input[name="costType"]').forEach(r => r.addEventListener("click", () => {
+    // Tapping the chosen option again clears it
+    if (r.dataset.was === "1") { r.checked = false; r.dataset.was = ""; }
+    else form.querySelectorAll('input[name="costType"]').forEach(x => x.dataset.was = x === r ? "1" : "");
+    showCostRows();
+    if (!$("#costAmountRow").hidden) $("#costAmount").focus();
+    else if (!$("#costOtherRow").hidden) $("#costOther").focus();
+    $("[data-f=cost]").classList.remove("invalid");
+    update();
+  }));
+  function costText() {
+    const r = form.querySelector('input[name="costType"]:checked');
+    if (!r) return "";
+    const amt = String($("#costAmount").value || "").trim().replace(/^\$/, "");
+    const money = amt ? "$" + (Number(amt) % 1 ? Number(amt).toFixed(2) : Number(amt)) : "";
+    if (r.value === "free") return "Free";
+    if (r.value === "donation") return money ? money + " suggested donation per person" : "";
+    if (r.value === "materials") return money ? money + " materials fee per person" : "";
+    return ($("#costOther").value || "").trim();
+  }
+  function setCost(text) {
+    text = String(text || "").trim();
+    let type = "", amt = "", other = "";
+    let m;
+    if (!text) type = "";
+    else if (/^free$/i.test(text)) type = "free";
+    else if ((m = text.match(/^\$?([\d.]+) suggested donation/i))) { type = "donation"; amt = m[1]; }
+    else if ((m = text.match(/^\$?([\d.]+) materials fee/i))) { type = "materials"; amt = m[1]; }
+    else { type = "other"; other = text; }
+    form.querySelectorAll('input[name="costType"]').forEach(x => { x.checked = x.value === type; x.dataset.was = x.checked ? "1" : ""; });
+    $("#costAmount").value = amt; $("#costOther").value = other;
+    showCostRows();
+  }
 
   /* ---------- RSVP options ---------- */
   form.querySelectorAll('input[name="rsvpMode"]').forEach(r => r.addEventListener("change", () => {
@@ -178,7 +223,7 @@
     } else if (cmd === "link") {
       $("#rteLink").hidden = false; $("#rteLinkUrl").value = ""; $("#rteLinkUrl").focus();
     } else if (cmd === "image") {
-      if (rte.querySelectorAll("img").length >= 6) { $("#detailsStatus").textContent = "That's the limit of 6 photos."; return; }
+      if (rte.querySelectorAll("img").length >= 6) { $("#detailsStatus").textContent = "That's the limit of 6 images."; return; }
       $("#detailsPhoto").click();
     } else document.execCommand(cmd);
     saveRange();
@@ -197,7 +242,7 @@
   $("#rteLinkUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#rteLinkAdd").click(); } });
   $("#detailsPhoto").addEventListener("change", async e => {
     const file = e.target.files[0]; if (!file) return;
-    $("#detailsStatus").textContent = "Adding your photo…";
+    $("#detailsStatus").textContent = "Adding your image…";
     try {
       const img = await loadImage(file);
       const max = 1400, scale = Math.min(1, max / Math.max(img.width, img.height));
@@ -208,7 +253,7 @@
       document.execCommand("insertHTML", false, `<img src="${c.toDataURL("image/jpeg", 0.8)}" alt=""><p><br></p>`);
       $("#detailsStatus").textContent = "";
       saveRange();
-    } catch (err) { $("#detailsStatus").textContent = "We couldn't read that photo. Try a different one."; }
+    } catch (err) { $("#detailsStatus").textContent = "We couldn't read that image. Try a different one."; }
     e.target.value = "";
   });
   // Pasting from Word or Google Docs: keep the simple formatting, drop the rest
@@ -244,7 +289,9 @@
       repeat: fd.get("repeat"),
       until: fd.get("until") || "",
       location: fd.get("place") === "__other" ? ($("#location").value || "").trim() : (fd.get("place") || ""),
-      cost: (fd.get("cost") || "").trim(),
+      cost: costText(),
+      costType: fd.get("costType") || "",
+      savePhoto: $("#savePhoto").checked,
       host: fd.get("host") || "",
       hostName: fd.get("host") === "community" ? (fd.get("hostName") || "").trim() : "",
       types: fd.getAll("types"),
@@ -324,10 +371,12 @@
     if (!v.allDay && !v.startTime) bad.push("startTime");
     if (!v.allDay && v.startTime && v.endTime && v.endTime <= v.startTime) bad.push("endTime");
     if (v.repeat !== "none" && (!v.until || v.until <= v.date)) bad.push("until");
+    if (v.costType && v.costType !== "free" && !v.cost) bad.push("cost");
     if (v.rsvpMode === "link" && (!v.link || !/^https?:\/\/\S+\.\S+/i.test(v.link))) bad.push("link");
     if (!v.calendars.length) bad.push("calendars");
     if (!v.name) bad.push("name");
     if (!/^\S+@\S+\.\S+$/.test(v.email)) bad.push("email");
+    $("#costErr").textContent = v.costType === "other" ? "Describe the cost, or unselect Other." : "Add a dollar amount.";
     form.querySelectorAll("[data-f]").forEach(f => f.classList.toggle("invalid", bad.includes(f.dataset.f)));
     return bad;
   }
@@ -421,7 +470,7 @@
     form.querySelectorAll('input[name="place"]').forEach(r => { r.checked = r.value === placeVal; r.dataset.was = r.checked ? "1" : ""; });
     $("#otherPlace").hidden = placeVal !== "__other";
     if (placeVal === "__other") $("#location").value = e.location;
-    set("cost", e.cost); set("host", e.host || ""); set("hostName", e.hostName || "");
+    setCost(e.cost); set("host", e.host || ""); set("hostName", e.hostName || "");
     $("#hostNameField").hidden = $("#host").value !== "community";
     form.querySelectorAll('input[name="types"]').forEach(c => c.checked = (e.types || []).includes(c.value));
     const mode = ["none", "form", "link"].includes(e.rsvpMode) ? e.rsvpMode : "none";

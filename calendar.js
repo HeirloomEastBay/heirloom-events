@@ -29,7 +29,7 @@
   document.querySelectorAll('[data-text="address"]').forEach(el => el.textContent = C.ADDRESS);
   document.querySelectorAll(".subscribe").forEach(a => a.href = H.subscribeLink());
   // In the embed, links should open outside the iframe
-  if (EMBED) document.querySelectorAll('a[href="submit.html"]').forEach(a => a.target = "_top");
+  if (EMBED) document.querySelectorAll('a[href="submit.html"], a[href="volunteer.html"]').forEach(a => a.target = "_top");
 
   const ICON = {
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',

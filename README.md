@@ -4,7 +4,8 @@ One form, two calendars, and a public events page for heirloomeastbay.com.
 
 - **index.html** is the events splash page: hero with the next event, the schedule, a photo strip, and buttons back to heirloomeastbay.com. It works on its own if someone lands there from Instagram.
 - **index.html?embed=1** is the calendar only, for the Squarespace Upcoming Events page.
-- **submit.html** is the "Share an event" form (no Google sign-in needed, phone-friendly photo upload).
+- **submit.html** is the "Submit an event" form (no Google sign-in needed, phone-friendly photo upload).
+- **volunteer.html** is the volunteer application. Each one lands on the **Volunteers** tab and is emailed to admin@heirloomeastbay.com (change it under *Volunteer applications go to* on the Settings tab). Replying to that email goes straight to the applicant. The applicant gets a confirmation with the background-check note. The areas they can pick are `VOLUNTEER_AREAS` in config.js.
 - **apps-script/Code.gs** is the backend. It lives in a Google Sheet owned by community@heirloomeastbay.com.
 - **config.js** holds the settings for the pages. It's the only web file you'll normally edit.
 
@@ -21,6 +22,12 @@ Until `API_URL` is filled in, both pages run in **preview mode** with sample eve
 5. The submitter gets an email when it's received, when it's live, or (kindly) if it's declined.
 6. Every 6 hours the backend imports **partner events** (see below) onto the public calendar.
 7. The public page reads the **public calendar** through the backend, so anything added straight into that Google Calendar shows up too.
+
+### Cost and saved photos
+
+**Cost** is a set of choices: *Free*, *Suggested donation* (a dollar amount per person), *Materials fee* (a dollar amount per person) or *Other* (anything they type). It shows on the card as, for example, "$10 suggested donation per person."
+
+**Saved photos:** when someone uploads their own photo, they can tick *"I'll host more events like this."* Once the event is live, the photo is added to the top of the **Keywords** tab with the event's name as its keyword (dates, seasons and "edition" are left out, so "Play Night - Fall Edition!" saves as "play night"). The next event with a similar name gets that photo automatically, and it shows in the "Pick one of ours" gallery. Untick *Show in form gallery*, or delete the row, to retire one.
 
 ### Event details popup
 
@@ -64,6 +71,7 @@ Groups like Plantify and The Soundbird Sanctuary are listed on the **Partners** 
 | Location name / Address | Where their events are, when the import doesn't say |
 | Partner emails | These people are trusted posters, and the form's "Who's hosting?" list includes the partner |
 | Active | Untick to hide a partner without deleting the row |
+| Also on residents' calendar | **At Heirloom only** (default: their on-farm events also go on the residents' calendar), **All events**, or **None**. Imports always go on the public calendar. |
 
 **Community members** (neighbors and friends who aren't part of a partner group) pick "Community member" under *Who's hosting?* and can add a name to show as "Hosted by …". Their events sit under the Community partners tab with their own chip. Whether a post goes live right away still depends only on the poster's email (trusted list or not), not on what they pick here.
 
@@ -85,12 +93,12 @@ New public events post themselves to Heirloom's Discord, sorted by channel. The 
 | #land-volunteers | Land |
 | #hospitality-volunteers | Hospitality |
 | #workdays-info | Workdays |
-| #events | Anything that doesn't fit the others, plus a **"This week at Heirloom" roundup every Monday at 9am** |
+| #community-events | Events marked **Community**, anything that doesn't fit the others, and the **"This week at Heirloom" roundup every Monday at 9am** |
 
 How an event finds its channel:
 - **From the form:** the poster ticks "What kind of event?" (any number). An event can go to more than one channel, e.g. a garden workday goes to #garden-volunteers and #workdays-info.
 - **Partner imports, events added straight in Calendar, or no type ticked:** the **Keywords** column decides (e.g. "fence, brush clearing" → #land-volunteers). Edit the keywords anytime.
-- **Nothing fits:** it goes to #events.
+- **Nothing fits:** it goes to #community-events. Posters can also pick **Community** to send it there on purpose.
 
 Setup for each channel (about a minute each): in Discord, hover the channel → ⚙️ **Edit Channel → Integrations → Webhooks → New Webhook**. Name it "Heirloom Events", give it the Heirloom badge (`images/logo-badge.png`) as its picture, click **Copy Webhook URL**, and paste it into that channel's row. You need "Manage Webhooks" permission. Then run **testDiscord** in Apps Script to send one test post to each channel.
 
