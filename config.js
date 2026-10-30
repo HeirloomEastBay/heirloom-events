@@ -31,9 +31,17 @@ window.HEIRLOOM = {
       website: "https://www.eventbrite.com/o/the-soundbird-sanctuary-121418754117" }
   ],
 
-  // "What kind of event?" choices in the form (each matches a Discord
-  // channel). Once live, the "Discord channels" tab in the Sheet takes over.
-  TYPES: ["Community", "Church", "Animals", "Garden", "Land", "Hospitality", "Workday"],
+  // Discord channels people can choose at the end of the form. Once live,
+  // the "Discord channels" tab in the Sheet takes over from this list.
+  DISCORD_CHANNELS: [
+    { type: "Community", name: "#community-events" },
+    { type: "Church", name: "#church-events" },
+    { type: "Animals", name: "#animal-volunteers" },
+    { type: "Garden", name: "#garden-volunteers" },
+    { type: "Land", name: "#land-volunteers" },
+    { type: "Hospitality", name: "#hospitality-volunteers" },
+    { type: "Workday", name: "#workdays-info" }
+  ],
 
   // Areas people can pick on the volunteer form (volunteer.html). "Other" is added automatically.
   VOLUNTEER_AREAS: ["Land", "Animals", "Garden", "Workshops"],

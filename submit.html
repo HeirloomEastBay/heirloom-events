@@ -139,6 +139,10 @@
   .save-photo { margin-top: 12px; align-items: flex-start; font-size: 15px; line-height: 1.4; }
   .save-photo input { margin-top: 1px; flex: none; }
 
+
+  .yn { grid-template-columns: repeat(2, 1fr); }
+  .invalid #channels label { border-color: var(--barn); }
+
   /* Editing */
   .keep-photo { margin-bottom: 12px; position: relative; }
   .keep-photo input { position: absolute; opacity: 0; }
@@ -173,6 +177,7 @@
         <img class="wordmark" src="images/logo-wordmark.svg" alt="Heirloom East Bay">
       </a>
       <nav class="nav" aria-label="Main">
+        <a class="nav-text keep" href="mine.html">My events</a>
         <a class="btn btn-outline btn-sm" href="index.html">See the calendar</a>
       </nav>
     </div>
@@ -210,11 +215,6 @@
             <label for="title">Event name <span class="req">*</span></label>
             <input type="text" id="title" name="title" maxlength="90" placeholder="Happy hour with the goats" autocomplete="off" required>
             <div class="err">Give your event a name.</div>
-          </div>
-          <div class="field">
-            <span class="lbl">What kind of event? <span class="opt">(pick any)</span></span>
-            <div class="type-chips" id="types" role="group" aria-label="Kind of event"></div>
-            <p class="hint">This decides which Heirloom Discord channels it's shared in. Skip it if none fit.</p>
           </div>
         </fieldset>
 
@@ -427,6 +427,23 @@
             <textarea id="notes" name="notes" maxlength="1000" placeholder="Expected headcount, setup needs, questions…" style="min-height:90px"></textarea>
           </div>
           <div class="hp" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        </fieldset>
+
+        <fieldset id="discordStep">
+          <legend><span class="step">8</span><h2>Share on Discord?</h2></legend>
+          <div class="field" data-f="discord">
+            <span class="lbl" id="discordQ">Do you want to post this on Heirloom's Discord?</span>
+            <div class="photo-modes rsvp-modes yn" role="radiogroup" aria-labelledby="discordQ">
+              <div class="mode"><input type="radio" name="discordShare" id="d-no" value="no" checked><label for="d-no">No, don't post it</label></div>
+              <div class="mode"><input type="radio" name="discordShare" id="d-yes" value="yes"><label for="d-yes">Yes, post it</label></div>
+            </div>
+            <div id="discordPick" hidden style="margin-top:14px">
+              <span class="lbl" id="channelsLbl">Which channel should it go to? <span class="opt">(pick one or more)</span></span>
+              <div class="type-chips" id="channels" role="group" aria-labelledby="channelsLbl"></div>
+            </div>
+            <div class="err">Pick at least one channel, or choose "No, don't post it."</div>
+            <p class="hint" id="discordHint">It'll be on the calendar and website either way.</p>
+          </div>
         </fieldset>
       </div>
 

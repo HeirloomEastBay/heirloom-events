@@ -22,13 +22,26 @@
     $("#hostNameField").hidden = $("#host").value !== "community";
   }
   renderHosts();
-  let types = (C.TYPES || []).slice();
-  function renderTypes() {
+  /* ---------- Discord: opt-in, at the end of the form ---------- */
+  // Channels come from the Sheet's "Discord channels" tab once live: [{ type, name }]
+  let channels = (C.DISCORD_CHANNELS || (C.TYPES || []).map(t => ({ type: t, name: t }))).slice();
+  function renderChannels() {
     const picked = new FormData(form).getAll("types");
-    $("#types").innerHTML = types.map((t, i) => `<label><input type="checkbox" name="types" id="t${i}" value="${esc(t)}"${picked.includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("");
-    $("#types").closest(".field").hidden = !types.length;
+    $("#channels").innerHTML = channels.map((c, i) =>
+      `<label><input type="checkbox" name="types" id="t${i}" value="${esc(c.type)}"${picked.includes(c.type) ? " checked" : ""}>${esc(c.name)}</label>`).join("");
+    $("#discordStep").hidden = !channels.length || !$("#cal-public").checked;
   }
-  renderTypes();
+  function syncDiscord() {
+    const yes = $("#d-yes").checked;
+    $("#discordPick").hidden = !yes;
+    if (!yes) form.querySelectorAll('input[name="types"]').forEach(c => c.checked = false);
+    $("[data-f=discord]").classList.remove("invalid");
+  }
+  renderChannels();
+  $("#channels").addEventListener("change", () => $("[data-f=discord]").classList.remove("invalid"));
+  form.querySelectorAll('input[name="discordShare"]').forEach(r => r.addEventListener("change", syncDiscord));
+  // Discord only posts public events
+  $("#cal-public").addEventListener("change", renderChannels);
   let fallbacks = C.FALLBACKS.slice();
   let upload = null; // { data: base64, url: objectURL }
 
@@ -72,7 +85,7 @@
   const presetsReady = !C.API_URL ? Promise.resolve() :
     fetch(C.API_URL + "?action=presets").then(r => r.json()).then(d => {
       if (d.ok && d.partners) { partners = d.partners; renderHosts(); }
-      if (d.ok && d.types) { types = d.types; renderTypes(); }
+      if (d.ok && d.channels && d.channels.length) { channels = d.channels; renderChannels(); }
       if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
       if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); update(); }
     }).catch(() => {});
@@ -294,7 +307,8 @@
       savePhoto: $("#savePhoto").checked,
       host: fd.get("host") || "",
       hostName: fd.get("host") === "community" ? (fd.get("hostName") || "").trim() : "",
-      types: fd.getAll("types"),
+      types: fd.get("discordShare") === "yes" && fd.getAll("calendars").includes("public") ? fd.getAll("types") : [],
+      noDiscord: !(fd.get("discordShare") === "yes" && fd.getAll("calendars").includes("public")),
       rsvpMode: fd.get("rsvpMode") || "none",
       spots: fd.get("spots") || "",
       link: fd.get("rsvpMode") === "link" ? (fd.get("link") || "").trim() : "",
@@ -372,6 +386,7 @@
     if (!v.allDay && v.startTime && v.endTime && v.endTime <= v.startTime) bad.push("endTime");
     if (v.repeat !== "none" && (!v.until || v.until <= v.date)) bad.push("until");
     if (v.costType && v.costType !== "free" && !v.cost) bad.push("cost");
+    if ($("#d-yes").checked && v.calendars.includes("public") && !v.types.length) bad.push("discord");
     if (v.rsvpMode === "link" && (!v.link || !/^https?:\/\/\S+\.\S+/i.test(v.link))) bad.push("link");
     if (!v.calendars.length) bad.push("calendars");
     if (!v.name) bad.push("name");
@@ -427,7 +442,7 @@
     $("#formWrap").innerHTML = `<div class="done">
       <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <h2>${esc(title)}</h2><p>${esc(msg)}</p>${extra || ""}
-      <div class="btns"><a class="btn btn-primary" href="submit.html">Submit another event</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
+      <div class="btns"><a class="btn btn-primary" href="submit.html">Submit another event</a><a class="btn btn-outline" href="mine.html">My events</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
     </div>`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -472,12 +487,15 @@
     if (placeVal === "__other") $("#location").value = e.location;
     setCost(e.cost); set("host", e.host || ""); set("hostName", e.hostName || "");
     $("#hostNameField").hidden = $("#host").value !== "community";
+    const share = !e.noDiscord && (e.types || []).length > 0;
+    $(share ? "#d-yes" : "#d-no").checked = true; syncDiscord();
     form.querySelectorAll('input[name="types"]').forEach(c => c.checked = (e.types || []).includes(c.value));
     const mode = ["none", "form", "link"].includes(e.rsvpMode) ? e.rsvpMode : "none";
     $("#r-" + mode).checked = true;
     document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== mode);
     set("spots", e.spots); set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
     form.querySelectorAll('input[name="calendars"]').forEach(c => c.checked = (e.calendars || []).includes(c.value));
+    renderChannels();
     set("name", e.name); set("email", e.email); set("phone", e.phone); set("notes", e.notes);
     rte.innerHTML = H.sanitize(e.details || "");
     $("#email").readOnly = true; $("#email").title = "Edits stay linked to the email that shared the event";
@@ -539,4 +557,14 @@
   };
 
   if (EDIT && C.API_URL) startEdit();
+
+  // Signed in on "My events"? Fill in their details on a new submission
+  if (!EDIT) {
+    let me = null; try { me = JSON.parse(localStorage.getItem("heirloom-me") || "null"); } catch (e) { /* storage off */ }
+    if (me) {
+      if (me.name && !$("#name").value) $("#name").value = me.name;
+      if (me.email && !$("#email").value) $("#email").value = me.email;
+      if (me.phone && !$("#phone").value) $("#phone").value = me.phone;
+    }
+  }
 })();
