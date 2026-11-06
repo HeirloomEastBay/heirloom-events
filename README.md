@@ -5,6 +5,7 @@ One form, two calendars, and a public events page for heirloomeastbay.com.
 - **index.html** is the events splash page: hero with the next event, the schedule, a photo strip, and buttons back to heirloomeastbay.com. It works on its own if someone lands there from Instagram.
 - **index.html?embed=1** is the calendar only, for the Squarespace Upcoming Events page.
 - **submit.html** is the "Submit an event" form (no Google sign-in needed, phone-friendly photo upload).
+- **mine.html** is **My events**: people sign in with their email and a 6-digit code we email them (no password), then see every event they've submitted with Edit or cancel and Guest list buttons. They stay signed in on that device for 30 days. It's linked from the form header, the events page and the confirmation emails.
 - **volunteer.html** is the volunteer application. Each one lands on the **Volunteers** tab and is emailed to admin@heirloomeastbay.com (change it under *Volunteer applications go to* on the Settings tab). Replying to that email goes straight to the applicant. The applicant gets a confirmation with the background-check note. The areas they can pick are `VOLUNTEER_AREAS` in config.js.
 - **apps-script/Code.gs** is the backend. It lives in a Google Sheet owned by community@heirloomeastbay.com.
 - **config.js** holds the settings for the pages. It's the only web file you'll normally edit.
@@ -81,39 +82,17 @@ Each partner gets its own tab on the calendar (All · Heirloom · Plantify · So
 
 **Adding a partner:** add a row on the Partners tab, then run **syncPartners** in Apps Script (or wait up to 6 hours).
 
-### Discord
+### Discord (opt-in)
 
-New public events post themselves to Heirloom's Discord, sorted by channel. The **Discord channels** tab has one row per channel:
+Nothing goes to Discord unless someone asks for it. At the end of the form, step 8 asks **"Do you want to post this on Heirloom's Discord?"** (No is the default). If they choose **Yes, post it**, they pick one or more channels, and the event is posted only there.
 
-| Channel | Gets |
-|---|---|
-| #church-events | Church events |
-| #animal-volunteers | Animals |
-| #garden-volunteers | Garden |
-| #land-volunteers | Land |
-| #hospitality-volunteers | Hospitality |
-| #workdays-info | Workdays |
-| #community-events | Events marked **Community**, anything that doesn't fit the others, and the **"This week at Heirloom" roundup every Monday at 9am** |
+- **Events added straight in Google Calendar are never posted**, so placeholders are safe.
+- **Partner imports** (Plantify, Soundbird) aren't posted unless *Discord: also post partner imports* is TRUE on the Settings tab. Then they go by the **Keywords** column on the Discord channels tab, or to #community-events if nothing matches.
+- The **Monday roundup** in #community-events lists only the week's opted-in events.
+- The channels offered in the form come from the **Discord channels** tab: every active row with an **Event type** and a webhook. The **Channel** column is the name people see.
+- Residents'-calendar-only events never post, so the question is hidden for them.
 
-How an event finds its channel:
-- **From the form:** the poster ticks "What kind of event?" (any number). An event can go to more than one channel, e.g. a garden workday goes to #garden-volunteers and #workdays-info.
-- **Partner imports, events added straight in Calendar, or no type ticked:** the **Keywords** column decides (e.g. "fence, brush clearing" → #land-volunteers). Edit the keywords anytime.
-- **Nothing fits:** it goes to #community-events. Posters can also pick **Community** to send it there on purpose.
-
-Setup for each channel (about a minute each): in Discord, hover the channel → ⚙️ **Edit Channel → Integrations → Webhooks → New Webhook**. Name it "Heirloom Events", give it the Heirloom badge (`images/logo-badge.png`) as its picture, click **Copy Webhook URL**, and paste it into that channel's row. You need "Manage Webhooks" permission. Then run **testDiscord** in Apps Script to send one test post to each channel.
-
-Good to know:
-- Approved and trusted posts go out right away; everything else is picked up within the hour. A repeating event is posted once.
-- When a channel is first connected, or the public calendar is switched, it marks what's already there as posted, so nothing floods.
-- Add or rename channels by editing rows; a channel with no webhook is skipped. Untick **Active** to pause one. The form's "What kind of event?" choices come from the **Event type** column.
-- The **Discord log** tab shows what was posted where. Both kinds of posts can be turned off on the Settings tab.
-- **Connect the webhooks after you go live** (or use a private test channel), so demo events don't post to the real channels.
-
-The residents' copy of an event includes the submitter's contact info and notes. The public copy never does.
-
----
-
-## Setup (about 20 minutes)
+Setup for each channel: Discord → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL, paste it into that channel's row, then run **testDiscord**. You need the "Manage Webhooks" permission on the server.
 
 ### 1. The Sheet and backend (signed in as community@heirloomeastbay.com)
 
@@ -190,7 +169,7 @@ The page's "Add to your calendar" button follows whatever the Settings tab says,
 | Add or remove a trusted poster or approver | Edit the **Settings** tab, one email per row |
 | Approve without the email | **Submissions** tab → change Status from *Pending* to *Approved* |
 | Take an event down | Unpublish button in the FYI email, or set Status to *Unpublished* |
-| Change an event's time or title | Edit it in Google Calendar (both copies if it's on both) |
+| Change an event's details | **Form events:** the poster uses *My events*, or you edit the row on the **Submissions** tab (title, date, start/end, repeats, until, location, description, details, cost, link, calendars). Sheet edits go to both calendars and the website right away; a value that doesn't make sense turns the cell red with a note and nothing is sent, and a good edit gets a "✓ Synced" note. Date/time/place changes email anyone who RSVP'd. **Events added in Google Calendar:** edit them in Google Calendar. |
 | Add a preset photo | Upload it to `images/` on GitHub, then add a row on the **Keywords** tab |
 | Add or reorder places in "Where on the farm?" | **Locations** tab, one per row (people can always pick "Somewhere else" and type their own) |
 | See who's coming | **RSVPs** tab (filter by Event), or the guest-list link in the host's emails |
