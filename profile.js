@@ -65,7 +65,7 @@
           <label class="f">Last name<input id="last" autocomplete="family-name" maxlength="60" value="${esc(r.last)}"></label>
         </div>
         <label class="f">Email<input type="email" value="${esc(r.email)}" disabled></label>
-        <p class="lock" style="margin-top:-6px">This is the email you log in with. To change it, ask the Heirloom team.</p>
+        <p class="lock" style="margin-top:-6px">${(r.others || []).length ? `You can also log in with ${esc(r.others.join(", "))}. ` : ""}To change your email${(r.others || []).length ? "s" : ""} or add another one, ask the Heirloom team.</p>
         <label class="f"><span>Phone <span class="opt">(optional)</span></span><input id="phone" type="tel" autocomplete="tel" maxlength="40" value="${esc(r.phone)}"></label>
         <label class="f"><span>Address <span class="opt">(optional)</span></span><input id="address" autocomplete="street-address" maxlength="300" value="${esc(r.address)}"></label>
         <label class="f"><span>Emergency contact <span class="opt">(optional)</span></span><input id="emergency" maxlength="200" placeholder="Name, relationship, phone" value="${esc(r.emergency)}"></label>

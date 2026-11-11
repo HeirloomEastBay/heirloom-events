@@ -198,11 +198,11 @@
     list.forEach((s, i) => {
       if (s.date !== last) { html += (last ? "</div>" : "") + `<h3 class="day-h">${esc(dayName(s.date))}</h3><div class="list">`; last = s.date; }
       const tag = s.kind === "signup" ? `<span class="tag vol">Signed up</span>${s.o.mine === "Waitlist" ? `<span class="tag warn">Waitlist</span>` : ""}`
-        : s.kind === "cover" ? `<span class="tag mine">Covering for ${esc(s.r.by)}</span>`
+        : s.kind === "cover" ? `<span class="tag mine">${s.r.pool ? "You're covering" : "Covering for " + esc(s.r.by)}</span>`
         : `<span class="tag">Regular slot</span>${s.req ? `<span class="tag warn">Coverage requested</span>` : ""}`;
       const act = s.kind === "signup" ? `<button class="btn-quiet" data-cancel="${i}">Cancel my spot</button>`
         : s.kind === "slot" ? (s.req ? `<button class="btn-quiet" data-uncover="${i}">I can make it after all</button>` : `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>`)
-        : `<span class="needs">Can't make it? Let ${esc(s.r.by)} know.</span>`;
+        : `<span class="needs">Can't make it? Let ${s.r.pool ? "the Heirloom team" : esc(s.r.by)} know.</span>`;
       const firstOfSlot = s.kind === "slot" && !s.req && !remSeen[s.slot.id] && (remSeen[s.slot.id] = true);
       const rem = firstOfSlot && !s.req ? remBtn(!!s.slot.reminders, `data-rem-slot="${esc(s.slot.id)}"`) : s.kind === "cover" ? remBtn(!!s.r.reminder, `data-rem-cover="${esc(s.r.id)}"`) : "";
       html += `<article class="item noimg"><div><h3>${esc(s.title)}</h3><p class="when">${esc(s.time)}${s.location ? " · " + esc(s.location) : ""}</p>
@@ -224,15 +224,17 @@
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   function renderChores() {
     const ch = data.chores;
-    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular weekly slots. Open ones are up for grabs, first come, first served. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
+    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular weekly chores. Open ones are up for grabs, first come, first served. "Volunteers" means the volunteer pool shares it; if you'd like to own one every week, you can take it. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
     if (!ch.length) html += `<div class="empty"><h2>The chore chart is empty</h2><p>Once slots are added, they'll show up here.</p></div>`;
     else html += `<div class="week">${DAYS.map(d => {
       const slots = ch.filter(c => c.day === d);
       return `<section class="dcol" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
         const i = ch.indexOf(c);
         const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Open</span>` : `<span class="who">${esc(c.who)}</span>`;
+        const canTake = (c.open || c.pool) && !c.missing.length;
         const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>${remBtn(!!c.reminders, `data-rem-slot="${esc(c.id)}"`)}<button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
-          : c.open ? (c.missing.length ? `<span class="needs">${esc(needText(c.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`) : "";
+          : c.open ? (c.missing.length ? `<span class="needs">${esc(needText(c.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`)
+          : canTake ? `<button class="btn-quiet" data-claim="${i}" style="justify-self:start;padding:2px 0">Make it my regular slot</button>` : "";
         return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}"><b>${esc(c.chore)}</b><span class="t">${esc(c.time)}</span>
           ${c.training ? `<span class="tag plain">${esc(c.training)}</span>` : ""}${who}${act}</div>`;
       }).join("") : `<p class="empty-day">No slots</p>`}</section>`;
@@ -240,7 +242,7 @@
     app.innerHTML = html;
     wireRem(app);
     app.querySelectorAll("[data-claim]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.claim];
-      confirmDlg(`Take ${c.day}s, ${c.time}?`, `${c.chore}, every week. If you can't make a date, you can ask for coverage here.`, "Take this slot",
+      confirmDlg(`Take ${c.day}s, ${c.time}?`, `${c.chore}, every week${c.pool ? ", as your own regular slot" : ""}. If you can't make a date, you can ask for coverage here.`, "Take this slot",
         btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.day}s ${c.time}. Thank you! Want an email the day before? Turn on reminders in My shifts.`)); });
     app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.drop];
       confirmDlg(`Give up ${c.day}s?`, `${c.chore}, ${c.time}. We'll let the other volunteers know it's open. If you only need a date or two off, ask for coverage instead.`, "Give it up",
@@ -254,7 +256,7 @@
     let html = statusNote() + `<div class="panel-h"><div><h2>Coverage</h2><p>Dates other volunteers need covered. Only volunteers see these. Thank you for stepping in!</p></div></div>`;
     if (!open.length) html += `<div class="empty"><h2>Nothing needs covering</h2><p>When someone needs a date covered, it shows up here and we'll email you.</p></div>`;
     else html += `<div class="list">${open.map((r, i) => `<article class="item noimg"><div><h3>${esc(r.chore)}</h3>
-      <p class="when">${esc(dayName(r.date))} · ${esc(r.time)}</p><div class="tags"><span class="tag warn">${esc(r.by)} needs coverage</span></div>
+      <p class="when">${esc(dayName(r.date))} · ${esc(r.time)}</p><div class="tags"><span class="tag warn">${r.pool ? "Needs someone" : esc(r.by) + " needs coverage"}</span></div>
       ${r.note ? `<p class="desc">“${esc(r.note)}”</p>` : ""}
       <div class="acts">${r.missing.length ? `<span class="needs">${esc(needText(r.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-take="${i}">I can cover</button>`}</div></div></article>`).join("")}</div>`;
     if (mine.length) html += `<h3 class="day-h" style="margin-top:28px">Your requests</h3><div class="list">${mine.map((r, i) => `<article class="item noimg"><div><h3>${esc(r.chore)}</h3>
@@ -263,7 +265,7 @@
       ${r.status === "Open" ? `<div class="acts"><button class="btn-quiet" data-unreq="${i}">I can make it after all</button></div>` : ""}</div></article>`).join("")}</div>`;
     app.innerHTML = html;
     app.querySelectorAll("[data-take]").forEach(b => b.onclick = () => { const r = open[+b.dataset.take];
-      confirmDlg(`Cover ${shortDay(r.date)}?`, `${r.chore}, ${r.time}, for ${r.by}. We'll let them know.`, "I'll cover it",
+      confirmDlg(`Cover ${shortDay(r.date)}?`, r.pool ? `${r.chore}, ${r.time}. Thank you for pitching in!` : `${r.chore}, ${r.time}, for ${r.by}. We'll let them know.`, "I'll cover it",
         btn => run(btn, { action: "volCoverTake", id: r.id }, `Thank you! You're covering ${r.chore} on ${shortDay(r.date)}. We'll email you a reminder the day before.`)); });
     app.querySelectorAll("[data-unreq]").forEach(b => b.onclick = () => run(b, { action: "volCoverCancel", id: mine[+b.dataset.unreq].id }, "Got it. Your request is cancelled."));
   }
@@ -350,7 +352,8 @@
       { id: "S-2", chore: "Evening animal chores", day: "Thursday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal chores", mine: false, open: true, who: "", missing: [], next: [] },
       { id: "S-3", chore: "Evening animal chores", day: "Saturday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal chores", mine: false, open: false, who: "Bo", missing: [], next: [] },
       { id: "S-4", chore: "Morning milking", day: "Saturday", start: "07:00", end: "08:00", time: "7am–8am", training: "Goat milking", mine: false, open: false, who: "Priya", missing: [], next: [] },
-      { id: "S-5", chore: "Chicken coop clean-out", day: "Monday", start: "16:00", end: "17:00", time: "4pm–5pm", training: "", mine: false, open: true, who: "", missing: [], next: [] }
+      { id: "S-5", chore: "Chicken coop clean-out", day: "Monday", start: "16:00", end: "17:00", time: "4pm–5pm", training: "", mine: false, open: true, who: "", missing: [], next: [] },
+      { id: "S-6", chore: "AM animal chores", day: "Monday", start: "09:00", end: "10:00", time: "by 10am", training: "Animal chores", mine: false, open: false, pool: true, who: "Volunteers", missing: [], next: [] }
     ],
     coverage: [{ id: "C-1", slotId: "S-3", chore: "Evening animal chores", date: nextDow(6, 7), time: "3pm–4pm", start: "15:00", end: "16:00", by: "Bo", note: "Visiting family that weekend!", status: "Open", missing: [] }],
     myRequests: [], myCovers: [{ id: "C-9", slotId: "S-4", chore: "Morning milking", date: nextDow(6), time: "7am–8am", start: "07:00", end: "08:00", by: "Priya", note: "", status: "Covered", coveredBy: "Ana", reminder: true, missing: [] }], mySignups: [],

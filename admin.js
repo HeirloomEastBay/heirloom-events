@@ -389,8 +389,8 @@
      ============================================================ */
   async function chores(fresh) {
     app.innerHTML = `<div class="panel-h"><div><h2>Chore chart</h2>
-      <p>Regular weekly slots, one person each. When a slot is set to Open, qualified volunteers get an email and can take it in their portal.
-      Volunteers can also ask for coverage on certain dates. It all lives on the Chore chart and Coverage tabs in the Sheet too.</p></div></div>
+      <p>Regular weekly chores, one slot per day. Give each one a person, the general "Volunteers" pool, or leave it Open (qualified volunteers get an email and can take it).
+      Anyone can ask for coverage on certain dates. It all lives on the Chore chart and Coverage tabs in the Sheet too.</p></div></div>
       <div id="ch"><p class="loading">Loading the chore chart…</p></div>`;
     try {
       if (fresh || !state.chores) state.chores = await call({ action: "adminChores" });
@@ -400,50 +400,67 @@
   function slotForm(s, d, n) {
     const opt = (list, val, blank) => (blank != null ? `<option value="">${esc(blank)}</option>` : "") + list.map(x => `<option${x === val ? " selected" : ""}>${esc(x)}</option>`).join("");
     const vols = d.volunteers.slice();
-    if (s.volunteer && !vols.some(v => v.email === s.volunteer)) vols.push({ email: s.volunteer, name: s.volunteer + " (not active)" });
-    return `<form class="slotf${s.id && !s.volunteer ? " open" : ""}${s.id ? "" : " add-slot"}" data-n="${n}" novalidate>
-      <label>Chore<input name="chore" maxlength="80" value="${esc(s.chore || "")}" placeholder="Evening animal chores" required></label>
-      <label>Day<select name="day">${opt(d.days, s.day || "Monday")}</select></label>
-      <label>Start<input type="time" name="start" value="${esc(s.start || "15:00")}"></label>
-      <label>End<input type="time" name="end" value="${esc(s.end || "")}"></label>
+    const real = s.volunteer && s.volunteer !== "Volunteers";
+    if (real && !vols.some(v => v.email === s.volunteer)) vols.push({ email: s.volunteer, name: s.volunteer + " (not active)" });
+    const add = !s.id;
+    return `<form class="slotf${s.id && !s.volunteer ? " open" : ""}${add ? " add-slot" : ""}" data-n="${n}" novalidate>
+      <label>Chore<input name="chore" maxlength="80" value="${esc(s.chore || "")}" placeholder="AM animal chores" required></label>
+      ${add ? "" : `<label>Day<select name="day">${opt(d.days, s.day || "Monday")}</select></label>`}
+      <label>When<input name="when" maxlength="40" value="${esc(s.when || "")}" placeholder="by 10am, ~5pm, Anytime" list="whenList"></label>
+      <label><span>Hours each</span><input type="number" name="hours" min="0.25" max="12" step="0.25" value="${esc(s.hours || 1)}"></label>
       <label>Training needed<select name="training">${opt(d.trainings, s.training, "None")}</select></label>
-      <label>Volunteer<select name="volunteer"><option value="">Open (needs someone)</option>${vols.map(v => `<option value="${esc(v.email)}"${v.email === s.volunteer ? " selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
-      <div class="sbtns">${s.id ? `<button type="button" class="btn-quiet" data-rm>Remove</button><button class="btn btn-forest btn-sm" disabled>Save</button>` : `<button class="btn btn-primary btn-sm">Add slot</button>`}</div>
-      <label class="notes">Notes <span class="opt">(shown to volunteers)</span><input name="notes" maxlength="500" value="${esc(s.notes || "")}" placeholder="Feed, water, collect eggs. Gate code is on the barn door."></label>
+      <label>Who<select name="volunteer"><option value="">Open (needs someone)</option><option value="Volunteers"${s.volunteer === "Volunteers" ? " selected" : ""}>Volunteers (the general pool)</option>
+        ${vols.map(v => `<option value="${esc(v.email)}"${v.email === s.volunteer ? " selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      ${add ? `<fieldset class="days"><legend>Days</legend>${d.days.map(x => `<label><input type="checkbox" name="days" value="${x}">${x.slice(0, 3)}</label>`).join("")}<button type="button" class="btn-quiet" data-every>Every day</button></fieldset>` : ""}
+      <label class="notes"><span>Notes <span class="opt">(shown to volunteers)</span></span><input name="notes" maxlength="500" value="${esc(s.notes || "")}" placeholder="Feed, water, collect eggs. Gate code is on the barn door."></label>
+      <div class="sbtns">${s.id ? `<button type="button" class="btn-quiet" data-need>Needs coverage…</button><button type="button" class="btn-quiet" data-rm>Remove</button><button class="btn btn-forest btn-sm" disabled>Save</button>` : `<button class="btn btn-primary btn-sm">Add</button>`}</div>
+      ${s.id && d.slots.filter(x => x.chore === s.chore).length > 1 ? `<label class="alld"><input type="checkbox" name="allDays"> Also change the name, when, hours, training and notes on the other ${d.slots.filter(x => x.chore === s.chore).length - 1} days of "${esc(s.chore)}"</label>` : ""}
     </form>`;
   }
   function renderChores() {
     const d = state.chores;
     const days = d.days.filter(day => d.slots.some(s => s.day === day));
-    const open = d.slots.filter(s => !s.volunteer).length;
-    $("#ch").innerHTML = `<h3 class="day-h" style="font-family:var(--f-label);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 8px">Add a slot</h3>
+    const open = d.slots.filter(s => !s.volunteer).length, pool = d.slots.filter(s => s.volunteer === "Volunteers").length;
+    const whens = [...new Set(["by 10am", "~5pm", "after 2pm", "Morning", "Evening", "Anytime"].concat(d.slots.map(s => s.when).filter(Boolean)))];
+    $("#ch").innerHTML = `<datalist id="whenList">${whens.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
+      <h3 class="day-h" style="font-family:var(--f-label);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 8px">Add a chore</h3>
       ${slotForm({}, d, -1)}
-      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}. Only active volunteers (and only those with the training, if one is needed) can be picked or take a slot.</p>
-      ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? slotForm(s, d, n) : "").join("")}</section>`).join("")}
-      <div class="panel-h" style="margin-top:26px"><div><h2 style="font-size:22px">Coverage requests</h2><p>Dates volunteers asked to have covered, coming up.</p></div></div>
-      ${d.coverage.length ? `<div class="alist">${d.coverage.map(c => `<article class="arow" style="grid-template-columns:1fr"><div>
+      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile.</p>
+      ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? `<details class="slotd${!s.volunteer ? " open-slot" : ""}"${state.openSlot === s.id ? " open" : ""} data-id="${esc(s.id)}">
+        <summary><b>${esc(s.chore)}</b><span class="w">${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
+          <span class="who${!s.volunteer ? " open" : s.volunteer === "Volunteers" ? " pool" : ""}">${!s.volunteer ? "Open" : s.volunteer === "Volunteers" ? "Volunteers" : esc((d.volunteers.find(v => v.email === s.volunteer) || { name: s.volunteer }).name)}</span>
+          ${d.coverage.some(c => c.slotId === s.id && c.status === "Open") ? `<span class="status pending">Needs coverage</span>` : ""}<span class="ed">Edit</span></summary>
+        ${slotForm(s, d, n)}</details>` : "").join("")}</section>`).join("")}
+      <div class="panel-h" style="margin-top:26px"><div><h2 style="font-size:22px">Coverage requests</h2><p>Dates that need someone, coming up.</p></div></div>
+      ${d.coverage.length ? `<div class="alist">${d.coverage.map((c, i) => `<article class="arow" style="grid-template-columns:1fr"><div>
         <h3>${esc(c.chore)}</h3><p class="when">${esc(H.fmt(H.zoned(...c.date.split("-").map(Number), 12), { weekday: "long", month: "long", day: "numeric" }))} · ${esc(c.time)}</p>
-        <div class="chips2"><span class="status src">Asked by ${esc(c.by)}</span>${c.status === "Covered" ? `<span class="status">Covered by ${esc(c.coveredBy)}</span>` : `<span class="status pending">Still open</span>`}</div>
-        ${c.note ? `<p class="hint" style="margin:0">“${esc(c.note)}”</p>` : ""}</div></article>`).join("")}</div>`
-        : `<div class="empty"><h2>No coverage requests</h2><p>When a volunteer asks for a date to be covered, it shows up here.</p></div>`}`;
+        <div class="chips2"><span class="status src">${c.pool ? "Needs someone" : "Asked by " + esc(c.by)}</span>${c.status === "Covered" ? `<span class="status">Covered by ${esc(c.coveredBy)}</span>` : `<span class="status pending">Still open</span>`}</div>
+        ${c.note ? `<p class="hint" style="margin:0 0 8px">“${esc(c.note)}”</p>` : ""}<div class="acts"><button class="btn-quiet" data-cc="${i}" style="padding:2px 0">Cancel this request</button></div></div></article>`).join("")}</div>`
+        : `<div class="empty"><h2>No coverage requests</h2><p>When a date needs someone, it shows up here.</p></div>`}`;
+    $("#ch").querySelectorAll(".slotd").forEach(x => x.addEventListener("toggle", () => { if (x.open) state.openSlot = x.dataset.id; }));
     $("#ch").querySelectorAll(".slotf").forEach(f => {
       const n = +f.dataset.n, s = n >= 0 ? d.slots[n] : null, save = f.querySelector(".sbtns .btn");
-      if (s) f.querySelectorAll("input, select").forEach(el => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => save.disabled = false));
+      if (s) f.querySelectorAll("input, select").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => save.disabled = false));
+      const every = f.querySelector("[data-every]");
+      if (every) every.onclick = () => { const all = [...f.querySelectorAll('[name="days"]')], on = !all.every(c => c.checked); all.forEach(c => c.checked = on); };
       f.onsubmit = async e => {
         e.preventDefault();
-        const body = Object.fromEntries(new FormData(f).entries());
+        const fd = new FormData(f), body = Object.fromEntries(fd.entries());
+        body.days = fd.getAll("days"); body.allDays = !!fd.get("allDays");
         if (!body.chore.trim()) { f.querySelector('[name="chore"]').focus(); return flash("Name the chore first.", true); }
+        if (!s && !body.days.length) return flash("Pick at least one day.", true);
         const wasVol = s && s.volunteer;
         const label = save.innerHTML; save.disabled = true; save.innerHTML = `<span class="spinner"></span>`;
         try {
           state.chores = await call(Object.assign({ action: "adminChoreSave", id: s ? s.id : "" }, body));
+          state.ppl = null; state.person = null;
           renderChores();
           flash(!body.volunteer && (!s || wasVol) ? "Saved. We emailed qualified volunteers that it's open." : "Saved.");
         } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); save.disabled = false; save.innerHTML = label; flash(err.message, true); }
       };
       const rm = f.querySelector("[data-rm]");
       if (rm) rm.onclick = () => {
-        openDlg(`<h2>Remove this slot?</h2><p>${esc(s.chore)}, ${esc(s.day)}s. It comes off the chore chart${s.volunteer ? ` and ${esc(s.volunteer)} won't see it anymore` : ""}.</p>
+        openDlg(`<h2>Remove this slot?</h2><p>${esc(s.chore)}, ${esc(s.day)}s. It comes off the chore chart${s.volunteer && s.volunteer !== "Volunteers" ? ` and ${esc(s.volunteer)} won't see it anymore` : ""}.</p>
           <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
         $("#go").onclick = async e => {
           const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
@@ -451,24 +468,57 @@
           catch (err) { b.disabled = false; b.textContent = "Remove"; flash(err.message, true); }
         };
       };
+      const need = f.querySelector("[data-need]");
+      if (need) need.onclick = () => {
+        const taken = {}; d.coverage.forEach(c => { if (c.slotId === s.id) taken[c.date] = c.status; });
+        const fmtD = ymd => H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { weekday: "short", month: "short", day: "numeric" });
+        openDlg(`<h2>Who can do ${esc(s.chore)}?</h2><p>${esc(s.day)}s, ${esc(s.when)}. Pick the dates that need someone. We'll email the volunteers who can do it, and they can grab it in their portal.</p>
+          <div class="checks" id="needDates">${s.next.map(x => `<label${taken[x] ? ' style="opacity:.55"' : ""}><input type="checkbox" value="${x}"${taken[x] ? " disabled" : ""}>${esc(fmtD(x))}${taken[x] ? " (" + taken[x].toLowerCase() + ")" : ""}</label>`).join("")}</div>
+          <label class="lbl" for="needNote">Note <span class="opt">(optional)</span></label><textarea id="needNote" maxlength="500" placeholder="Brit's away that weekend"></textarea>
+          <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Ask for coverage</button></div>`);
+        $("#go").onclick = async e => {
+          const dates = [...dlgIn.querySelectorAll("#needDates input:checked")].map(i => i.value);
+          if (!dates.length) return flash("Pick at least one date.", true);
+          const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+          try { state.chores = await call({ action: "adminCoverNeed", slotId: s.id, dates, note: $("#needNote").value.trim() }); dlg.close(); renderChores(); flash("Done. We emailed the volunteers who can do it."); }
+          catch (err) { if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); } b.disabled = false; b.textContent = "Ask for coverage"; flash(err.message, true); }
+        };
+      };
+    });
+    $("#ch").querySelectorAll("[data-cc]").forEach(b => b.onclick = async () => {
+      const c = d.coverage[+b.dataset.cc];
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try { state.chores = await call({ action: "adminCoverCancel", id: c.id }); renderChores(); flash(c.status === "Covered" ? `Cancelled. Let ${c.coveredBy} know they're off the hook.` : "Cancelled."); }
+      catch (err) { b.disabled = false; b.textContent = "Cancel this request"; flash(err.message, true); }
     });
   }
+  let demoCh = null;
   function demoChores(b) {
-    const base = state.chores || { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"],
-      volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }],
-      slots: [
-        { id: "S-1", chore: "Evening animal chores", day: "Tuesday", start: "15:00", end: "16:00", training: "Animal chores", volunteer: "ana@example.com", notes: "Feed, water, collect eggs." },
-        { id: "S-2", chore: "Evening animal chores", day: "Thursday", start: "15:00", end: "16:00", training: "Animal chores", volunteer: "", notes: "" },
-        { id: "S-3", chore: "Morning milking", day: "Saturday", start: "07:00", end: "08:00", training: "Goat milking", volunteer: "bo@example.com", notes: "" }],
-      coverage: [{ id: "C-1", chore: "Evening animal chores", date: H.dayKey(new Date(Date.now() + 6 * 86400000)), time: "3pm–4pm", by: "ana@example.com", status: "Open", coveredBy: "", note: "Out of town" }] };
-    if (b.action === "adminChoreSave") {
-      const s = { id: b.id || "S-" + Date.now(), chore: b.chore, day: b.day, start: b.start, end: b.end, training: b.training, volunteer: b.volunteer, notes: b.notes };
-      const i = base.slots.findIndex(x => x.id === b.id);
-      if (i === -1) base.slots.push(s); else base.slots[i] = s;
-      const days = base.days; base.slots.sort((a, c) => days.indexOf(a.day) - days.indexOf(c.day) || a.start.localeCompare(c.start));
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const nextOf = day => { const want = days.indexOf(day), d = new Date(); let k = 0; while (((d.getDay() + 6 + k) % 7) !== want) k++; return [0, 7, 14, 21, 28, 35, 42, 49].map(n => H.dayKey(new Date(Date.now() + (k + n) * 86400000))); };
+    const sortOf = w => /10am/.test(w) ? "09:00" : /2pm/.test(w) ? "14:00" : /5pm/.test(w) ? "17:00" : /morning/i.test(w) ? "08:00" : "12:00";
+    if (!demoCh) {
+      const std = [["AM animal chores", days, "by 10am", 1, "Animal chores"], ["PM animal chores", days, "~5pm", 1, "Animal chores"], ["Eggs & welfare check", days, "after 2pm", 0.5, "Animal chores"],
+        ["AM milking", days, "Morning", 0.5, "Goat milking"], ["Chicken feed/water refill", ["Tuesday", "Thursday", "Saturday"], "Anytime", 0.5, "Animal chores"]];
+      let id = 0;
+      demoCh = { days, trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"],
+        volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }],
+        slots: std.flatMap(([chore, ds, when, hours, training]) => ds.map(day => ({ id: "S-" + (++id), chore, day, when, hours, training, volunteer: chore === "PM animal chores" && day === "Tuesday" ? "ana@example.com" : "Volunteers", notes: "", next: nextOf(day), sort: sortOf(when) }))),
+        coverage: [] };
+      demoCh.coverage.push({ id: "C-1", slotId: "S-3", chore: "AM animal chores", date: nextOf("Wednesday")[0], time: "by 10am", by: "", pool: true, status: "Open", coveredBy: "", note: "Brit's away" });
     }
-    if (b.action === "adminChoreRemove") base.slots = base.slots.filter(x => x.id !== b.id);
-    return Object.assign({ ok: true }, JSON.parse(JSON.stringify(base)));
+    const D = demoCh, sortAll = () => D.slots.sort((a, c) => days.indexOf(a.day) - days.indexOf(c.day) || a.sort.localeCompare(c.sort));
+    if (b.action === "adminChoreSave") {
+      const f = { chore: b.chore, when: b.when || "Anytime", hours: Number(b.hours) || 1, training: b.training, volunteer: b.volunteer, notes: b.notes, sort: sortOf(b.when || "") };
+      if (b.id) { const s = D.slots.find(x => x.id === b.id), old = s.chore; Object.assign(s, f, { day: b.day, next: nextOf(b.day) });
+        if (b.allDays) D.slots.forEach(x => { if (x !== s && x.chore === old) Object.assign(x, f, { volunteer: x.volunteer }); }); }
+      else b.days.forEach(day => D.slots.push(Object.assign({ id: "S-" + Date.now() + day, day, next: nextOf(day) }, f)));
+      sortAll();
+    }
+    if (b.action === "adminChoreRemove") D.slots = D.slots.filter(x => x.id !== b.id);
+    if (b.action === "adminCoverNeed") { const s = D.slots.find(x => x.id === b.slotId); b.dates.forEach(dt => D.coverage.push({ id: "C-" + dt, slotId: s.id, chore: s.chore, date: dt, time: s.when, by: "", pool: true, status: "Open", coveredBy: "", note: b.note })); D.coverage.sort((x, y) => x.date.localeCompare(y.date)); }
+    if (b.action === "adminCoverCancel") D.coverage = D.coverage.filter(c => c.id !== b.id);
+    return Object.assign({ ok: true }, JSON.parse(JSON.stringify(D)));
   }
 
   /* ============================================================
@@ -529,7 +579,7 @@
       else if (f === "none") { if (p.role) return false; }
       else if (f && !p[f]) return false;
       if (pstate.news && !p.news) return false;
-      return !pstate.q || [p.first, p.last, p.email, p.phone].join(" ").toLowerCase().includes(pstate.q.toLowerCase());
+      return !pstate.q || [p.first, p.last, p.email, p.phone].concat(p.others || []).join(" ").toLowerCase().includes(pstate.q.toLowerCase());
     };
     const filtered = () => all.filter(match);
     const draw = () => {
@@ -537,7 +587,7 @@
       $("#pcount").textContent = `${list.length} of ${all.length} ${all.length === 1 ? "person" : "people"}`;
       $("#plist").innerHTML = list.length ? list.map(p => `<button type="button" class="prow" data-e="${esc(p.email)}">
           <span class="av${p.role === "Resident" ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
-          <span class="pmain"><b>${esc(nameOf(p))}</b><span class="sub">${esc(p.email)}${p.phone ? " · " + esc(p.phone) : ""}</span>
+          <span class="pmain"><b>${esc(nameOf(p))}</b><span class="sub">${esc(p.email)}${(p.others || []).length ? " + " + p.others.length + " more" : ""}${p.phone ? " · " + esc(p.phone) : ""}</span>
             <span class="chips2">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted && !p.admin && !p.approver ? `<span class="status">Trusted poster</span>` : ""}${p.slots ? `<span class="status src">${p.slots} chore slot${p.slots > 1 ? "s" : ""}</span>` : ""}${p.events ? `<span class="status src">${p.events} event${p.events > 1 ? "s" : ""} posted</span>` : ""}</span></span>
           <span class="pstat">${p.hours ? `<b>${esc(hrs(p.hours))}</b>` : ""}${p.lastText ? `<span>Last helped ${esc(p.lastText)}</span>` : ""}</span>
         </button>`).join("")
@@ -644,6 +694,7 @@
           <h3>Contact</h3>
           <div class="two">${field("first", "First name", p.first)}${field("last", "Last name", p.last)}</div>
           <label class="lbl">Email<input type="email" value="${esc(p.email)}" disabled></label>
+          <label class="lbl">Other emails they log in with <span class="opt">(optional)</span><input type="text" data-k="others" value="${esc((p.others || []).join(", "))}" placeholder="their personal email, for example" autocomplete="off"></label>
           ${field("phone", "Phone", p.phone, "tel", true)}
           ${field("address", "Address", p.address, "text", true)}
           ${field("emergency", "Emergency contact", p.emergency, "text", true, "Name, relationship, phone")}
@@ -725,7 +776,7 @@
       }
       const resident = q("resident").checked, st = q("stage").value;
       const body = { action: "adminPersonSave", email: p.email, first: q("first").value, last: q("last").value, phone: q("phone").value, address: q("address").value,
-        emergency: q("emergency").value, news: q("news").checked, notes: q("notes").value,
+        emergency: q("emergency").value, news: q("news").checked, notes: q("notes").value, others: q("others").value,
         role: resident ? "Resident" : st === NOT_VOL ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("bg").value,
         trainings: [...f.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value),
         trusted: q("trusted").checked, approver: q("approver").checked, admin };
@@ -748,7 +799,7 @@
       pick.onchange = () => add.disabled = !pick.value;
       add.onclick = () => {
         const s = R.slots.find(x => x.id === pick.value); if (!s) return;
-        if (s.who) {
+        if (s.who && s.who !== "Volunteers") {
           openDlg(`<h2>Move ${esc(p.first || "them")} onto this slot?</h2><p>${esc(s.day)}s · ${esc(s.chore)} is ${esc(s.who)}'s right now. ${esc(s.who)} comes off it (their hours so far are kept).</p>
             <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Move</button></div>`);
           $("#go").onclick = e => { dlg.close(); chore({ slotId: s.id, on: true, replace: true }, add, `Added. We emailed ${p.first || "them"} the details.`); };
@@ -789,7 +840,7 @@
     if (b.action === "adminLibrary") return { ok: true, photos: demoLib };
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
     if (/^adminPerson|^adminTrainings/.test(b.action)) return demoPeople(b);
-    if (b.action === "adminChores" || b.action === "adminChoreSave" || b.action === "adminChoreRemove") return demoChores(b);
+    if (/^adminChore|^adminCover/.test(b.action)) return demoChores(b);
     return { ok: true };
   }
 
