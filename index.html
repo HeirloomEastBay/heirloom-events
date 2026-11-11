@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261111a">
+<link rel="stylesheet" href="styles.css?v=20261111c">
 <style>
   /* Layout: a one-page events splash. Green hero with the next event,
      the schedule, a photo strip, then buttons back to the main site. */
@@ -97,7 +97,9 @@
   .grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--line); gap: 1px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
   .grid .dow { background: var(--sage-soft); text-align: center; padding: 8px 0; font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .1em; color: var(--forest-deep); text-transform: uppercase; }
   .day { background: var(--paper); min-height: 112px; padding: 6px; text-align: left; border: 0; font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .day.out { background: #f6f2ea; color: #b5ae9f; cursor: default; }
+  .day.out { background: #f6f2ea; color: #b5ae9f; }
+  .day.out .n { width: auto; min-width: 26px; padding: 0 4px; border-radius: 13px; white-space: nowrap; }
+  .day.out .pill { opacity: .8; }
   .day .n { font-size: 13px; font-weight: 600; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
   .day.today .n { background: var(--barn); color: #fff; }
   .day.sel { outline: 2px solid var(--forest); outline-offset: -2px; }
@@ -313,9 +315,9 @@
     <div class="rsvp-done" id="rsvpDone" hidden></div>
   </dialog>
 
-<script src="config.js?v=20261111a"></script>
-<script src="common.js?v=20261111a"></script>
-<script src="flyer.js?v=20261111a"></script>
-<script src="calendar.js?v=20261111a"></script>
+<script src="config.js?v=20261111c"></script>
+<script src="common.js?v=20261111c"></script>
+<script src="flyer.js?v=20261111c"></script>
+<script src="calendar.js?v=20261111c"></script>
 </body>
 </html>

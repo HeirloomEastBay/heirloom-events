@@ -139,8 +139,18 @@
     </article>`;
   }
 
+  // Upcoming first; past and cancelled ones are a tap away
+  let mineTab = "up";
   function render(r) {
-    const up = r.events.filter(e => !e.past), past = r.events.filter(e => e.past);
+    const off = e => /^(Declined|Cancelled|Unpublished)$/.test(e.status);
+    const groups = {
+      up: r.events.filter(e => !e.past && !off(e)),
+      past: r.events.filter(e => e.past && !off(e)),
+      off: r.events.filter(off)
+    };
+    const labels = { up: "Upcoming", past: "Past", off: "Cancelled & not added" };
+    if (!groups[mineTab].length && groups.up.length) mineTab = "up";
+    const list = groups[mineTab];
     app.innerHTML = `
       <div class="who">
         <p>Signed in as <b>${esc(r.email)}</b></p>
@@ -151,9 +161,13 @@
         </div>
       </div>
       ${!r.events.length ? `<div class="empty"><h2>No events yet</h2><p>Once you submit an event with this email, it'll show up here.</p>
-        <p><a class="btn btn-primary" href="submit.html">Submit an event</a></p></div>` : ""}
-      ${up.length ? `<div class="group-h"><h2>Upcoming</h2></div><div class="mine-list">${up.map(card).join("")}</div>` : ""}
-      ${past.length ? `<div class="group-h"><h2>Past</h2></div><div class="mine-list">${past.slice(0, 30).map(card).join("")}</div>` : ""}`;
+        <p><a class="btn btn-primary" href="submit.html">Submit an event</a></p></div>` : `
+      <div class="mtabs" role="tablist" aria-label="Which events">${Object.keys(labels).map(k => `<button type="button" role="tab" data-t="${k}" aria-selected="${k === mineTab}">${labels[k]}<span class="n">${groups[k].length}</span></button>`).join("")}</div>
+      ${list.length ? `<div class="mine-list">${list.slice(0, 100).map(card).join("")}</div>`
+        : `<div class="empty"><h2>${mineTab === "up" ? "Nothing coming up" : mineTab === "past" ? "No past events yet" : "Nothing cancelled"}</h2>
+          <p>${mineTab === "up" ? "Your next event will show up here once you submit it." : "They'll show up here."}</p>
+          ${mineTab === "up" ? `<p><a class="btn btn-primary" href="submit.html">Submit an event</a></p>` : ""}</div>`}`}`;
+    app.querySelectorAll(".mtabs [data-t]").forEach(b => b.onclick = () => { mineTab = b.dataset.t; render(r); });
     $("#out").onclick = () => { store.del(KEY); if (window.HLNav) HLNav.signedOut(); askEmail(r.email); };
   }
 
@@ -173,7 +187,8 @@
       { id: "1", title: "Happy Hour with the Goats", when: d(2) + ", 4–6pm · Every Thursday", location: "Goat pen", status: "Published", image: "images/goats.jpg", rsvp: false, calendars: "Public, Residents", editUrl: "https://example.com/", past: false },
       { id: "2", title: "Painting in the Farmhouse", when: d(9) + ", 2–4:30pm", location: "Farmhouse", status: "Published", image: "images/painting.jpg", rsvp: true, spots: 12, going: 9, calendars: "Public", editUrl: "https://example.com/", guestsUrl: "https://example.com/", past: false },
       { id: "3", title: "Knit & Sip on the Porch", when: d(16) + ", 6–8pm", location: "Farmhouse", status: "Pending", image: "images/farmhouse-lawn.jpg", editUrl: "https://example.com/", past: false },
-      { id: "4", title: "Fall Harvest Potluck", when: d(-12) + ", 5–8pm", location: "The big lawn", status: "Published", image: "images/tomatoes.jpg", past: true }
+      { id: "4", title: "Fall Harvest Potluck", when: d(-12) + ", 5–8pm", location: "The big lawn", status: "Published", image: "images/tomatoes.jpg", past: true },
+      { id: "5", title: "Movie Night", when: d(5) + ", 7–9pm", location: "Barn", status: "Cancelled", image: "images/farmhouse.jpg", past: false }
     ] };
   }
 

@@ -529,7 +529,7 @@
   const pstate = { q: "", filter: "", news: false };
   const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]];
   const NOT_VOL = "Not a volunteer";
-  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Trusted posters"], ["none", "Event posters & contacts"]];
+  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Trusted posters"], ["none", "Event posters & contacts"], ["removed", "Removed people"]];
   const nameOf = p => (p.first + " " + p.last).trim() || p.email;
   const initials = p => ((p.first || p.email)[0] + (p.last ? p.last[0] : "")).toUpperCase();
   const hrs = h => (h === 1 ? "1 hour" : (Math.round(h * 4) / 4) + " hours");
@@ -563,7 +563,7 @@
 
   function renderPeople() {
     const all = state.ppl.people;
-    setNewCount(all);
+    setNewCount(all.filter(p => !p.removed));
     $("#ppl").innerHTML = `<div class="toolbar">
         <input type="search" id="pq" placeholder="Search names, emails, phone numbers" value="${esc(pstate.q)}" aria-label="Search people">
         <select id="pf" aria-label="Show">${FILTERS.map(([v, l]) => `<option value="${v}"${v === pstate.filter ? " selected" : ""}>${l}</option>`).join("")}</select>
@@ -574,17 +574,20 @@
       <div class="plist2" id="plist"></div>`;
     const match = p => {
       const f = pstate.filter;
+      if (f === "removed") { if (!p.removed) return false; }
+      else if (p.removed) return false;
       if (f === "Resident" || f === "Volunteer") { if (p.role !== f) return false; }
       else if (f === "New") { if (!(p.role === "Volunteer" && p.status === "New")) return false; }
       else if (f === "none") { if (p.role) return false; }
-      else if (f && !p[f]) return false;
+      else if (f && f !== "removed" && !p[f]) return false;
       if (pstate.news && !p.news) return false;
       return !pstate.q || [p.first, p.last, p.email, p.phone].concat(p.others || []).join(" ").toLowerCase().includes(pstate.q.toLowerCase());
     };
     const filtered = () => all.filter(match);
     const draw = () => {
       const list = filtered();
-      $("#pcount").textContent = `${list.length} of ${all.length} ${all.length === 1 ? "person" : "people"}`;
+      const total = all.filter(p => pstate.filter === "removed" ? p.removed : !p.removed).length;
+      $("#pcount").textContent = pstate.filter === "removed" ? `${list.length} removed ${list.length === 1 ? "person" : "people"} (their info is still on the People tab in the Sheet)` : `${list.length} of ${total} ${total === 1 ? "person" : "people"}`;
       $("#plist").innerHTML = list.length ? list.map(p => `<button type="button" class="prow" data-e="${esc(p.email)}">
           <span class="av${p.role === "Resident" ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
           <span class="pmain"><b>${esc(nameOf(p))}</b><span class="sub">${esc(p.email)}${(p.others || []).length ? " + " + p.others.length + " more" : ""}${p.phone ? " · " + esc(p.phone) : ""}</span>
@@ -681,6 +684,7 @@
     const free = R.slots.filter(s => s.volunteer !== p.email);
     const since = p.firstText ? `Helping since ${esc(p.firstText)}` : "";
     $("#prof").innerHTML = `
+      ${p.removed ? `<div class="removed-bar"><p><b>Removed from People on ${esc(dateLong(p.removed))}.</b> Their info and hours are kept. They don't count as a volunteer and aren't on any chores or permission lists.</p><button type="button" class="btn btn-forest btn-sm" id="restore">Restore</button></div>` : ""}
       <section class="phead">
         <span class="av big${res ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
         <div><h2>${esc(nameOf(p))}</h2>
@@ -752,7 +756,10 @@
         ${p.interests ? `<p><span class="lbl">Interested in</span>${esc(p.interests)}</p>` : ""}
         ${p.heard ? `<p><span class="lbl">Heard about us</span>${esc(p.heard)}</p>` : ""}
         ${p.comments ? `<p><span class="lbl">Comments</span><span class="cm">${esc(p.comments)}</span></p>` : ""}
-      </section>` : ""}`;
+      </section>` : ""}
+      ${!p.removed && p.email !== me ? `<section class="pcard danger"><h3>Remove from People</h3>
+        <p class="hint" style="margin:0">Moved away or not involved anymore? This takes ${esc(p.first || "them")} off the list, the chore chart and any permissions. Their info and volunteer hours stay saved on the People tab in the Sheet, and you can restore them any time from "Removed people".</p>
+        <p><button type="button" class="btn btn-outline btn-sm" id="remove">Remove ${esc(p.first || "this person")}…</button></p></section>` : ""}`;
 
     const f = $("#pform"), save = $("#psave"), msg = $("#pmsg");
     const q = k => f.querySelector(`[data-k="${k}"]`);
@@ -787,6 +794,25 @@
         state.person = r; state.ppl = null; state.chores = null;
         renderPerson(); flash("Saved.");
       } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); save.disabled = false; save.textContent = "Save changes"; msg.textContent = err.message + "."; }
+    };
+    // Remove / restore
+    const rmBtn = $("#remove"), rsBtn = $("#restore");
+    if (rmBtn) rmBtn.onclick = () => {
+      const n = mine.length;
+      openDlg(`<h2>Remove ${esc(nameOf(p))}?</h2>
+        <p>They'll come off the People list${n ? `, off ${n} chore slot${n > 1 ? "s" : ""} (we'll email qualified volunteers that ${n > 1 ? "they're" : "it's"} open)` : ""}${p.admin || p.approver || p.trusted ? ", and off the permission lists" : ""}. Their info and hours stay saved, and you can restore them later.</p>
+        <label class="lbl" for="rmWhy">Reason <span class="opt">(optional, for the Admin log)</span></label><textarea id="rmWhy" maxlength="300" placeholder="Moved away in November"></textarea>
+        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
+      $("#go").onclick = async e => {
+        const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+        try { state.person = await call({ action: "adminPersonRemove", email: p.email, reason: $("#rmWhy").value.trim() }); state.ppl = null; state.chores = null; dlg.close(); renderPerson(); flash(`Removed. Their info is still on the People tab in the Sheet.`); }
+        catch (err) { if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); } b.disabled = false; b.textContent = "Remove"; flash(err.message, true); }
+      };
+    };
+    if (rsBtn) rsBtn.onclick = async () => {
+      rsBtn.disabled = true; rsBtn.innerHTML = `<span class="spinner"></span>`;
+      try { state.person = await call({ action: "adminPersonRemove", email: p.email, restore: true }); state.ppl = null; renderPerson(); flash("Restored. Set their role, permissions and chores again if they need them."); }
+      catch (err) { rsBtn.disabled = false; rsBtn.textContent = "Restore"; flash(err.message, true); }
     };
     // Chores
     const pick = $("#slotPick"), add = $("#slotAdd");
@@ -887,6 +913,11 @@
       p.trusted = b.trusted !== undefined ? b.trusted : p.trusted;
       if (b.role === "Resident" && !wasRes) p.trusted = true;
       return Object.assign(detail(b.email), { stillAdmin: b.email === session.email && b.admin === false ? false : true });
+    }
+    if (b.action === "adminPersonRemove") {
+      const p = find(b.email);
+      if (b.restore) p.removed = ""; else { p.removed = d(0); p.admin = p.approver = p.trusted = false; P.slots.forEach(s => { if (s.volunteer === b.email) s.volunteer = ""; }); }
+      return detail(b.email);
     }
     if (b.action === "adminPersonChore") {
       const s = P.slots.find(x => x.id === b.slotId);

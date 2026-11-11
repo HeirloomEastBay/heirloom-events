@@ -310,14 +310,15 @@
 
     let grid = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => `<div class="dow" aria-hidden="true">${d.slice(0, 1)}<span class="visually-hidden">${d}</span></div>`).join("");
     for (let i = 0; i < cells; i++) {
-      const dnum = i - startDow + 1;
-      if (dnum < 1 || dnum > daysInMonth) { grid += `<div class="day out" aria-hidden="true"></div>`; continue; }
-      const key = `${y}-${H.pad(m)}-${H.pad(dnum)}`;
+      // Days before and after this month show too (in the lighter color), with their events
+      const dt = new Date(Date.UTC(y, m - 1, i - startDow + 1));
+      const cy = dt.getUTCFullYear(), cm = dt.getUTCMonth() + 1, dnum = dt.getUTCDate(), out = cm !== m;
+      const key = `${cy}-${H.pad(cm)}-${H.pad(dnum)}`;
       const list = byDay[key] || [];
-      const cls = ["day", key === todayKey ? "today" : "", key === selectedDay ? "sel" : ""].join(" ");
-      const label = `${H.fmt(H.zoned(y, m, dnum, 12), { weekday: "long", month: "long", day: "numeric" })}, ${list.length || "no"} event${list.length === 1 ? "" : "s"}`;
+      const cls = ["day", out ? "out" : "", key === todayKey ? "today" : "", key === selectedDay ? "sel" : ""].join(" ");
+      const label = `${H.fmt(H.zoned(cy, cm, dnum, 12), { weekday: "long", month: "long", day: "numeric" })}, ${list.length || "no"} event${list.length === 1 ? "" : "s"}`;
       grid += `<button type="button" class="${cls}" data-day="${key}" aria-label="${esc(label)}">
-        <span class="n">${dnum}</span>
+        <span class="n">${out && dnum === 1 ? esc(H.fmt(H.zoned(cy, cm, 1, 12), { month: "short" })) + " 1" : dnum}</span>
         ${list.slice(0, 2).map(e => `<span class="pill${partnerOf(e) ? " partner" : ""}${+(e.end || e.start) < +now ? " past" : ""}"${partnerOf(e) ? ` style="--c:${esc(partnerOf(e).color)}"` : ""}>${e.allDay ? "" : `<b>${esc(H.fmtTimeRange(e.start, null, false))}</b> `}${esc(e.title)}</span>`).join("")}
         ${list.length > 2 ? `<span class="more-n">+${list.length - 2} more</span>` : ""}
         ${list.length ? `<span class="dots">${list.slice(0, 3).map(() => "<i></i>").join("")}</span>` : ""}

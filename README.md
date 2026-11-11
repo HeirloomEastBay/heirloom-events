@@ -64,6 +64,7 @@ Admins sign in on **My events** (same emailed code), then tap **Admin**. The Adm
 - **Chore chart:** the slots they're on, **Take off**, and **Add to a chore slot**. They get an email and see it when they log in.
 - **Activity:** hours helped, shifts, last helped, sign-ups, coverage and events they've posted. Plus their volunteer form answers and admin-only notes.
 - **Other emails they log in with:** for people with more than one email (a work and a personal one). Any of them logs in as the same person, with the same profile, chores and permissions, and events posted from any of them show up together. If the other email already has its own row on the People tab, remove that row in the Sheet first.
+- **Remove from People** (bottom of a profile): takes them off the list, their chore slots (which go back to Open) and the permission lists, and they stop counting as a volunteer. Their row stays on the People tab with the date in "Removed", so their info and hours are kept. Find them under **Removed people** to restore.
 - **Add a person** for residents or anyone who hasn't filled out a form. They can log in right away.
 
 **Hours helped** add up automatically: past volunteer sign-ups (all-day ones count as 4 hours), every week on a chore slot since they took it (minus dates they asked to have covered), and dates they covered for someone. When someone leaves a slot, their hours on it are saved to "Earlier hours" and "Earlier shifts" on their People row.
