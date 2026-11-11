@@ -125,6 +125,16 @@ Residents (Role "Resident" on the People tab) get a lighter version of the Admin
 - **Guest rooms:** book and manage stays (see below).
 - **People** is admins only.
 
+### Venues (reserving places by the hour)
+The **Venues** tab (Admin and Resident panels):
+- **Day view:** every venue as a row from 7am to 11pm. Green = reserved, gold = an event from the event form at that place (it holds the venue automatically), dashed = something on either calendar that mentions the venue (a heads-up only), striped = setup/cleanup time. Tap an open time to reserve it, or a bar for details.
+- **Reserve:** what it's for, one or more venues, date, start/end, optional setup & cleanup (default 1 hour before and after, editable), repeats (weekly, every other week, monthly) until a date, host, notes. It goes on the residents' calendar as "📍 Yurt: Book club (Lindsey)".
+- **Overlaps:** venues set to "Not allowed" refuse a second booking (admins can reserve anyway); "Heads-up" venues (outdoor spaces, Pool, Meadow & Stage, Main House) warn and let you go ahead.
+- Whoever reserved it, or an admin, can edit or cancel (a repeating one is changed or cancelled as a whole). Admins get an FYI email when a resident reserves (same setting as guest stays).
+- **Edit venues** (admins): names, "Also called" names (used to match calendar events and older posts, e.g. "Autoshop"), Public (shown on the public event form), Reservable, and Can share. All on the **Venues** tab in the Sheet too.
+
+**The event form's places** come from the Venues tab. Anyone sees the Public ones; residents, approved volunteers and admins (signed in) see every venue. If the chosen place is reserved at that time, the form shows a heads-up (without names). The old Locations tab isn't used anymore.
+
 ### Guest rooms (overnight stays)
 **stays.html** ("Guest rooms" in the menu, for residents and admins) and the Admin page's **Guest rooms** tab:
 - **Tonight:** a card per room, filled in with the guest if someone's staying, outlined if it's open (with who's next).

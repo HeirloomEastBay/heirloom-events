@@ -49,7 +49,7 @@ window.HEIRLOOM = {
   // Places people can tap under "Where on the farm?" in the form (they can
   // also pick "Somewhere else" and type their own). Once the backend is
   // live, the "Locations" tab in the Google Sheet takes over from this list.
-  LOCATIONS: ["Farmhouse", "Autoshop", "Yurt", "Meadow", "Hills", "Prayer Labyrinth", "The big lawn", "The garden", "Goat pen", "Chicken coop"],
+  LOCATIONS: ["Event Barn (Autoshop)", "Main House", "Yurt", "Main Grass Area & Picnic Tables", "Garden", "Goat Pen", "Chicken Coop", "Prayer Labyrinth", "Meadow & Stage", "Hills"],
 
   // Photos people can pick in the form, and the keywords that
   // auto-match a photo when nobody uploads one. Once the backend is

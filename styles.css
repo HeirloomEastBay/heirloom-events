@@ -390,3 +390,51 @@ dialog.dates-dlg::backdrop { background: rgba(20,30,22,.55); }
 .mtabs .n { font-size: 12px; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.07); text-align: center; }
 .mtabs button[aria-selected="true"] .n { background: rgba(255,255,255,.2); }
 @media (max-width: 480px) { .mtabs { border-radius: 16px; } .mtabs button { padding: 8px 11px; font-size: 14px; } }
+
+/* Venues (venues.js) */
+.vn-grid { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 10px 10px; overflow-x: auto; }
+.vn-row { display: grid; grid-template-columns: 190px minmax(640px, 1fr); }
+.vn-name { position: sticky; left: 0; z-index: 3; background: var(--paper); display: grid; align-content: center; padding: 4px 10px 4px 0; border-top: 1px solid var(--line); }
+.vn-name b { font-size: 13.5px; line-height: 1.2; color: var(--forest-deep); }
+.vn-name span { font-size: 11.5px; color: var(--muted); }
+.vn-head .vn-name { border-top: 0; }
+.vn-hours { display: grid; grid-template-columns: repeat(16, 1fr); font-size: 11.5px; color: var(--ink-soft); padding: 4px 0; }
+.vn-hours span { transform: translateX(-50%); white-space: nowrap; }
+.vn-hours span:first-child { transform: none; }
+.vn-track { position: relative; display: grid; grid-template-columns: repeat(16, 1fr); min-height: 40px; border-top: 1px solid var(--line); cursor: copy; }
+.vn-h { border-left: 1px solid #efeadf; }
+.vn-h.odd { background: rgba(0,0,0,.012); }
+.vn-pad { position: absolute; top: 50%; margin-top: -11px; height: 22px; border-radius: 6px; background: repeating-linear-gradient(135deg, rgba(46,74,54,.16) 0 6px, rgba(46,74,54,.06) 6px 12px); }
+.vn-bar { position: absolute; top: 50%; margin-top: -15px; height: 30px; appearance: none; border: 0; border-radius: 8px; font: inherit; font-size: 12.5px; font-weight: 600; padding: 0 8px; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; z-index: 1; }
+.vn-bar.reservation { background: var(--forest); color: #fff; }
+.vn-bar.event { background: var(--wheat); color: var(--forest-deep); }
+.vn-bar.calendar { background: #fff; color: var(--ink-soft); border: 1.5px dashed #a9b2a4; }
+.vn-bar:hover { filter: brightness(1.08); }
+.vn-bar:focus-visible { outline: 3px solid var(--barn); outline-offset: 1px; }
+.vn-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--barn); z-index: 2; pointer-events: none; }
+.vn-key { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: -1px; margin: 0 3px 0 10px; }
+.vn-key:first-child { margin-left: 0; }
+.vn-key.reservation { background: var(--forest); } .vn-key.event { background: var(--wheat); } .vn-key.calendar { background: #fff; border: 1.5px dashed #a9b2a4; }
+.vn-key.pad { background: repeating-linear-gradient(135deg, rgba(46,74,54,.3) 0 3px, rgba(46,74,54,.1) 3px 6px); }
+.vn-date input { min-height: 36px; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 14px; }
+.vn-ico { font-size: 20px; }
+.vn-pick { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow: auto; padding: 2px; }
+.vn-pick label { display: inline-flex; cursor: pointer; }
+.vn-pick input { position: absolute; opacity: 0; }
+.vn-pick span { border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 500; background: #fff; }
+.vn-pick input:checked + span { background: var(--forest); color: #fff; border-color: var(--forest); }
+.vn-pick input:focus-visible + span { outline: 3px solid var(--wheat); outline-offset: 2px; }
+.vn-clash { background: #f3e5c4; color: #5a3d0c; border-radius: 12px; padding: 10px 14px; font-size: 14.5px; }
+.vn-clash p { margin: 0 0 6px; color: inherit; }
+.vn-clash ul { margin: 0 0 8px; padding-left: 18px; }
+.vn-edit { display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+.vn-er { display: grid; grid-template-columns: minmax(150px, 1.5fr) minmax(110px, 1.1fr) auto auto auto 30px; gap: 8px; align-items: center; font-size: 13px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+.vn-er input[type="text"], .vn-er input:not([type]) { min-height: 34px; padding: 5px 8px; border: 1.5px solid var(--line); border-radius: 8px; font: inherit; font-size: 13.5px; width: 100%; }
+.vn-er label { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+@media (max-width: 640px) { .vn-er { grid-template-columns: 1fr 1fr; } .vn-row { grid-template-columns: 120px minmax(640px, 1fr); } }
+dialog.vn-dlg { width: min(860px, calc(100vw - 24px)); }
+.vn-er .vn-x { appearance: none; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--barn); cursor: pointer; width: 30px; height: 30px; border-radius: 50%; }
+.vn-er .vn-x:hover { background: #f7e1dd; }
+/* Event form: the place is already reserved then */
+.venue-note { margin: 10px 0 0; background: #f3e5c4; color: #5a3d0c; border-radius: 10px; padding: 9px 12px; font-size: 14.5px; }

@@ -105,6 +105,31 @@
   }
   renderPlaces();
 
+  /* ---------- Heads-up when the place is already reserved then ---------- */
+  let venueTimer = null, venueAsk = 0;
+  function checkVenue() {
+    clearTimeout(venueTimer);
+    venueTimer = setTimeout(async () => {
+      const box = $("#venueNote"); if (!box || !C.API_URL) return;
+      const p = form.querySelector('input[name="place"]:checked');
+      const loc = p ? (p.value === "__other" ? $("#location").value : p.value) : "";
+      const date = $("#date").value, allDay = $("#allDay").checked;
+      if (!loc || !date || (!allDay && !$("#startTime").value)) { box.hidden = true; return; }
+      const ask = ++venueAsk;
+      try {
+        const r = await (await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "venueCheck", location: loc,
+          date, start: allDay ? "" : $("#startTime").value, end: allDay ? "" : $("#endTime").value, repeats: $("#repeat").value, until: $("#until").value,
+          skipId: (ADMIN && ADMIN.id) || qs.get("id") || qs.get("edit") || "" }) })).json();
+        if (ask !== venueAsk) return;
+        if (!r.ok || !r.clashes || !r.clashes.length) { box.hidden = true; return; }
+        box.innerHTML = `<b>Heads-up:</b> ${esc(r.venue)} ${r.shared ? "has something else going on" : "is already reserved"} then (${r.clashes.slice(0, 3).map(c => esc(c.when)).join("; ")}${r.clashes.length > 3 ? "…" : ""}). ${r.shared ? "It can be shared, so you can still go ahead." : "You can still send it, but you may want to pick another time or place."}`;
+        box.hidden = false;
+      } catch (e) { box.hidden = true; }
+    }, 600);
+  }
+  ["#date", "#startTime", "#endTime", "#allDay", "#repeat", "#until", "#location"].forEach(id => { const el = $(id); if (el) el.addEventListener("change", checkVenue); });
+  $("#places").addEventListener("click", () => setTimeout(checkVenue, 0));
+
   // Today in farm time = earliest date allowed
   const t = H.parts(new Date());
   const todayStr = `${t.y}-${H.pad(t.m)}-${H.pad(t.d)}`;
@@ -124,6 +149,9 @@
       if (d.ok && d.channels && d.channels.length) { channels = d.channels; renderChannels(); }
       if (d.ok && d.volAreas && d.volAreas.length) { volAreas = d.volAreas; trainings = d.trainings || []; renderVolChoices(); }
       if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
+      // Residents, approved volunteers and admins can pick every venue, not just the public ones
+      if (SESSION && SESSION.token) fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "venuePlaces", token: SESSION.token }) })
+        .then(r => r.json()).then(v => { if (v.ok && v.places && v.places.length > places.length) { places = v.places; renderPlaces(); } }).catch(() => {});
       if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); renderMulti(); update(); }
     }).catch(() => {});
 
@@ -625,6 +653,13 @@
     refreshRepeatLabels();
     set("repeat", e.repeat || "none"); $("#untilField").hidden = $("#repeat").value === "none"; set("until", e.until);
     // Place
+    // Older posts may use an earlier name ("Autoshop" is now "Event Barn (Autoshop)")
+    const n = x => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const renamed = { farmhouse: "Main House", "the big lawn": "Main Grass Area & Picnic Tables", meadow: "Meadow & Stage", "the garden": "Garden" };
+    if (e.location && !places.includes(e.location)) {
+      const hit = places.find(p => n(p) === n(renamed[n(e.location)])) || places.find(p => n(p).split(" ").length > 1 && (" " + n(p) + " ").indexOf(" " + n(e.location) + " ") !== -1);
+      if (hit) e.location = hit;
+    }
     const placeVal = places.includes(e.location) ? e.location : (e.location ? "__other" : "");
     form.querySelectorAll('input[name="place"]').forEach(r => { r.checked = r.value === placeVal; r.dataset.was = r.checked ? "1" : ""; });
     $("#otherPlace").hidden = placeVal !== "__other";

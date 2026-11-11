@@ -55,7 +55,7 @@
 
   /* ---------- Tabs ---------- */
   if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
-  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
+  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays", "venues"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
   const RES = () => state.viewer === "resident";
   // Residents get a lighter panel: no People tab, calendars to look at, add photos and chores
   function setViewer(v) {
@@ -84,6 +84,7 @@
     if (tab === "photos") return photos(fresh);
     if (tab === "people" && RES()) return show("public");
     if (tab === "people") return people(fresh);
+    if (tab === "venues") { app.innerHTML = `<div class="panel-h"><div><h2>Venues</h2><p>Reserve places around the farm by the hour. Events from the event form hold their place automatically, and anything on the calendars that mentions a venue shows as a heads-up. Reservations go on the residents' calendar.</p></div></div><div id="venues"></div>`; return HLVenues.mount($("#venues")); }
     if (tab === "stays") { app.innerHTML = `<div class="panel-h"><div><h2>Guest rooms</h2><p>Who's in the 4 guest rooms, and when. Stays come from the residents' calendar ("Room 1: Sarah (Sabbath 365)") and from the Guest rooms page residents use. Admins can change any stay and block rooms.</p></div></div><div id="stays"></div>`; return HLStays.mount($("#stays"), { refresh: fresh }); }
     if (tab === "chores") return chores(fresh);
     calendar(tab, fresh);
