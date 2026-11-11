@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Heirloom Activities</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="images/logo-badge.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .intro { background: var(--forest); color: #fff; padding-block: 36px 0; }
+  .intro .kicker { color: var(--sage); }
+  .intro h1 { font-size: clamp(32px, 5vw, 46px); margin: 8px 0 8px; }
+  .intro p { margin: 0 0 22px; max-width: 40em; color: #e1e8dc; font-size: 16.5px; }
+  .intro .who { color: #e1e8dc; font-size: 14.5px; }
+  .intro .who b { color: #fff; }
+
+  /* Tabs sit on the bottom edge of the green band */
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: none; appearance: none; border: 0; cursor: pointer; font: inherit; font-family: var(--f-label); font-weight: 700; font-size: 14px;
+    padding: 13px 18px 12px; border-radius: 12px 12px 0 0; background: rgba(255,255,255,.1); color: #e1e8dc; display: inline-flex; align-items: center; gap: 8px; }
+  .tab:hover { background: rgba(255,255,255,.18); color: #fff; }
+  .tab[aria-selected="true"] { background: var(--cream); color: var(--forest-deep); }
+  .tab:focus-visible { outline: 3px solid var(--wheat); outline-offset: -3px; }
+  .tab .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--wheat); }
+  .tab .dot.res { background: #9fb6a4; }
+
+  .page { padding-top: 24px; padding-bottom: 56px; }
+  .panel-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .panel-h h2 { font-size: 26px; color: var(--forest); }
+  .panel-h p { margin: 4px 0 0; color: var(--ink-soft); font-size: 15px; max-width: 46em; }
+  .cal-flag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--barn); }
+  .cal-flag.res { color: #4b6b55; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .toolbar input[type="search"] { flex: 1 1 220px; min-height: 44px; padding: 9px 14px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-size: 15.5px; }
+  .toolbar input[type="search"]:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .seg { display: inline-flex; background: var(--paper); border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; }
+  .seg button { appearance: none; border: 0; background: none; font: inherit; font-weight: 600; font-size: 14px; color: var(--ink-soft); padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--forest); color: #fff; }
+  .seg .n { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #f3e5c4; color: #6b4a12; font-size: 12px; }
+
+  .alist { display: grid; gap: 10px; }
+  .arow { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; align-items: start; }
+  .arow.dim { opacity: .62; }
+  .arow .thumb { width: 96px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--sage-soft); display: grid; place-items: center; color: var(--forest); }
+  .arow .thumb svg { width: 30px; height: 30px; opacity: .6; }
+  .arow h3 { font-size: 19px; margin: 1px 0 3px; text-wrap: balance; }
+  .arow .when { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 8px; }
+  .chips2 { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .status { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 9px; border-radius: 999px; background: var(--sage-soft); color: var(--forest-deep); }
+  .status.pending { background: #f3e5c4; color: #6b4a12; }
+  .status.off { background: #ebe5d8; color: var(--ink-soft); }
+  .status.src { background: #fff; border: 1px solid var(--line); color: var(--ink-soft); }
+  .status.partner { background: color-mix(in srgb, #6a5a8e 14%, #fff); color: #4a3d6a; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .acts .btn { min-height: 38px; }
+  .btn-quiet { background: none; border: 0; color: var(--barn); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 8px 6px; cursor: pointer; font: inherit; font-size: 14px; }
+  @media (max-width: 560px) {
+    .arow { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+    .arow .thumb { width: 64px; height: 64px; }
+    .arow h3 { font-size: 17.5px; }
+  }
+  .empty { background: var(--paper); border-radius: var(--radius); padding: 36px 24px; text-align: center; color: var(--ink-soft); box-shadow: var(--shadow); }
+  .empty h2 { font-size: 22px; color: var(--forest); margin-bottom: 6px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px 0; }
+  .msg { margin: 0 0 14px; border-radius: 10px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; }
+  .msg.err { background: #f7e1dd; color: var(--barn-dark); }
+  .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
+
+  /* Photo library */
+  .add-photo { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; margin-bottom: 22px; }
+  .add-photo .pick { width: 180px; aspect-ratio: 4 / 3; border-radius: 12px; border: 2px dashed var(--line); background: #fff center / cover no-repeat; display: grid; place-items: center; text-align: center; color: var(--forest); font-weight: 700; font-size: 14px; cursor: pointer; padding: 10px; }
+  .add-photo .pick.has { border-style: solid; color: transparent; }
+  .add-photo h3 { font-size: 19px; margin: 0 0 8px; }
+  .f2 { display: grid; gap: 10px; }
+  .f2 label.lbl2 { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .f2 input[type="text"], .f2 textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15px; }
+  .f2 textarea { min-height: 64px; resize: vertical; }
+  .f2 input:focus, .f2 textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+  .checks label { display: inline-flex; gap: 7px; align-items: center; cursor: pointer; }
+  .checks input { width: 17px; height: 17px; accent-color: var(--forest); }
+  @media (max-width: 560px) { .add-photo { grid-template-columns: 1fr; } .add-photo .pick { width: 100%; } }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .photo { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+  .photo .img { position: relative; aspect-ratio: 16 / 10; background: var(--sage-soft); }
+  .photo .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo .rank { position: absolute; left: 10px; top: 10px; background: rgba(28,48,36,.82); color: #fff; font-family: var(--f-label); font-weight: 700; font-size: 12px; padding: 4px 9px; border-radius: 999px; }
+  .photo .used { position: absolute; right: 10px; top: 10px; background: rgba(251,248,241,.92); color: var(--forest-deep); font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; }
+  .photo .body { padding: 12px; display: grid; gap: 9px; flex: 1; }
+  .photo .row2 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: auto; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--forest); font-size: 16px; }
+  .icon-btn:disabled { opacity: .35; cursor: default; }
+  .icon-btn:not(:disabled):hover { border-color: var(--forest); }
+
+  /* People */
+  .people { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .plist { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .plist h3 { font-size: 20px; color: var(--forest); }
+  .plist p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .plist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 360px; overflow: auto; }
+  .plist li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 6px 6px 12px; font-size: 14.5px; word-break: break-all; }
+  .plist li.me { border-color: var(--wheat); }
+  .plist li .x { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; }
+  .plist li .x:hover { background: #f7e1dd; color: var(--barn); }
+  .plist form { display: flex; gap: 6px; margin-top: auto; }
+  .plist form input { flex: 1; min-width: 0; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 999px; font: inherit; font-size: 14.5px; background: #fff; }
+  .savebar { margin-top: 18px; background: var(--cream); padding: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--line); }
+  .savebar p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+
+  .opt { font-weight: 400; color: var(--muted); }
+  .lbl { display: block; font-weight: 600; font-size: 14.5px; }
+  .hint { color: var(--muted); font-size: 14px; }
+
+  /* Dialog */
+  dialog.adlg { border: 0; border-radius: 18px; padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(20,30,22,.35); }
+  dialog.adlg::backdrop { background: rgba(20,30,22,.55); }
+  .adlg .in { padding: 22px; display: grid; gap: 14px; }
+  .adlg h2 { font-size: 23px; }
+  .adlg p { margin: 0; color: var(--ink-soft); }
+  .adlg textarea { width: 100%; min-height: 84px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; background: #fff; }
+  .adlg .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .pickgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; max-height: 300px; overflow: auto; padding: 2px; }
+  .pickgrid button { border: 2px solid transparent; border-radius: 10px; padding: 0; overflow: hidden; background: var(--sage-soft); cursor: pointer; text-align: left; }
+  .pickgrid button[aria-pressed="true"] { border-color: var(--forest); box-shadow: 0 0 0 2px var(--forest); }
+  .pickgrid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
+  .pickgrid span { display: block; font-size: 12px; padding: 4px 6px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--paper); }
+</style>
+</head>
+<body>
+  <div class="demo-banner" id="demoBanner" hidden>Preview mode with sample events. Nothing you change here is saved.</div>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Heirloom Activities">
+        <img class="badge" src="images/logo-badge.png" alt="">
+        <img class="wordmark" src="images/logo-wordmark.svg" alt="Heirloom East Bay">
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a class="nav-text keep" href="mine.html">My events</a>
+        <a class="btn btn-outline btn-sm" href="index.html">See the calendar</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="intro">
+    <div class="wrap">
+      <span class="kicker">Heirloom Activities</span>
+      <h1>Admin</h1>
+      <p>Edit, cancel or delete anything on either calendar, no matter who added it. Manage the photo library and who can post.</p>
+      <div class="tabs" role="tablist" aria-label="Admin sections" id="tabs" hidden>
+        <button class="tab" role="tab" id="tab-public" aria-controls="app" data-tab="public"><span class="dot"></span>Public calendar</button>
+        <button class="tab" role="tab" id="tab-residents" aria-controls="app" data-tab="residents"><span class="dot res"></span>Residents' calendar</button>
+        <button class="tab" role="tab" id="tab-photos" aria-controls="app" data-tab="photos">Photo library</button>
+        <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="wrap page" id="app" role="tabpanel" aria-live="polite"><p class="loading">Loading…</p></main>
+
+  <dialog class="adlg" id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-small" style="border:0;margin:0;padding:0">
+        <p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p>
+        <p id="footLine"></p>
+      </div>
+    </div>
+  </footer>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

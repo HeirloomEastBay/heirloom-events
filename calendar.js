@@ -422,17 +422,25 @@
       <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
       <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>`;
     if ($("#popRsvp")) $("#popRsvp").onclick = () => { closePop(); openRsvp(e, fromButton); };
+    // Flyer + social images (flyer.js)
+    const share = $("#popShare");
+    share.innerHTML = "";
+    if (window.HLFlyer) {
+      const p = partnerOf(e);
+      share.appendChild(window.HLFlyer.buttons(async () => Object.assign({}, e, { partnerName: p && e.source !== "community" ? p.name || p.label : "" })));
+    }
     // Long description: from the sample data, or fetched once from the Sheet
     const box = $("#popDetails");
     box.innerHTML = "";
     if (e.details) box.innerHTML = H.sanitize(e.details);
-    else if (e.hasDetails && e.ref && C.API_URL) {
-      if (detailsCache[e.ref] != null) box.innerHTML = H.sanitize(detailsCache[e.ref]);
+    else if (e.hasDetails && (e.ref || e.detailsKey) && C.API_URL) {
+      const dk = e.ref || e.detailsKey;
+      if (detailsCache[dk] != null) box.innerHTML = H.sanitize(detailsCache[dk]);
       else {
         box.innerHTML = `<p class="loading">Loading details…</p>`;
-        fetch(C.API_URL + "?action=details&id=" + encodeURIComponent(e.ref)).then(r => r.json()).then(d => {
-          detailsCache[e.ref] = d.ok ? d.html : "";
-          if ($("#popTitle").textContent === e.title) box.innerHTML = H.sanitize(detailsCache[e.ref]);
+        fetch(C.API_URL + "?action=details&id=" + encodeURIComponent(dk)).then(r => r.json()).then(d => {
+          detailsCache[dk] = d.ok ? d.html : "";
+          if ($("#popTitle").textContent === e.title) box.innerHTML = H.sanitize(detailsCache[dk]);
           resize();
         }).catch(() => { box.innerHTML = ""; });
       }
@@ -456,8 +464,12 @@
       const e = events.find(x => x.rsvp && x.eventId === id && +(x.end || x.start) >= +now);
       if (e) openRsvp(e);
     } else if (ev) {
-      const e = events.find(x => String(x.id).split("_")[0] === ev && +(x.end || x.start) >= +now);
-      if (e) openEvent(e);
+      const e = events.find(x => (x.ref === ev || String(x.id).split("_")[0] === ev) && +(x.end || x.start) >= +now);
+      if (e) {
+        openEvent(e);
+        // From My events → "Flyer & images": jump to the share buttons
+        if (params.has("flyer")) setTimeout(() => { const k = $("#popShare .share-kit"); if (k) { k.scrollIntoView({ block: "center" }); k.classList.add("flash"); } }, 150);
+      }
     }
   }
 

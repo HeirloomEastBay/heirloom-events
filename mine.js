@@ -96,6 +96,8 @@
       }
       // Remember name, email and phone so the Submit form can fill them in
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
+      // Came from the Admin page to sign in: go back there
+      if (r.admin && new URLSearchParams(location.search).get("next") === "admin") { location.replace("admin.html"); return; }
       render(r);
     } catch (err) {
       app.innerHTML = `<div class="empty"><h2>We couldn't load your events</h2><p>${esc(err.message || "Please try again in a minute.")}</p>
@@ -124,6 +126,7 @@
         <div class="acts">
           ${edit && !e.past ? `<a class="btn btn-primary btn-sm" href="${esc(edit)}">Edit or cancel</a>` : ""}
           ${guests ? `<a class="btn btn-outline btn-sm" href="${esc(guests)}" target="_blank" rel="noopener">Guest list</a>` : ""}
+          ${e.status === "Published" && !e.past && /public/i.test(e.calendars || "") ? `<a class="btn btn-outline btn-sm" href="index.html?event=${encodeURIComponent(e.id)}&flyer=1">Flyer &amp; images</a>` : ""}
         </div>
       </div>
     </article>`;
@@ -135,6 +138,7 @@
       <div class="who">
         <p>Signed in as <b>${esc(r.email)}</b></p>
         <div class="tools">
+          ${r.admin ? `<a class="btn btn-forest btn-sm" href="admin.html">Admin</a>` : ""}
           <a class="btn btn-primary btn-sm" href="submit.html">Submit a new event</a>
           <button type="button" class="btn btn-outline btn-sm" id="out">Sign out</button>
         </div>
@@ -158,9 +162,9 @@
     if (b.action === "loginVerify") return b.code === "123456" ? { ok: true, token: "demo", email: b.email } : { ok: false, error: "That code doesn't match. In preview mode it's 123456" };
     const s = store.get(KEY) || {};
     const d = n => { const x = new Date(Date.now() + n * 86400000); return x.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); };
-    return { ok: true, email: s.email || "you@example.com", name: "", phone: "", events: [
-      { id: "1", title: "Happy Hour with the Goats", when: d(2) + ", 4–6pm · Every Thursday", location: "Goat pen", status: "Published", image: "images/goats.jpg", rsvp: false, editUrl: "https://example.com/", past: false },
-      { id: "2", title: "Painting in the Farmhouse", when: d(9) + ", 2–4:30pm", location: "Farmhouse", status: "Published", image: "images/painting.jpg", rsvp: true, spots: 12, going: 9, editUrl: "https://example.com/", guestsUrl: "https://example.com/", past: false },
+    return { ok: true, email: s.email || "you@example.com", name: "", phone: "", admin: true, events: [
+      { id: "1", title: "Happy Hour with the Goats", when: d(2) + ", 4–6pm · Every Thursday", location: "Goat pen", status: "Published", image: "images/goats.jpg", rsvp: false, calendars: "Public, Residents", editUrl: "https://example.com/", past: false },
+      { id: "2", title: "Painting in the Farmhouse", when: d(9) + ", 2–4:30pm", location: "Farmhouse", status: "Published", image: "images/painting.jpg", rsvp: true, spots: 12, going: 9, calendars: "Public", editUrl: "https://example.com/", guestsUrl: "https://example.com/", past: false },
       { id: "3", title: "Knit & Sip on the Porch", when: d(16) + ", 6–8pm", location: "Farmhouse", status: "Pending", image: "images/farmhouse-lawn.jpg", editUrl: "https://example.com/", past: false },
       { id: "4", title: "Fall Harvest Potluck", when: d(-12) + ", 5–8pm", location: "The big lawn", status: "Published", image: "images/tomatoes.jpg", past: true }
     ] };

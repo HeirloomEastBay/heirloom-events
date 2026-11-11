@@ -212,3 +212,35 @@ dialog.event-pop .x { position: absolute; top: 12px; right: 12px; width: 40px; h
 @media (max-width: 560px) { .pop-body { padding: 18px 18px 22px; } }
 
 @media (max-width: 760px) { .nav a.nav-text.keep { display: inline; } }
+
+/* ---------- Share this event: flyer + social images (flyer.js) ---------- */
+.share-kit { margin-top: 18px; padding: 16px; border-radius: 16px; background: var(--cream); transition: box-shadow .4s; }
+.share-kit.flash { box-shadow: 0 0 0 3px var(--wheat); }
+.share-h { margin: 0 0 10px; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--barn); }
+.share-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.share-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line, #d9d3c4); background: var(--paper); color: var(--forest-deep); cursor: pointer; font: inherit; min-height: 64px; }
+.share-btn:hover { border-color: var(--forest); }
+.share-btn:focus-visible { outline: 3px solid var(--wheat); outline-offset: 2px; }
+.share-btn b { font-family: var(--f-label); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.share-btn small { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.share-btn[disabled] { opacity: .75; cursor: progress; }
+.share-btn .spinner { width: 14px; height: 14px; border-color: rgba(46,74,54,.25); border-top-color: var(--forest); }
+.share-msg { margin: 8px 0 0; font-size: 13.5px; color: var(--forest); min-height: 0; }
+.share-msg:empty { display: none; }
+@media (max-width: 560px) { .share-btns { grid-template-columns: 1fr; } .share-btn { min-height: 0; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; } .share-btn b { white-space: nowrap; } .share-btn small { text-align: right; } }
+.done .share-kit { text-align: left; margin: 0 0 24px; }
+.done .share-kit p.share-h { font-size: 12px; margin: 0 0 10px; color: var(--barn); max-width: none; }
+.done .share-kit p.share-msg, .done .share-kit p.share-note { font-size: 13.5px; margin: 8px 0 0; max-width: none; }
+.share-note { color: var(--muted); }
+
+/* ---------- Admin editing in the form (submit.html?admin=1) ---------- */
+.admin-back { display: inline-block; margin: 0 0 10px; color: var(--wheat); font-weight: 700; text-decoration: none; font-family: var(--f-label); font-size: 14px; }
+.admin-back:hover { text-decoration: underline; }
+.intro p .admin-back { display: block; }
+.admin-notify { background: var(--cream); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; margin: 0 0 14px; display: grid; gap: 10px; text-align: left; }
+.admin-notify .toggle span { font-weight: 600; }
+.admin-notify textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 15px; background: #fff; margin-top: 6px; }
+.admin-notify .hint { margin: 6px 0 0; }
+.cancel-confirm textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 15px; background: #fff; margin: 6px 0 10px; min-height: 70px; }
+.cancel-confirm .lbl, .admin-notify .lbl { display: block; font-weight: 600; font-size: 14.5px; margin: 0; }
+body.res-mode #preview .card-media { display: none; }

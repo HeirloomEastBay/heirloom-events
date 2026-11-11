@@ -7,8 +7,18 @@
   const openedAt = Date.now();
   // Edit mode: opened from the "Edit or cancel your event" link in an email
   const qs = new URLSearchParams(location.search);
-  const EDIT = qs.get("edit") && qs.get("sig") ? { id: qs.get("edit"), by: qs.get("by") || "", sig: qs.get("sig") } : null;
+  const EDIT = qs.get("admin") !== "1" && qs.get("edit") && qs.get("sig") ? { id: qs.get("edit"), by: qs.get("by") || "", sig: qs.get("sig") } : null;
+  // Admin mode: opened from the Admin page (needs an admin's sign-in from My events)
+  //   ?admin=1&edit=EV-…                       → an event from the form
+  //   ?admin=1&cal=public&eid=…&start=…       → an event added straight in Google Calendar
+  const SESSION = (() => { try { return JSON.parse(localStorage.getItem("heirloom-session") || "null"); } catch (e) { return null; } })();
+  const ADMIN = qs.get("admin") !== "1" ? null
+    : qs.get("eid") ? { kind: "calendar", cal: qs.get("cal") === "residents" ? "residents" : "public", eventId: qs.get("eid"), start: qs.get("start") || "" }
+    : qs.get("edit") ? { kind: "form", id: qs.get("edit") } : null;
+  const CALMODE = !!(ADMIN && ADMIN.kind === "calendar");
+  const backToAdmin = "admin.html" + (ADMIN && ADMIN.cal === "residents" ? "?tab=residents" : "");
   let original = null;
+  let payloadNotified = false;
   let presets = C.PRESETS.slice();
   let partners = (C.PARTNERS || []).slice();
   function renderHosts() {
@@ -295,9 +305,9 @@
     return {
       title: (fd.get("title") || "").trim(),
       description: (fd.get("description") || "").trim(),
-      date: fd.get("date") || "",
-      startTime: fd.get("startTime") || "",
-      endTime: fd.get("endTime") || "",
+      date: $("#date").value || "",            // read directly: these are locked (disabled) for repeating calendar events
+      startTime: $("#startTime").value || "",
+      endTime: $("#endTime").value || "",
       allDay: $("#allDay").checked,
       repeat: fd.get("repeat"),
       until: fd.get("until") || "",
@@ -380,17 +390,22 @@
   function validate(v) {
     const bad = [];
     if (!v.title) bad.push("title");
-    if (!v.description) bad.push("description");
-    if (!v.date || (v.date < todayStr && !(original && v.date === original.date))) bad.push("date");
-    if (!v.allDay && !v.startTime) bad.push("startTime");
-    if (!v.allDay && v.startTime && v.endTime && v.endTime <= v.startTime) bad.push("endTime");
+    if (!v.description && !CALMODE) bad.push("description");
+    const timesLocked = CALMODE && original && original.recurring;
+    if (!timesLocked) {
+      if (!v.date || (v.date < todayStr && !(original && v.date === original.date))) bad.push("date");
+      if (!v.allDay && !v.startTime) bad.push("startTime");
+      if (!v.allDay && v.startTime && v.endTime && v.endTime <= v.startTime) bad.push("endTime");
+    }
     if (v.repeat !== "none" && (!v.until || v.until <= v.date)) bad.push("until");
     if (v.costType && v.costType !== "free" && !v.cost) bad.push("cost");
-    if ($("#d-yes").checked && v.calendars.includes("public") && !v.types.length) bad.push("discord");
+    if (!CALMODE && $("#d-yes").checked && v.calendars.includes("public") && !v.types.length) bad.push("discord");
     if (v.rsvpMode === "link" && (!v.link || !/^https?:\/\/\S+\.\S+/i.test(v.link))) bad.push("link");
-    if (!v.calendars.length) bad.push("calendars");
-    if (!v.name) bad.push("name");
-    if (!/^\S+@\S+\.\S+$/.test(v.email)) bad.push("email");
+    if (!CALMODE) {
+      if (!v.calendars.length) bad.push("calendars");
+      if (!v.name) bad.push("name");
+      if (!/^\S+@\S+\.\S+$/.test(v.email)) bad.push("email");
+    }
     $("#costErr").textContent = v.costType === "other" ? "Describe the cost, or unselect Other." : "Add a dollar amount.";
     form.querySelectorAll("[data-f]").forEach(f => f.classList.toggle("invalid", bad.includes(f.dataset.f)));
     return bad;
@@ -412,13 +427,18 @@
       return;
     }
     if (v.imageMode === "upload" && !upload) v.imageMode = "auto";
+    payloadNotified = !!($("#adminNotify") && $("#adminNotify").checked);
     const payload = Object.assign({}, v, detailsPayload(), {
       imageData: v.imageMode === "upload" ? upload.data : "",
       elapsed: Date.now() - openedAt
     }, EDIT ? { action: "update", id: EDIT.id, by: EDIT.by, sig: EDIT.sig } : {});
+    if (ADMIN) Object.assign(payload, { token: SESSION && SESSION.token },
+      ADMIN.kind === "form"
+        ? { action: "adminSaveSheet", id: ADMIN.id, notify: !!($("#adminNotify") && $("#adminNotify").checked), note: $("#adminNote") ? $("#adminNote").value.trim() : "" }
+        : { action: "adminSaveCal", cal: ADMIN.cal, eventId: ADMIN.eventId, start: ADMIN.start });
 
     const btn = $("#submitBtn");
-    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${EDIT ? "Saving…" : "Sending…"}`;
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${EDIT || ADMIN ? "Saving…" : "Sending…"}`;
     try {
       let result;
       if (!C.API_URL) {
@@ -428,26 +448,36 @@
         const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), redirect: "follow" });
         result = await res.json();
       }
-      if (!result.ok) throw new Error(result.error || "Something went wrong");
+      if (!result.ok) throw new Error(result.signedOut ? "Your sign-in expired. Sign in again on My events, then come back" : result.error || "Something went wrong");
       showDone(result, v);
     } catch (err) {
       console.error(err);
-      $("#formError").textContent = (err && err.message && err.message.length < 140 ? err.message + ". " : "") + (EDIT ? "Your changes weren't saved." : "Your event wasn't sent.") + " Please try again, or email " + C.EMAIL + ".";
+      $("#formError").textContent = (err && err.message && err.message.length < 140 ? err.message + ". " : "") + (EDIT || ADMIN ? "Your changes weren't saved." : "Your event wasn't sent.") + " Please try again, or email " + C.EMAIL + ".";
       $("#formError").classList.add("on");
-      btn.disabled = false; btn.textContent = EDIT ? "Save changes" : "Send it in";
+      btn.disabled = false; btn.textContent = EDIT || ADMIN ? "Save changes" : "Send it in";
     }
   });
 
   function doneCard(title, msg, extra) {
+    const btns = ADMIN
+      ? `<a class="btn btn-primary" href="${backToAdmin}">Back to Admin</a><a class="btn btn-outline" href="index.html">See the calendar</a>`
+      : `<a class="btn btn-primary" href="submit.html">Submit another event</a><a class="btn btn-outline" href="mine.html">My events</a><a class="btn btn-outline" href="index.html">See the calendar</a>`;
     $("#formWrap").innerHTML = `<div class="done">
       <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <h2>${esc(title)}</h2><p>${esc(msg)}</p>${extra || ""}
-      <div class="btns"><a class="btn btn-primary" href="submit.html">Submit another event</a><a class="btn btn-outline" href="mine.html">My events</a><a class="btn btn-outline" href="index.html">See the calendar</a></div>
+      <div class="btns">${btns}</div>
     </div>`;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function showDone(r, v) {
+    if (ADMIN) {
+      const where = CALMODE ? (ADMIN.cal === "residents" ? "residents' calendar" : "calendar and website") : "calendar";
+      const msg = r.status === "pending" ? `"${v.title}" is saved. It's still waiting for review, so it isn't on the calendar yet.`
+        : CALMODE && r.changes && !r.changes.length ? `Nothing needed changing on "${v.title}".`
+        : `Your changes to "${v.title}" are on the ${where}.` + (ADMIN.kind === "form" && payloadNotified ? " We emailed the person who submitted it." : "");
+      return doneCard("Saved!", msg, `<p class="hint"><a href="${esc(location.href)}">Make more changes</a></p>`);
+    }
     if (EDIT) {
       const msgs = {
         updated: ["Saved!", `Your changes to "${v.title}" are on the calendar.`],
@@ -465,8 +495,35 @@
       : `Someone from the Heirloom team will take a quick look and add "${v.title}" to the calendar. We'll email ${v.email} as soon as it's up.`;
     doneCard(title, msg,
       (r.editUrl ? `<p class="hint">Need to change something later? <a href="${esc(r.editUrl)}">Edit or cancel your event</a>. The link is in your email too.</p>` : "") +
-      (r.demo ? `<p class="hint">(Preview mode: nothing was actually sent.)</p>` : ""));
+      (r.demo ? `<p class="hint">(Preview mode: nothing was actually sent.)</p>` : "") +
+      `<div id="doneShare"></div>`);
+    // Flyer + social images, made from what they just typed in
+    if (window.HLFlyer && v.calendars.includes("public")) {
+      const box = window.HLFlyer.buttons(async () => flyerEvent(r, v));
+      if (!live) box.insertAdjacentHTML("beforeend", `<p class="share-note">Make them now and share once it's approved. The QR code starts working as soon as your event is on the calendar.</p>`);
+      $("#doneShare").appendChild(box);
+    }
   }
+
+  function flyerEvent(r, v) {
+    const [y, m, d] = v.date.split("-").map(Number);
+    const hm = t => (t || "0:0").split(":").map(Number);
+    const start = v.allDay ? H.zoned(y, m, d, 0) : H.zoned(y, m, d, ...hm(v.startTime));
+    let end = v.allDay ? new Date(+start + 86400000) : v.endTime ? H.zoned(y, m, d, ...hm(v.endTime)) : null;
+    if (end && end <= start) end = null;
+    const hostSel = $("#host"), partner = v.host && !/^(heirloom|community)$/.test(v.host) && hostSel ? hostSel.options[hostSel.selectedIndex].textContent : "";
+    return {
+      title: v.title, description: v.description, start, end, allDay: v.allDay,
+      location: v.location, address: v.location && !presetPlace(v.location) ? v.location : "",
+      cost: v.cost, recurring: repeatText(v),
+      image: v.imageMode === "upload" && upload ? upload.url : chosenImage(v),
+      source: v.host === "community" ? "community" : partner ? "partner" : "heirloom",
+      hostName: v.hostName, partnerName: partner,
+      ref: r.id || "", rsvp: v.rsvpMode === "form", eventId: r.id || ""
+    };
+  }
+  // Places on the farm (the chips) don't need a street address on the flyer
+  function presetPlace(p) { return !!form.querySelector(`input[name="place"][value="${CSS.escape(p)}"]`); }
 
   /* ---------- Edit mode ---------- */
   function setPanel(name) { document.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("on", p.dataset.panel === name)); }
@@ -557,9 +614,149 @@
   };
 
   if (EDIT && C.API_URL) startEdit();
+  if (ADMIN) startAdmin();
+
+  /* ---------- Admin mode ---------- */
+  async function adminCall(body) {
+    const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ token: SESSION && SESSION.token }, body)) });
+    const r = await res.json();
+    if (!r.ok) throw new Error(r.signedOut ? "Your sign-in expired. Sign in again on My events, then come back" : r.error || "Something went wrong");
+    return r;
+  }
+  function hideField(el) { if (el) el.hidden = true; }
+  function renumberSteps() {
+    let n = 0;
+    form.querySelectorAll("fieldset").forEach(f => { const st = f.querySelector(".step"); if (st && !f.hidden) st.textContent = ++n; });
+  }
+  async function startAdmin() {
+    const back = `<a class="admin-back" href="${backToAdmin}">← Back to Admin</a>`;
+    $("#pageTitle").textContent = CALMODE ? "Edit calendar event" : "Edit event";
+    $("#pageIntro").innerHTML = back + esc(CALMODE
+      ? (ADMIN.cal === "residents"
+        ? "This event was added straight in the residents' Google Calendar. Your changes update it there."
+        : "This event was added straight in Google Calendar. Name, time, place and description changes update Google Calendar. The image, cost, link, host and More details show on the website.")
+      : "You're editing as an admin. Changes go live right away, and you choose whether to email the person who submitted it.");
+    document.title = "Edit event · Admin · Heirloom";
+    const formEl = $("#eventForm");
+    formEl.hidden = true;
+    const loading = document.createElement("div");
+    loading.className = "loading-card"; loading.textContent = "Loading the event…";
+    formEl.before(loading);
+    const fail = msg => {
+      loading.innerHTML = `<h2 style="font-family:var(--f-title);color:var(--forest);margin:0 0 8px">We couldn't open this event</h2>
+        <p style="margin:0 0 18px">${esc(msg)}</p><a class="btn btn-primary" href="${backToAdmin}">Back to Admin</a>`;
+    };
+    if (!C.API_URL) return fail("Admin editing works once the calendar is connected (it's in preview mode).");
+    if (!SESSION || !SESSION.token) {
+      loading.innerHTML = `<h2 style="font-family:var(--f-title);color:var(--forest);margin:0 0 8px">Please sign in first</h2>
+        <p style="margin:0 0 18px">Admins sign in on My events with an emailed code.</p><a class="btn btn-primary" href="mine.html?next=admin">Sign in</a>`;
+      return;
+    }
+    await presetsReady;
+    try {
+      const r = await adminCall(Object.assign({ action: "adminGet" }, ADMIN));
+      original = r.event;
+      loading.remove(); formEl.hidden = false;
+      if (CALMODE) setupCalendarMode(original);
+      prefill(original);
+      if (CALMODE) {
+        $("#email").readOnly = false;
+        if (!original.imageCustom) { $("#keepPhoto").hidden = true; $("#m-auto").checked = true; setPanel("auto"); update(); }
+      }
+      $("#submitBtn").textContent = "Save changes";
+      $("#submitHint").textContent = CALMODE ? "Saves straight to Google Calendar." : "Saves right away.";
+      if (!CALMODE) addNotifyBox(original);
+      setupAdminCancel(original);
+    } catch (err) { fail(err.message || "Please try again from the Admin page."); }
+  }
+
+  function setupCalendarMode(e) {
+    const sets = form.querySelectorAll("fieldset");
+    [5, 6].forEach(i => hideField(sets[i]));            // Which calendar? · About you
+    hideField($("#discordStep"));
+    hideField($("#repeat").closest(".field")); hideField($("#untilField"));
+    $("#r-form").closest(".mode").hidden = true;        // built-in RSVPs need an event from the form
+    $("#description").removeAttribute("required"); $("#description").maxLength = 8000;
+    const dl = form.querySelector('label[for="description"]'); if (dl) dl.querySelectorAll(".req").forEach(x => x.remove());
+    if (e.recurring) {
+      ["date", "startTime", "endTime", "allDay"].forEach(id => $("#" + id).disabled = true);
+      const note = document.createElement("p");
+      note.className = "edit-note";
+      note.textContent = "This one repeats in Google Calendar. To change its time or which dates it's on, edit it there. Changes to the name, place, description and image apply to every date.";
+      sets[1].appendChild(note);
+    }
+    if (ADMIN.cal === "residents") {
+      hideField(sets[3]);                                // the residents' calendar has no website image
+      hideField($("[data-f=cost]")); hideField($("#r-none").closest(".field"));
+      document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = true);
+      hideField($("#details").closest(".field")); hideField($("#host").closest(".field")); hideField($("#hostNameField"));
+      $(".preview-col .label").textContent = "Preview (the residents' calendar shows the name, time, place and description)";
+      document.body.classList.add("res-mode");
+    }
+    renumberSteps();
+  }
+
+  function addNotifyBox(e) {
+    const box = document.createElement("div");
+    box.className = "admin-notify";
+    box.innerHTML = `<label class="toggle"><input type="checkbox" id="adminNotify"><span>Email ${esc(e.name || "the person who submitted it")} about these changes</span></label>
+      <div id="adminNoteWrap" hidden><label for="adminNote" class="lbl">Personal note <span class="opt">(optional)</span></label>
+      <textarea id="adminNote" maxlength="2000" rows="3" placeholder="Hi! I tidied up the time and added a photo."></textarea>
+      <p class="hint">They'll get the updated details with your note. Replies come to you.</p></div>`;
+    $("#submitBtn").before(box);
+    $("#adminNotify").addEventListener("change", () => { $("#adminNoteWrap").hidden = !$("#adminNotify").checked; });
+  }
+
+  function setupAdminCancel(e) {
+    const area = $("#cancelArea");
+    area.hidden = false;
+    if (!CALMODE) {
+      area.innerHTML = `<button type="button" class="link-btn" id="aCancelBtn">Cancel this event</button>
+        <div class="cancel-confirm" id="aCancelConfirm" hidden>
+          <p>Cancel <b>${esc(e.title)}</b>? It comes off the calendar. ${esc(e.name || "The person who submitted it")} gets an email${e.rsvpMode === "form" ? ", and so does anyone who RSVP'd" : ""}.</p>
+          <label for="aCancelNote" class="lbl">Note to ${esc(e.name || "them")} <span class="opt">(optional)</span></label>
+          <textarea id="aCancelNote" maxlength="2000" rows="3" placeholder="Sorry, we need the farmhouse that night."></textarea>
+          <div class="cancel-btns">
+            <button type="button" class="btn btn-primary btn-sm" id="aCancelYes">Yes, cancel it</button>
+            <button type="button" class="btn btn-outline btn-sm" id="aCancelNo">Keep it</button>
+          </div>
+        </div>`;
+      $("#aCancelBtn").onclick = () => { $("#aCancelBtn").hidden = true; $("#aCancelConfirm").hidden = false; };
+      $("#aCancelNo").onclick = () => { $("#aCancelBtn").hidden = false; $("#aCancelConfirm").hidden = true; };
+      $("#aCancelYes").onclick = () => adminRemove($("#aCancelYes"), "Yes, cancel it", { action: "adminCancelSheet", id: ADMIN.id, note: $("#aCancelNote").value.trim() },
+        "Cancelled", `"${e.title}" is off the calendar, and we emailed ${e.name || "the person who submitted it"}.`);
+      return;
+    }
+    const day = H.fmt(new Date(e.start), { weekday: "short", month: "short", day: "numeric" });
+    area.innerHTML = `<button type="button" class="link-btn" id="aCancelBtn">Delete this event</button>
+      <div class="cancel-confirm" id="aCancelConfirm" hidden>
+        <p>Delete <b>${esc(e.title)}</b> from the ${ADMIN.cal === "residents" ? "residents'" : "public"} Google Calendar? A backup copy is saved to the Admin log tab in the Sheet.</p>
+        <div class="cancel-btns">
+          ${e.recurring ? `<button type="button" class="btn btn-primary btn-sm" data-scope="one">Delete just ${esc(day)}</button>
+            <button type="button" class="btn btn-primary btn-sm" data-scope="series">Delete every date</button>`
+          : `<button type="button" class="btn btn-primary btn-sm" data-scope="one">Yes, delete it</button>`}
+          <button type="button" class="btn btn-outline btn-sm" id="aCancelNo">Keep it</button>
+        </div>
+      </div>`;
+    $("#aCancelBtn").onclick = () => { $("#aCancelBtn").hidden = true; $("#aCancelConfirm").hidden = false; };
+    $("#aCancelNo").onclick = () => { $("#aCancelBtn").hidden = false; $("#aCancelConfirm").hidden = true; };
+    area.querySelectorAll("[data-scope]").forEach(b => b.onclick = () => adminRemove(b, b.textContent,
+      { action: "adminDeleteCal", cal: ADMIN.cal, eventId: ADMIN.eventId, start: ADMIN.start, scope: b.dataset.scope },
+      "Deleted", b.dataset.scope === "series" ? `Every date of "${e.title}" is off the calendar.` : `"${e.title}"${e.recurring ? " on " + day : ""} is off the calendar.`));
+  }
+
+  async function adminRemove(btn, label, body, title, msg) {
+    btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Working…`;
+    try { await adminCall(body); doneCard(title, msg); }
+    catch (err) {
+      $("#formError").textContent = (err.message || "Something went wrong") + ". Nothing was changed. Please try again.";
+      $("#formError").classList.add("on");
+      btn.disabled = false; btn.textContent = label;
+    }
+  }
 
   // Signed in on "My events"? Fill in their details on a new submission
-  if (!EDIT) {
+  if (!EDIT && !ADMIN) {
     let me = null; try { me = JSON.parse(localStorage.getItem("heirloom-me") || "null"); } catch (e) { /* storage off */ }
     if (me) {
       if (me.name && !$("#name").value) $("#name").value = me.name;

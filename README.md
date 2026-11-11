@@ -38,6 +38,29 @@ Tapping an event's photo or title opens a popup with the **whole photo, uncroppe
 
 Links like `…/heirloom-events/?event=<id>` open an event's popup directly. Discord posts use these links.
 
+### Admins (admin.html)
+Admins sign in on **My events** (same emailed code), then tap **Admin**. The Admins list is column C on the Settings tab. It starts with lindsey.j.huffman@gmail.com, staff@, community@ and admin@.
+
+| Tab | What you can do |
+|---|---|
+| Public calendar | Everything on the website. **Events from the form:** Edit, Approve/Decline, Cancel. **Added in Google Calendar:** Edit, Delete. **Partner imports:** Change image, Hide/Show. |
+| Residents' calendar | Same, for the private calendar (no images there). |
+| Photo library | Add photos, rename them, edit keywords, reorder (the first match wins), remove. This is the Keywords tab. |
+| People | Admins, Approvers and Trusted posters. Only admins can change these, here or in the Sheet (columns A–C of Settings are protected). |
+
+- **Editing a form event** opens the form, saves right away, and gives you a checkbox to email the person who submitted it, with an optional personal note. Replies go to you. **Cancelling** always emails them, plus anyone who RSVP'd.
+- **Editing an event added in Google Calendar:** name, date, time, place and description change in Google Calendar itself. The image, cost, link, host and More details are saved on the **Calendar extras** tab and shown on the website. For a repeating event, the time and dates stay as set in Google Calendar; everything else applies to every date.
+- **Deleting** an event added in Google Calendar saves a full backup copy on the **Admin log** tab first. For repeating events you choose "just this date" or "every date".
+- Everything admins do is listed on the **Admin log** tab (who, when, what).
+
+### Flyers and social images
+Every public event gets three ready-made graphics in Heirloom's colors and fonts, made from the event's photo, title, date, place and cost:
+- **Printable flyer** (PDF, letter size) with a QR code. It opens the RSVP form for RSVP events, or the event's details otherwise.
+- **Square post** (1080 × 1080) for Instagram and Facebook feeds.
+- **Story** (1080 × 1920) for Instagram and Facebook stories.
+
+Find them under "Share this event" in each event's popup, on the "Thanks!" screen right after submitting, and from My events ("Flyer & images"). On a phone they open the share sheet; on a computer they download. They're drawn in the visitor's browser (`flyer.js`, with the PDF and QR code tools in `vendor/`), so there's nothing to set up and nothing is stored.
+
 ### Editing or cancelling
 
 Every confirmation email (and the "Thanks!" screen after posting) has an **Edit or cancel your event** button. It opens the form already filled in. Only the person who posted gets the link, and it only works for their event.
