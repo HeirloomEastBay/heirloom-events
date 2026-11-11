@@ -165,6 +165,7 @@
       else acts.push(`<span class="hint" style="margin:0;font-size:13.5px">Copied here from ${esc(i.partner)} automatically.</span>`);
     } else {
       if (!past) acts.push(`<a class="btn btn-forest btn-sm" href="${editHref(which, i)}">Edit</a>`);
+      if (!past && i.recurring && window.HLDates) acts.push(`<button class="btn btn-outline btn-sm" data-act="dates">Change one date</button>`);
       acts.push(`<button class="btn-quiet" data-act="delete">Delete</button>`);
     }
     if (which === "public" && !past && !i.hidden && !/^(Declined|Cancelled|Unpublished)$/.test(i.status || "") && window.HLFlyer)
@@ -205,7 +206,7 @@
   }
 
   function act(which, kind, i) {
-    if (kind === "dates") return HLDates.open(i.id, { onChange: () => calendar(which, true) });
+    if (kind === "dates") return HLDates.open(i.kind === "form" ? i.id : { cal: which, eventId: i.eventId }, { onChange: () => calendar(which, true) });
     if (kind === "approve") {
       openDlg(`<h2>Approve “${esc(i.title)}”?</h2><p>It goes on the calendar now, and we email ${esc(i.poster || "them")} that it's live.</p>
         <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Not yet</button><button class="btn btn-forest btn-sm" id="go">Approve and publish</button></div>`);

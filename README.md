@@ -111,10 +111,11 @@ Every confirmation email (and the "Thanks!" screen after posting) has an **Edit 
 ### Changing one date of a repeating event
 Repeating events from the form have **Change one date** on the Admin page and, for whoever posted them, on My events. Pick a date to:
 - **Cancel it:** just that date comes off both calendars. People who RSVP'd for it get an email (with an optional message), and their RSVPs for that date are cancelled.
+- **Move it:** pick a different day (and time if you like). People who RSVP'd move with it and get an email.
 - **Change it:** a different time, place, note ("Moved to the barn, rain!") or photo for that date. Google Calendar is updated, the website shows the note on that date's card, and anyone who RSVP'd gets an email.
 - **Back to normal** / **Bring it back** undoes it.
 
-The changes are kept on the **Date changes** tab, and are put back automatically if someone later edits the whole series. Repeating events added straight in Google Calendar: change one date there.
+The changes are kept on the **Date changes** tab, and are put back automatically if someone later edits the whole series. Repeating events added straight in Google Calendar (like Supper Church) have **Change one date** too, for admins. For those, bringing back a cancelled date adds it back as a one-time event.
 
 ### RSVPs
 
