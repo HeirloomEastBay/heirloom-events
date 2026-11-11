@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261110e">
+<link rel="stylesheet" href="styles.css?v=20261110g">
 <style>
   .intro { background: var(--forest); color: #fff; padding-block: 36px 0; }
   .intro .kicker { color: var(--sage); }
@@ -134,6 +134,71 @@
   .status.news { background: #e6eadc; }
   @media (max-width: 680px) { .vol { grid-template-columns: 1fr; gap: 12px; } }
 
+
+  /* People list + profiles */
+  .plist2 { display: grid; gap: 8px; }
+  .prow { appearance: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 12px 14px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .prow:hover { box-shadow: 0 0 0 2px var(--sage), var(--shadow); }
+  .prow:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
+  .prow .pmain { display: grid; gap: 2px; min-width: 0; }
+  .prow .pmain b { font-family: var(--f-display); font-size: 18px; font-weight: 600; }
+  .prow .sub { color: var(--ink-soft); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prow .chips2 { margin: 4px 0 0; }
+  .prow .pstat { display: grid; text-align: right; font-size: 13px; color: var(--ink-soft); }
+  .prow .pstat b { font-size: 15px; color: var(--forest); }
+  .av { width: 44px; height: 44px; border-radius: 50%; background: var(--sage-soft); color: var(--forest-deep); display: grid; place-items: center; font-family: var(--f-label); font-weight: 700; font-size: 15px; }
+  .av.res { background: var(--forest); color: #fff; }
+  .av.big { width: 64px; height: 64px; font-size: 21px; }
+  @media (max-width: 560px) { .prow { grid-template-columns: 40px minmax(0, 1fr); } .prow .av { width: 40px; height: 40px; } .prow .pstat { grid-column: 2; text-align: left; display: flex; gap: 8px; } }
+  .btn-back { appearance: none; border: 0; background: none; font: inherit; font-weight: 700; color: var(--forest); cursor: pointer; padding: 6px 0; font-size: 15px; }
+  .phead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; }
+  .phead h2 { font-size: 28px; color: var(--forest); }
+  .phead .sub { margin: 2px 0 0; color: var(--ink-soft); font-size: 14.5px; word-break: break-word; }
+  .phead .sub a { color: var(--forest); font-weight: 600; }
+  .phead .impact { display: grid; text-align: right; font-size: 13.5px; color: var(--ink-soft); }
+  .phead .impact b { font-family: var(--f-display); font-size: 26px; color: var(--forest); font-weight: 600; }
+  @media (max-width: 640px) { .phead { grid-template-columns: auto minmax(0, 1fr); } .phead .impact { grid-column: 1 / -1; text-align: left; } }
+  .pgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .pgrid .wide { grid-column: 1 / -1; }
+  @media (max-width: 760px) { .pgrid { grid-template-columns: 1fr; } }
+  .pcard { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; display: grid; gap: 10px; align-content: start; margin-bottom: 14px; }
+  .pgrid .pcard { margin-bottom: 0; }
+  .pcard h3 { font-size: 19px; color: var(--forest); margin: 0; }
+  .pcard .lbl { font-size: 13.5px; }
+  .pcard input[type="text"], .pcard input[type="tel"], .pcard input[type="email"], .pcard select, .pcard textarea, .addslot select {
+    display: block; width: 100%; margin-top: 3px; min-height: 42px; padding: 8px 11px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15px; font-weight: 400; }
+  .pcard input:disabled { background: var(--cream); color: var(--ink-soft); }
+  .pcard textarea { min-height: 84px; resize: vertical; }
+  .pcard p { margin: 0; }
+  .pcard p .lbl { margin-bottom: 2px; }
+  .pcard .cm { display: block; white-space: pre-wrap; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14.5px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chk { display: flex; gap: 9px; align-items: flex-start; font-size: 15px; cursor: pointer; }
+  .chk input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--forest); flex: none; }
+  .privacy { margin: 0; font-size: 13px; }
+  .vbox, .vfields { display: grid; gap: 10px; }
+  .vbox[hidden], .vfields[hidden] { display: none; }
+  .switch { display: flex; gap: 12px; align-items: center; cursor: pointer; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch .track { flex: none; width: 46px; height: 26px; border-radius: 999px; background: #cfd3c8; position: relative; transition: background .15s; }
+  .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s; }
+  .switch input:checked + .track { background: var(--forest); }
+  .switch input:checked + .track::after { transform: translateX(20px); }
+  .switch input:focus-visible + .track { outline: 3px solid var(--wheat); outline-offset: 2px; }
+  .switch .hint { font-size: 13px; }
+  .pgrid .savebar { margin-top: 0; position: sticky; bottom: 0; z-index: 2; }
+  .clist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .clist li { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 8px 8px 12px; }
+  .clist li > span { display: grid; }
+  .clist .hint { font-size: 13px; }
+  .addslot { display: flex; gap: 8px; align-items: center; }
+  .addslot select { margin: 0; flex: 1; min-width: 0; }
+  .act ul { margin: 4px 0 0; padding-left: 18px; font-size: 14.5px; display: grid; gap: 3px; }
+  .act li.past { color: var(--muted); }
+  .act + .act { margin-top: 4px; }
+  #addP .two input, #addP > .lbl input { display: block; width: 100%; margin-top: 3px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; background: #fff; }
+
   .trn { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13.5px; }
   .trn label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   .trn input { width: 16px; height: 16px; accent-color: var(--forest); }
@@ -187,14 +252,13 @@
     <div class="wrap">
       <span class="kicker">Heirloom Activities</span>
       <h1>Admin</h1>
-      <p>Edit, cancel or delete anything on either calendar, no matter who added it. See who has signed up to volunteer, and manage the photo library and who can post.</p>
+      <p>Edit, cancel or delete anything on either calendar, no matter who added it. Manage people, roles and the chore chart, and the photo library.</p>
       <div class="tabs" role="tablist" aria-label="Admin sections" id="tabs" hidden>
         <button class="tab" role="tab" id="tab-public" aria-controls="app" data-tab="public"><span class="dot"></span>Public calendar</button>
         <button class="tab" role="tab" id="tab-residents" aria-controls="app" data-tab="residents"><span class="dot res"></span>Residents' calendar</button>
         <button class="tab" role="tab" id="tab-photos" aria-controls="app" data-tab="photos">Photo library</button>
-        <button class="tab" role="tab" id="tab-volunteers" aria-controls="app" data-tab="volunteers">Volunteers<span class="tab-n" id="volCount" hidden></span></button>
+        <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People<span class="tab-n" id="volCount" hidden></span></button>
         <button class="tab" role="tab" id="tab-chores" aria-controls="app" data-tab="chores">Chore chart</button>
-        <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People</button>
       </div>
     </div>
   </section>
@@ -212,10 +276,10 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261110e"></script>
-<script src="common.js?v=20261110e"></script>
-<script src="nav.js?v=20261110e"></script>
-<script src="flyer.js?v=20261110e"></script>
-<script src="admin.js?v=20261110e"></script>
+<script src="config.js?v=20261110g"></script>
+<script src="common.js?v=20261110g"></script>
+<script src="nav.js?v=20261110g"></script>
+<script src="flyer.js?v=20261110g"></script>
+<script src="admin.js?v=20261110g"></script>
 </body>
 </html>

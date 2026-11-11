@@ -64,8 +64,65 @@
       me.trainings.forEach(t => b.push(`<span>${esc(t)}</span>`));
     }
     $("#badges").innerHTML = b.join("");
+    impact();
     const n = mineShifts().length; $("#nMine").hidden = !n; $("#nMine").textContent = n;
     const c = data.coverage.filter(x => !x.missing.length).length; $("#nCover").hidden = !c; $("#nCover").textContent = c;
+  }
+
+  /* ---------- How you've helped, with a little celebration at milestones ---------- */
+  const MILESTONES = [[h => h.shifts >= 1, "first", "You did your first volunteer shift. Welcome to the crew!"],
+    ...[10, 25, 50, 100, 200, 500, 1000].map(n => [h => h.hours >= n, "h" + n, `You've helped for ${n} hours. Thank you!`])];
+  function impact() {
+    const s = data.stats, box = $("#impact");
+    if (!s || !data.me) { box.hidden = true; return; }
+    const hours = s.hours === 1 ? "1 hour" : `${s.hours} hours`;
+    box.innerHTML = s.shifts
+      ? `<span><b>${esc(String(s.hours))}</b>${s.hours === 1 ? "hour" : "hours"} helped</span><span><b>${s.shifts}</b>shift${s.shifts === 1 ? "" : "s"}</span>${s.last ? `<span>Last helped ${esc(shortDay(s.last))}</span>` : ""}`
+      : `<span>Your hours will add up here after your first shift.</span>`;
+    box.hidden = false;
+    // Which milestones are new since last time on this device?
+    const key = "heirloom-milestones-" + data.email;
+    let seen = null; try { seen = JSON.parse(localStorage.getItem(key) || "null"); } catch (e) { /* fine */ }
+    const reached = MILESTONES.filter(m => m[0](s));
+    const fresh = reached.filter(m => !(seen || []).includes(m[1]));
+    try { localStorage.setItem(key, JSON.stringify(reached.map(m => m[1]))); } catch (e) { /* fine */ }
+    if (!fresh.length) return;
+    const top = fresh[fresh.length - 1];
+    box.insertAdjacentHTML("beforeend", `<p class="yay" role="status">🎉 ${esc(top[2])}${top[1] === "first" ? "" : ` That's ${esc(hours)} and ${s.shifts} shifts so far.`}</p>`);
+    confetti();
+  }
+  function confetti() {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = document.createElement("canvas"); c.id = "confetti"; document.body.appendChild(c);
+    const x = c.getContext("2d"), dpr = window.devicePixelRatio || 1;
+    const W = c.width = innerWidth * dpr, Hh = c.height = innerHeight * dpr;
+    const colors = ["#e3b65a", "#2e4a36", "#9fb6a4", "#b5452f", "#f4efe3", "#e9e1f3"];
+    const bits = Array.from({ length: 140 }, () => ({ x: W / 2 + (Math.random() - .5) * W * .3, y: Hh * .35, vx: (Math.random() - .5) * 16 * dpr, vy: (-Math.random() * 16 - 6) * dpr,
+      w: (6 + Math.random() * 6) * dpr, h: (8 + Math.random() * 8) * dpr, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: colors[Math.floor(Math.random() * colors.length)] }));
+    const t0 = performance.now();
+    (function frame(t) {
+      x.clearRect(0, 0, W, Hh);
+      bits.forEach(b => { b.vy += .45 * dpr; b.vx *= .99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        x.save(); x.translate(b.x, b.y); x.rotate(b.r); x.fillStyle = b.c; x.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); x.restore(); });
+      if (t - t0 < 3500) requestAnimationFrame(frame); else c.remove();
+    })(t0);
+  }
+
+  // Reminder emails the day before, per chore (off by default) or per coverage (on by default)
+  const remBtn = (on, attr) => `<button type="button" class="rem" ${attr} aria-pressed="${on}">${on ? "🔔 Reminder emails on" : "🔕 Reminder emails off"}</button>`;
+  function wireRem(root) {
+    root.querySelectorAll("[data-rem-slot], [data-rem-cover]").forEach(b => b.onclick = async () => {
+      const on = b.getAttribute("aria-pressed") !== "true", slotId = b.dataset.remSlot, coverId = b.dataset.remCover;
+      b.disabled = true;
+      try {
+        await call(slotId ? { action: "volReminder", slotId, on } : { action: "volReminder", coverId, on });
+        if (slotId) data.chores.forEach(c => { if (c.id === slotId) c.reminders = on; });
+        else data.myCovers.forEach(r => { if (r.id === coverId) r.reminder = on; });
+        root.querySelectorAll(slotId ? `[data-rem-slot="${slotId}"]` : `[data-rem-cover="${coverId}"]`).forEach(x => x.outerHTML = remBtn(on, slotId ? `data-rem-slot="${esc(slotId)}"` : `data-rem-cover="${esc(coverId)}"`));
+        wireRem(root);
+        flash(on ? "We'll email you a reminder the day before." : "Reminders off for this one.");
+      } catch (err) { b.disabled = false; flash(err.message + ".", true); }
+    });
   }
 
   function show(tab) {
@@ -137,6 +194,7 @@
     if (!list.length) html += `<div class="empty"><h2>No shifts yet</h2><p>Sign up for something on the Sign up tab, or take an open slot on the chore chart.</p>
       <p><button class="btn btn-primary" data-go="signup">See ways to help</button></p></div>`;
     let last = "";
+    const remSeen = {}; // the reminder switch is per chore, so show it on its next date only
     list.forEach((s, i) => {
       if (s.date !== last) { html += (last ? "</div>" : "") + `<h3 class="day-h">${esc(dayName(s.date))}</h3><div class="list">`; last = s.date; }
       const tag = s.kind === "signup" ? `<span class="tag vol">Signed up</span>${s.o.mine === "Waitlist" ? `<span class="tag warn">Waitlist</span>` : ""}`
@@ -145,11 +203,14 @@
       const act = s.kind === "signup" ? `<button class="btn-quiet" data-cancel="${i}">Cancel my spot</button>`
         : s.kind === "slot" ? (s.req ? `<button class="btn-quiet" data-uncover="${i}">I can make it after all</button>` : `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>`)
         : `<span class="needs">Can't make it? Let ${esc(s.r.by)} know.</span>`;
+      const firstOfSlot = s.kind === "slot" && !s.req && !remSeen[s.slot.id] && (remSeen[s.slot.id] = true);
+      const rem = firstOfSlot && !s.req ? remBtn(!!s.slot.reminders, `data-rem-slot="${esc(s.slot.id)}"`) : s.kind === "cover" ? remBtn(!!s.r.reminder, `data-rem-cover="${esc(s.r.id)}"`) : "";
       html += `<article class="item noimg"><div><h3>${esc(s.title)}</h3><p class="when">${esc(s.time)}${s.location ? " · " + esc(s.location) : ""}</p>
-        <div class="tags">${tag}</div><div class="acts">${act}</div></div></article>`;
+        <div class="tags">${tag}</div><div class="acts">${act}${rem}</div></div></article>`;
     });
     if (last) html += "</div>";
     app.innerHTML = html;
+    wireRem(app);
     app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
     if ($("#ics")) $("#ics").onclick = () => downloadIcs(list);
     app.querySelectorAll("[data-cancel]").forEach(b => b.onclick = () => { const s = list[+b.dataset.cancel];
@@ -170,16 +231,17 @@
       return `<section class="dcol" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
         const i = ch.indexOf(c);
         const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Open</span>` : `<span class="who">${esc(c.who)}</span>`;
-        const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button><button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
+        const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>${remBtn(!!c.reminders, `data-rem-slot="${esc(c.id)}"`)}<button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
           : c.open ? (c.missing.length ? `<span class="needs">${esc(needText(c.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`) : "";
         return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}"><b>${esc(c.chore)}</b><span class="t">${esc(c.time)}</span>
           ${c.training ? `<span class="tag plain">${esc(c.training)}</span>` : ""}${who}${act}</div>`;
       }).join("") : `<p class="empty-day">No slots</p>`}</section>`;
     }).join("")}</div>`;
     app.innerHTML = html;
+    wireRem(app);
     app.querySelectorAll("[data-claim]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.claim];
       confirmDlg(`Take ${c.day}s, ${c.time}?`, `${c.chore}, every week. If you can't make a date, you can ask for coverage here.`, "Take this slot",
-        btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.day}s ${c.time}. Thank you!`)); });
+        btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.day}s ${c.time}. Thank you! Want an email the day before? Turn on reminders in My shifts.`)); });
     app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.drop];
       confirmDlg(`Give up ${c.day}s?`, `${c.chore}, ${c.time}. We'll let the other volunteers know it's open. If you only need a date or two off, ask for coverage instead.`, "Give it up",
         btn => run(btn, { action: "volDrop", slotId: c.id }, "Thanks for letting us know. The slot is open for someone else now.")); });
@@ -202,7 +264,7 @@
     app.innerHTML = html;
     app.querySelectorAll("[data-take]").forEach(b => b.onclick = () => { const r = open[+b.dataset.take];
       confirmDlg(`Cover ${shortDay(r.date)}?`, `${r.chore}, ${r.time}, for ${r.by}. We'll let them know.`, "I'll cover it",
-        btn => run(btn, { action: "volCoverTake", id: r.id }, `Thank you! You're covering ${r.chore} on ${shortDay(r.date)}.`)); });
+        btn => run(btn, { action: "volCoverTake", id: r.id }, `Thank you! You're covering ${r.chore} on ${shortDay(r.date)}. We'll email you a reminder the day before.`)); });
     app.querySelectorAll("[data-unreq]").forEach(b => b.onclick = () => run(b, { action: "volCoverCancel", id: mine[+b.dataset.unreq].id }, "Got it. Your request is cancelled."));
   }
 
@@ -291,12 +353,14 @@
       { id: "S-5", chore: "Chicken coop clean-out", day: "Monday", start: "16:00", end: "17:00", time: "4pm–5pm", training: "", mine: false, open: true, who: "", missing: [], next: [] }
     ],
     coverage: [{ id: "C-1", slotId: "S-3", chore: "Evening animal chores", date: nextDow(6, 7), time: "3pm–4pm", start: "15:00", end: "16:00", by: "Bo", note: "Visiting family that weekend!", status: "Open", missing: [] }],
-    myRequests: [], myCovers: [], mySignups: []
+    myRequests: [], myCovers: [{ id: "C-9", slotId: "S-4", chore: "Morning milking", date: nextDow(6), time: "7am–8am", start: "07:00", end: "08:00", by: "Priya", note: "", status: "Covered", coveredBy: "Ana", reminder: true, missing: [] }], mySignups: [],
+    stats: { hours: 10.5, shifts: 9, first: dIn(-70), last: dIn(-5) }
   };
   demoData.mySignups = demoData.opps.filter(o => o.mine);
   async function demo(b) {
     await new Promise(r => setTimeout(r, 300));
     if (b.action === "volPortal") return JSON.parse(JSON.stringify(demoData));
+    if (b.action === "volReminder") { demoData.chores.forEach(c => { if (c.id === b.slotId) c.reminders = b.on; }); demoData.myCovers.forEach(r => { if (r.id === b.coverId) r.reminder = b.on; }); }
     return { ok: true };
   }
 

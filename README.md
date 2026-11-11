@@ -46,7 +46,8 @@ Admins sign in on **My events** (same emailed code), then tap **Admin**. The Adm
 | Public calendar | Everything on the website. **Events from the form:** Edit, Approve/Decline, Cancel. **Added in Google Calendar:** Edit, Delete. **Partner imports:** Change image, Hide/Show. |
 | Residents' calendar | Same, for the private calendar (no images there). |
 | Photo library | Add photos, rename them, edit keywords, reorder (the first match wins), remove. This is the Keywords tab. |
-| People | Admins, Approvers and Trusted posters. Only admins can change these, here or in the Sheet (columns A–C of Settings are protected). |
+| People | Everyone in one list: residents, volunteers, and anyone who posts events. Click a name to open their profile (see below). |
+| Chore chart | The weekly slots, and upcoming coverage requests. |
 
 - **Editing a form event** opens the form, saves right away, and gives you a checkbox to email the person who submitted it, with an optional personal note. Replies go to you. **Cancelling** always emails them, plus anyone who RSVP'd.
 - **Editing an event added in Google Calendar:** name, date, time, place and description change in Google Calendar itself. The image, cost, link, host and More details are saved on the **Calendar extras** tab and shown on the website. For a repeating event, the time and dates stay as set in Google Calendar; everything else applies to every date.
@@ -55,12 +56,18 @@ Admins sign in on **My events** (same emailed code), then tap **Admin**. The Adm
 
 ### Volunteers: opportunities, portal, chore chart and coverage
 
-**Residents:** set someone's Role to **Resident** (or add them with **Add a person**). Residents count as approved, background-checked and trained for everything, and get every volunteer announcement. When someone moves out, switch their Role to Volunteer and set their check and trainings. Each person's card also has **Post events without review** (trusted poster) and **Approve events** (events approver). These are the same lists as the People tab.
+**People and profiles.** The **People** tab in the Sheet (called "Volunteers" before; `setup()` renames it, nothing is lost) has one row per person. On the Admin page, **People** lists everyone, with search and filters (Residents, Volunteers, New volunteers to follow up, Admins, Event approvers, Trusted posters, Event posters & contacts). Click a name for their profile:
+- **Contact:** name, phone, address, emergency contact, news & updates. Phone, address and emergency contact are private: only admins and the person themselves see them.
+- **Resident switch:** residents count as approved volunteers with a cleared background check and every training. Turning it on also turns on **Post events without review**. **Approve events** stays a separate choice, so approval emails only go to the people whose job that is.
+- **Can:** post events without review, approve other people's events, use the Admin page. These are the same lists as columns A–C of Settings. You can't remove the last admin.
+- **Volunteer:** stage (Not a volunteer, New, Contacted, Background check sent, Active volunteer, Not right now), background check (Not yet / Sent / Cleared), and trainings. "Active volunteer" makes them an approved volunteer. Edit the trainings list itself with **Edit trainings list**.
+- **Chore chart:** the slots they're on, **Take off**, and **Add to a chore slot**. They get an email and see it when they log in.
+- **Activity:** hours helped, shifts, last helped, sign-ups, coverage and events they've posted. Plus their volunteer form answers and admin-only notes.
+- **Add a person** for residents or anyone who hasn't filled out a form. They can log in right away.
 
-**Who's a volunteer:** anyone on the **Volunteers** tab. On the Admin page's Volunteers tab, set each person's:
-- **Status:** "Active volunteer" makes them an approved volunteer.
-- **Background check:** Not yet / Sent / Cleared.
-- **Trainings:** checkboxes. Edit the list itself with "Edit trainings list" (saved as "Volunteer trainings" on Settings).
+**Hours helped** add up automatically: past volunteer sign-ups (all-day ones count as 4 hours), every week on a chore slot since they took it (minus dates they asked to have covered), and dates they covered for someone. When someone leaves a slot, their hours on it are saved to "Earlier hours" and "Earlier shifts" on their People row.
+
+**Profile (profile.html):** anyone logged in gets a **Profile** link in the menu to update their own contact info. Address and emergency contact are only asked for there, never on the public forms. The volunteer form has an optional phone number. If someone who's already in People fills out the volunteer form again, their row is updated instead of duplicated.
 
 **Volunteer opportunities:** trusted posters and admins tick **"This is a volunteer opportunity"** in the Submit form, then pick:
 - an area,
@@ -71,11 +78,13 @@ Sign-ups reuse the RSVP system: spots, waitlist, reminders and the guest list.
 
 **Volunteer portal (portal.html):** volunteers tap **Log in** on the home page and land here. Admins land on Admin, which links to the portal.
 - **Sign up:** opportunities for the next 3 months.
+- At the top: hours helped, shifts and the last time they helped. The first shift and 10, 25, 50, 100, 200, 500 and 1000 hours get a little confetti (once per milestone, per device; skipped if their device asks for reduced motion).
 - **My shifts:** their sign-ups, chore slots and dates they're covering, plus **Add to my calendar** (a calendar file).
+- **Reminder emails:** each person chooses per chore. Off by default for their regular chores, on by default when they cover someone's date. They go out the day before at about 9am.
 - **Chore chart:** take an open slot or give one up.
 - **Coverage:** ask for coverage on certain dates, or pick up someone else's request.
 
-**Chore chart:** manage it on the Admin page's **Chore chart** tab (or the Chore chart tab in the Sheet). Each slot is one person, every week. When a slot becomes Open, all qualified active volunteers get an email. Coverage requests email qualified volunteers, and both people get an email when someone covers. Admin FYIs go to "Volunteer applications go to".
+**Chore chart:** manage it on the Admin page's **Chore chart** tab (or the Chore chart tab in the Sheet), or put people on slots from their profile. AM animal chores (7–8am) and PM animal chores (5–6pm) are set up for every day of the week by `setup()`; change the times right on the chart. Each slot is one person, every week. When a slot becomes Open, all qualified active volunteers get an email. Coverage requests email qualified volunteers, and both people get an email when someone covers. Admin FYIs go to "Volunteer applications go to".
 
 ### Menu and flyers for admins
 Once signed in, every page's top-right menu shows **My events**, plus **Volunteer portal** and **Admin panel** for the people who have them. On the Admin page's Public calendar tab, each event has **Flyer & images**. They're made fresh from the event's current photo and details every time.

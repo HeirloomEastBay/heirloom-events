@@ -27,7 +27,7 @@
     const fd = new FormData(form);
     return {
       first: (fd.get("first") || "").trim(), last: (fd.get("last") || "").trim(),
-      email: (fd.get("email") || "").trim(), news: !!$("#news").checked,
+      email: (fd.get("email") || "").trim(), news: !!$("#news").checked, phone: (fd.get("phone") || "").trim(),
       areas: fd.getAll("areas"), heard: fd.get("heard") || "",
       comments: (fd.get("comments") || "").trim(), website: fd.get("website") || ""
     };

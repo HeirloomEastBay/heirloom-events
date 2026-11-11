@@ -1,6 +1,6 @@
 /* Heirloom Activities — Admin page
-   Admins sign in on My events (emailed code). Four tabs:
-   Public calendar · Residents' calendar · Photo library · People */
+   Admins sign in on My events (emailed code). Five tabs:
+   Public calendar · Residents' calendar · Photo library · Chore chart · People */
 (function () {
   const C = window.HEIRLOOM, H = window.HL;
   const $ = (s, el = document) => el.querySelector(s);
@@ -15,7 +15,7 @@
 
   let markedAdmin = false;
   async function call(body) {
-    if (DEMO) return demo(body);
+    if (DEMO) { const r = await demo(body); if (r.ok === false) throw new Error(r.error); return r; }
     const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(Object.assign({ token: session && session.token }, body)) });
     const r = await res.json();
@@ -46,9 +46,10 @@
   if (!session || !session.token) return gate("signin");
 
   /* ---------- Tabs ---------- */
-  const state = { tab: ["public", "residents", "photos", "volunteers", "chores", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
+  if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
+  const state = { tab: ["public", "residents", "photos", "chores", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
   $("#tabs").hidden = false;
-  document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.tab));
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => { qs.delete("p"); show(t.dataset.tab); });
   $("#tabs").addEventListener("keydown", e => {
     if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
     const tabs = [...document.querySelectorAll(".tab")], i = tabs.findIndex(t => t.dataset.tab === state.tab);
@@ -58,10 +59,9 @@
   function show(tab, fresh) {
     state.tab = tab;
     document.querySelectorAll(".tab").forEach(t => { const on = t.dataset.tab === tab; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; });
-    history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab);
+    if (tab !== "people" || !qs.get("p")) { qs.delete("p"); history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab); }
     if (tab === "photos") return photos(fresh);
-    if (tab === "people") return people();
-    if (tab === "volunteers") return volunteers(fresh);
+    if (tab === "people") return people(fresh);
     if (tab === "chores") return chores(fresh);
     calendar(tab, fresh);
   }
@@ -385,162 +385,6 @@
   }
 
   /* ============================================================
-     Volunteers (from the volunteer form)
-     ============================================================ */
-  const vstate = { q: "", status: "", interest: "", news: false, role: "" };
-  const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]];
-  // The role bits of a person's card (and of the "Add a person" form)
-  function roleFields(v, statuses, id) {
-    const res = v.role === "Resident";
-    return `<label class="lbl" for="rl${id}">Role</label>
-      <select id="rl${id}" data-k="role"><option${res ? "" : " selected"}>Volunteer</option><option${res ? " selected" : ""}>Resident</option></select>
-      <p class="hint res-note" ${res ? "" : "hidden"} style="margin:0;font-size:13px">Residents count as approved, background-checked and trained for everything, and get every volunteer announcement. When someone moves out, switch them to Volunteer and set their check and trainings.</p>
-      <div class="vfields" ${res ? "hidden" : ""} style="display:grid;gap:8px">
-        <label class="lbl" for="st${id}">Status</label>
-        <select id="st${id}" data-k="status">${statuses.concat(statuses.includes(v.status) ? [] : [v.status]).map(s => `<option${s === v.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
-        <label class="lbl" for="bg${id}">Background check</label>
-        <select id="bg${id}" data-k="bg">${BG.map(([val, l]) => `<option value="${val}"${val === (v.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select>
-        <span class="lbl">Trainings</span>
-        <div class="trn">${(state.vols.trainings || []).map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${(v.trainings || []).includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("")}</div>
-      </div>
-      <span class="lbl">Can also</span>
-      <div class="trn"><label><input type="checkbox" data-k="trusted"${v.trusted ? " checked" : ""}>Post events without review</label>
-        <label><input type="checkbox" data-k="approver"${v.approver ? " checked" : ""}>Approve events</label></div>`;
-  }
-  function wireRole(box) {
-    const sel = box.querySelector('[data-k="role"]');
-    sel.addEventListener("change", () => { const r = sel.value === "Resident"; box.querySelector(".vfields").hidden = r; box.querySelector(".res-note").hidden = !r; });
-  }
-  const readRole = box => ({
-    role: box.querySelector('[data-k="role"]').value, status: box.querySelector('[data-k="status"]').value, bg: box.querySelector('[data-k="bg"]').value,
-    trainings: [...box.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value),
-    trusted: box.querySelector('[data-k="trusted"]').checked, approver: box.querySelector('[data-k="approver"]').checked
-  });
-  async function volunteers(fresh) {
-    app.innerHTML = `<div class="panel-h"><div><h2>Volunteers</h2>
-      <p>Everyone who's filled out the volunteer form, newest first. Set a status and keep notes as you follow up. It all lives on the Volunteers tab in the Sheet too.</p></div></div>
-      <div id="vols"><p class="loading">Loading volunteers…</p></div>`;
-    try {
-      if (fresh || !state.vols) state.vols = await call({ action: "adminVolunteers" });
-      if (state.tab === "volunteers") renderVolunteers();
-    } catch (err) { handle(err, $("#vols")); }
-  }
-
-  const short = s => String(s).replace(/\s*\(.*?\)\s*/g, "").trim();
-  function renderVolunteers() {
-    const all = state.vols.volunteers, statuses = state.vols.statuses;
-    const interests = [...new Set(all.flatMap(v => v.interests.split(/,\s*(?![^()]*\))/).map(x => x.trim()).filter(Boolean)))];
-    $("#vols").innerHTML = `<div class="toolbar">
-        <input type="search" id="vq" placeholder="Search names, emails, comments" value="${esc(vstate.q)}" aria-label="Search volunteers">
-        <select id="vs" aria-label="Status"><option value="">Any status</option>${statuses.map(s => `<option${s === vstate.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
-        <select id="vi" aria-label="Interested in"><option value="">Any interest</option>${interests.map(s => `<option value="${esc(s)}"${s === vstate.interest ? " selected" : ""}>${esc(short(s))}</option>`).join("")}</select>
-        <select id="vr" aria-label="Role"><option value="">Residents &amp; volunteers</option><option${vstate.role === "Resident" ? " selected" : ""}>Resident</option><option${vstate.role === "Volunteer" ? " selected" : ""}>Volunteer</option></select>
-        <label class="tog"><input type="checkbox" id="vn"${vstate.news ? " checked" : ""}> Wants news &amp; updates</label>
-      </div>
-      <div class="toolbar" style="justify-content:space-between"><p class="hint" id="vcount" style="margin:0"></p>
-        <div class="acts"><button class="btn btn-forest btn-sm" id="vadd">Add a person</button><button class="btn btn-outline btn-sm" id="vtrn">Edit trainings list</button><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
-      <div class="vlist" id="vlist"></div>`;
-    const filtered = () => all.filter(v =>
-      (!vstate.role || v.role === vstate.role) && (!vstate.status || v.status === vstate.status) && (!vstate.interest || v.interests.includes(vstate.interest)) && (!vstate.news || v.news) &&
-      (!vstate.q || [v.first, v.last, v.email, v.comments, v.notes, v.heard, v.interests].join(" ").toLowerCase().includes(vstate.q.toLowerCase())));
-    const draw = () => {
-      const list = filtered();
-      $("#vcount").textContent = `${list.length} of ${all.length} volunteer${all.length === 1 ? "" : "s"}`;
-      $("#vlist").innerHTML = list.length ? list.map(v => `<article class="vol" data-row="${v.row}">
-          <div>
-            <h3>${esc(v.first)} ${esc(v.last)}</h3>
-            <p class="sub"><a href="mailto:${esc(v.email)}">${esc(v.email)}</a>${v.phone ? " · " + esc(v.phone) : ""} · ${esc(v.submitted)}</p>
-            <div class="chips2">${v.role === "Resident" ? `<span class="status news">Resident</span>` : v.status === "New" ? `<span class="status new">New</span>` : ""}
-              ${v.admin ? `<span class="status">Admin</span>` : ""}${v.approver ? `<span class="status">Events approver</span>` : ""}${v.trusted ? `<span class="status">Trusted poster</span>` : ""}
-              ${v.interests.split(/,\s*(?![^()]*\))/).filter(Boolean).map(i => `<span class="status">${esc(i.trim())}</span>`).join("")}
-              ${v.news ? `<span class="status news">✓ News &amp; updates</span>` : ""}
-              ${v.heard ? `<span class="status src">Heard via ${esc(v.heard)}</span>` : ""}</div>
-            ${v.comments ? `<p class="cm">${esc(v.comments)}</p>` : ""}
-            ${(v.slots || []).length || v.upcoming ? `<p class="sub" style="margin-top:8px">${(v.slots || []).length ? "Chore chart: " + esc(v.slots.join(", ")) : ""}${(v.slots || []).length && v.upcoming ? " · " : ""}${v.upcoming ? v.upcoming + " upcoming sign-up" + (v.upcoming > 1 ? "s" : "") : ""}</p>` : ""}
-          </div>
-          <div class="side">
-            ${roleFields(v, statuses, v.row)}
-            <label class="lbl" for="nt${v.row}">Notes</label>
-            <textarea id="nt${v.row}" data-k="notes" maxlength="3000" placeholder="Called Tuesday, coming Saturday…">${esc(v.notes)}</textarea>
-            <div class="row3"><span class="saved" aria-live="polite"></span><button class="btn btn-forest btn-sm" data-save disabled>Save</button></div>
-          </div></article>`).join("")
-        : `<div class="empty"><h2>${all.length ? "No one matches" : "No volunteers yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here."}</p></div>`;
-      $("#vlist").querySelectorAll(".vol").forEach(card => {
-        const v = all.find(x => x.row === +card.dataset.row), btn = card.querySelector("[data-save]"), msg = card.querySelector(".saved");
-        wireRole(card);
-        card.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => { btn.disabled = false; msg.textContent = ""; }));
-        btn.onclick = async () => {
-          btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
-          const notes = card.querySelector('[data-k="notes"]').value.trim(), r = readRole(card);
-          try {
-            await call(Object.assign({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, notes }, r));
-            Object.assign(v, r, { notes }); if (r.role === "Resident") v.status = "Active volunteer";
-            btn.textContent = "Save"; msg.textContent = "Saved";
-            const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
-          } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); btn.disabled = false; btn.textContent = "Save"; msg.textContent = err.message; }
-        };
-      });
-    };
-    $("#vr").onchange = e => { vstate.role = e.target.value; draw(); };
-    $("#vadd").onclick = () => {
-      openDlg(`<h2>Add a person</h2><p>For residents and pre-approved volunteers who haven't filled out the form. They can log in right away with this email.</p>
-        <form id="addP" class="f2" novalidate style="display:grid;gap:8px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="lbl">First name<input type="text" name="first" maxlength="60" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label>
-          <label class="lbl">Last name<input type="text" name="last" maxlength="60" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label></div>
-          <label class="lbl">Email<input type="email" name="email" maxlength="120" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label>
-          <div class="side" style="display:grid;gap:8px">${roleFields({ role: "Resident", status: "Active volunteer", trainings: [] }, state.vols.statuses, "new")}</div>
-          <label class="lbl">Notes <span class="opt">(optional)</span><textarea name="notes" maxlength="3000" style="width:100%;min-height:60px"></textarea></label>
-        </form>
-        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Add</button></div>`);
-      const f = $("#addP"); wireRole(f);
-      f.querySelectorAll("select").forEach(s => s.style.cssText = "width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff");
-      $("#go").onclick = async e => {
-        const b = e.currentTarget, fd = new FormData(f);
-        const body = Object.assign({ action: "adminVolunteerAdd", first: fd.get("first"), last: fd.get("last"), email: fd.get("email"), notes: fd.get("notes") }, readRole(f));
-        b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-        try { state.vols = await call(body); dlg.close(); renderVolunteers(); flash(`Added ${body.first}. They can log in with ${body.email}.`); }
-        catch (err) {
-          if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); }
-          b.disabled = false; b.textContent = "Add";
-          if (!dlgIn.querySelector(".msg.err")) dlgIn.insertAdjacentHTML("beforeend", `<p class="msg err"></p>`);
-          dlgIn.querySelector(".msg.err").textContent = err.message + ".";
-        }
-      };
-    };
-    $("#vtrn").onclick = () => {
-      openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line.</p>
-        <textarea id="trnList" style="min-height:160px">${esc((state.vols.trainings || []).join("\n"))}</textarea>
-        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Save</button></div>`);
-      $("#go").onclick = async e => {
-        const b = e.currentTarget, list = $("#trnList").value.split("\n").map(x => x.trim()).filter(Boolean);
-        b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-        try { const r = await call({ action: "adminTrainingsSave", list }); state.vols.trainings = r.trainings; state.chores = null; dlg.close(); renderVolunteers(); flash("Trainings updated."); }
-        catch (err) { b.disabled = false; b.textContent = "Save"; flash(err.message, true); }
-      };
-    };
-    $("#vq").addEventListener("input", e => { vstate.q = e.target.value; draw(); });
-    $("#vs").onchange = e => { vstate.status = e.target.value; draw(); };
-    $("#vi").onchange = e => { vstate.interest = e.target.value; draw(); };
-    $("#vn").onchange = e => { vstate.news = e.target.checked; draw(); };
-    $("#vcopy").onclick = async () => {
-      const emails = [...new Set(filtered().map(v => v.email).filter(Boolean))].join(", ");
-      try { await navigator.clipboard.writeText(emails); flash(`Copied ${filtered().length} email${filtered().length === 1 ? "" : "s"}. Paste them into the To or Bcc line.`); }
-      catch (e) { openDlg(`<h2>Emails</h2><p>Copy these:</p><textarea readonly style="min-height:140px">${esc(emails)}</textarea><div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Done</button></div>`); }
-    };
-    $("#vcsv").onclick = () => {
-      const cols = [["Submitted", "submitted"], ["First name", "first"], ["Last name", "last"], ["Email", "email"], ["News & updates", "news"], ["Interested in", "interests"], ["Heard about us", "heard"], ["Comments", "comments"], ["Status", "status"], ["Notes", "notes"]];
-      const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
-      const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(v => cols.map(c => cell(v[c[1]])).join(","))).join("\r\n");
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
-      a.download = "heirloom-volunteers-" + H.dayKey(new Date()) + ".csv";
-      document.body.appendChild(a); a.click(); a.remove();
-    };
-    const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
-    draw();
-  }
-
-  /* ============================================================
      Chore chart (regular weekly slots) + coverage requests
      ============================================================ */
   async function chores(fresh) {
@@ -628,70 +472,294 @@
   }
 
   /* ============================================================
-     People
+     People: everyone in one list. Click a name for their profile:
+     contact info, resident switch, permissions, volunteer stage,
+     background check, trainings, chores, and what they've done.
      ============================================================ */
-  async function people() {
+  const pstate = { q: "", filter: "", news: false };
+  const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]];
+  const NOT_VOL = "Not a volunteer";
+  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Trusted posters"], ["none", "Event posters & contacts"]];
+  const nameOf = p => (p.first + " " + p.last).trim() || p.email;
+  const initials = p => ((p.first || p.email)[0] + (p.last ? p.last[0] : "")).toUpperCase();
+  const hrs = h => (h === 1 ? "1 hour" : (Math.round(h * 4) / 4) + " hours");
+  const dateLong = ymd => ymd ? H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { month: "short", day: "numeric", year: "numeric" }) : "";
+
+  function setNewCount(list) { const n = list.filter(p => p.role === "Volunteer" && p.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n; }
+
+  async function people(fresh) {
+    const who = qs.get("p");
+    if (who) return person(who);
     app.innerHTML = `<div class="panel-h"><div><h2>People</h2>
-      <p>Who can post without review, who approves, and who can use this page. Only admins can change these, here or in the Sheet.</p></div></div><div id="ppl"><p class="loading">Loading…</p></div>`;
+      <p>Residents, volunteers, and everyone who posts events, in one list. Click a name to see their profile, change their role and permissions, or put them on the chore chart. It all lives on the People tab in the Sheet too.</p></div></div>
+      <div id="ppl"><p class="loading">Loading people…</p></div>`;
     try {
-      const r = await call({ action: "adminPeople" });
-      if (state.tab === "people") renderPeople(r);
+      if (fresh || !state.ppl) state.ppl = await call({ action: "adminPersons" });
+      if (state.tab === "people" && !qs.get("p")) renderPeople();
     } catch (err) { handle(err, $("#ppl")); }
   }
+  function goPerson(email) {
+    if (email) qs.set("p", email); else qs.delete("p");
+    history.pushState(null, "", "admin.html?tab=people" + (email ? "&p=" + encodeURIComponent(email) : ""));
+    window.scrollTo(0, 0);
+    people();
+  }
+  window.addEventListener("popstate", () => {
+    const u = new URLSearchParams(location.search);
+    if (u.get("tab") !== "people") return;
+    if (u.get("p")) qs.set("p", u.get("p")); else qs.delete("p");
+    people();
+  });
 
-  function renderPeople(r) {
-    const lists = { admins: r.admins.slice(), approvers: r.approvers.slice(), trusted: r.trusted.slice() };
-    const me = String(r.me || "").toLowerCase();
-    const info = {
-      admins: ["Admins", "Can use this page: edit, cancel or delete any event, manage photos, and change these lists."],
-      approvers: ["Approvers", "Get an email to approve or decline posts from people who aren't trusted. Their own posts go up right away."],
-      trusted: ["Trusted posters", "Their posts go up right away, without review. (Admins and approvers are trusted automatically.)"]
+  function renderPeople() {
+    const all = state.ppl.people;
+    setNewCount(all);
+    $("#ppl").innerHTML = `<div class="toolbar">
+        <input type="search" id="pq" placeholder="Search names, emails, phone numbers" value="${esc(pstate.q)}" aria-label="Search people">
+        <select id="pf" aria-label="Show">${FILTERS.map(([v, l]) => `<option value="${v}"${v === pstate.filter ? " selected" : ""}>${l}</option>`).join("")}</select>
+        <label class="tog"><input type="checkbox" id="pn"${pstate.news ? " checked" : ""}> Wants news &amp; updates</label>
+      </div>
+      <div class="toolbar" style="justify-content:space-between"><p class="hint" id="pcount" style="margin:0"></p>
+        <div class="acts"><button class="btn btn-forest btn-sm" id="padd">Add a person</button><button class="btn btn-outline btn-sm" id="ptrn">Edit trainings list</button><button class="btn btn-outline btn-sm" id="pcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="pcsv">Download spreadsheet</button></div></div>
+      <div class="plist2" id="plist"></div>`;
+    const match = p => {
+      const f = pstate.filter;
+      if (f === "Resident" || f === "Volunteer") { if (p.role !== f) return false; }
+      else if (f === "New") { if (!(p.role === "Volunteer" && p.status === "New")) return false; }
+      else if (f === "none") { if (p.role) return false; }
+      else if (f && !p[f]) return false;
+      if (pstate.news && !p.news) return false;
+      return !pstate.q || [p.first, p.last, p.email, p.phone].join(" ").toLowerCase().includes(pstate.q.toLowerCase());
     };
-    let dirty = false;
+    const filtered = () => all.filter(match);
     const draw = () => {
-      $("#ppl").innerHTML = `<div class="people">${Object.keys(lists).map(k => `<section class="plist" data-k="${k}">
-          <h3>${info[k][0]} <span class="hint" style="font-family:var(--f-body);font-size:14px">(${lists[k].length})</span></h3><p>${info[k][1]}</p>
-          <ul>${lists[k].map((e, n) => `<li class="${e === me ? "me" : ""}"><span>${esc(e)}${e === me ? " <b>(you)</b>" : ""}</span><button type="button" class="x" data-n="${n}" aria-label="Remove ${esc(e)}">×</button></li>`).join("") || `<li style="justify-content:center;color:var(--muted)">Nobody yet</li>`}</ul>
-          <form novalidate><input type="email" placeholder="name@example.com" aria-label="Add an email to ${info[k][0]}" autocomplete="off"><button class="btn btn-outline btn-sm">Add</button></form>
-        </section>`).join("")}</div>
-        <div class="savebar"><button class="btn btn-primary" id="savePeople"${dirty ? "" : " disabled"}>Save changes</button><p id="pplMsg">${dirty ? "You have unsaved changes." : "Changes take effect as soon as you save."}</p></div>`;
-      $("#ppl").querySelectorAll(".plist").forEach(sec => {
-        const k = sec.dataset.k;
-        sec.querySelectorAll(".x").forEach(x => x.onclick = () => { lists[k].splice(+x.dataset.n, 1); dirty = true; draw(); });
-        sec.querySelector("form").onsubmit = e => {
-          e.preventDefault();
-          const inp = sec.querySelector("input");
-          const added = inp.value.split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
-          const bad = added.filter(a => !/^\S+@\S+\.\S+$/.test(a));
-          if (bad.length) { inp.setCustomValidity("Check this email"); inp.reportValidity(); return; }
-          added.forEach(a => { if (!lists[k].includes(a)) lists[k].push(a); });
-          dirty = true; draw();
-          $(`.plist[data-k="${k}"] input`).focus();
-        };
-        sec.querySelector("input").addEventListener("input", e => e.target.setCustomValidity(""));
-      });
-      $("#savePeople").onclick = async () => {
-        if (!lists.admins.length) { $("#pplMsg").textContent = "Keep at least one admin."; return; }
-        if (!lists.admins.includes(me) && !confirmSelf()) return;
-        const b = $("#savePeople"); b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
-        try {
-          const res = await call({ action: "adminPeopleSave", admins: lists.admins, approvers: lists.approvers, trusted: lists.trusted });
-          if (res.stillAdmin === false) return gate("notAdmin");
-          renderPeople(res); flash("Saved. The lists in the Sheet are updated too.");
-        } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); b.disabled = false; b.textContent = "Save changes"; $("#pplMsg").textContent = err.message + "."; }
-      };
+      const list = filtered();
+      $("#pcount").textContent = `${list.length} of ${all.length} ${all.length === 1 ? "person" : "people"}`;
+      $("#plist").innerHTML = list.length ? list.map(p => `<button type="button" class="prow" data-e="${esc(p.email)}">
+          <span class="av${p.role === "Resident" ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
+          <span class="pmain"><b>${esc(nameOf(p))}</b><span class="sub">${esc(p.email)}${p.phone ? " · " + esc(p.phone) : ""}</span>
+            <span class="chips2">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted && !p.admin && !p.approver ? `<span class="status">Trusted poster</span>` : ""}${p.slots ? `<span class="status src">${p.slots} chore slot${p.slots > 1 ? "s" : ""}</span>` : ""}${p.events ? `<span class="status src">${p.events} event${p.events > 1 ? "s" : ""} posted</span>` : ""}</span></span>
+          <span class="pstat">${p.hours ? `<b>${esc(hrs(p.hours))}</b>` : ""}${p.lastText ? `<span>Last helped ${esc(p.lastText)}</span>` : ""}</span>
+        </button>`).join("")
+        : `<div class="empty"><h2>${all.length ? "No one matches" : "No one yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here, and so does anyone who posts an event."}</p></div>`;
+      $("#plist").querySelectorAll(".prow").forEach(b => b.onclick = () => goPerson(b.dataset.e));
     };
-    // Taking yourself off the Admins list locks you out of this page
-    let selfOk = false;
-    function confirmSelf() {
-      if (selfOk) return true;
-      openDlg(`<h2>Remove yourself as an admin?</h2><p>You won't be able to use this page anymore. Another admin would need to add you back.</p>
-        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep me</button><button class="btn btn-primary btn-sm" id="go">Remove me</button></div>`);
-      $("#go").onclick = () => { selfOk = true; dlg.close(); $("#savePeople").click(); };
-      return false;
-    }
-    window.addEventListener("beforeunload", e => { if (dirty && state.tab === "people") { e.preventDefault(); e.returnValue = ""; } });
+    $("#pq").addEventListener("input", e => { pstate.q = e.target.value; draw(); });
+    $("#pf").onchange = e => { pstate.filter = e.target.value; draw(); };
+    $("#pn").onchange = e => { pstate.news = e.target.checked; draw(); };
+    $("#padd").onclick = addPerson;
+    $("#ptrn").onclick = editTrainings;
+    $("#pcopy").onclick = async () => {
+      const emails = [...new Set(filtered().map(p => p.email))].join(", ");
+      try { await navigator.clipboard.writeText(emails); flash(`Copied ${filtered().length} email${filtered().length === 1 ? "" : "s"}. Paste them into the To or Bcc line.`); }
+      catch (e) { openDlg(`<h2>Emails</h2><p>Copy these:</p><textarea readonly style="min-height:140px">${esc(emails)}</textarea><div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Done</button></div>`); }
+    };
+    $("#pcsv").onclick = () => {
+      const cols = [["First name", "first"], ["Last name", "last"], ["Email", "email"], ["Phone", "phone"], ["Role", "role"], ["Volunteer stage", "status"], ["Background check", "bg"],
+        ["Trainings", p => p.trainings.join(", ")], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Trusted poster", "trusted"],
+        ["Chore slots", "slots"], ["Hours helped", "hours"], ["Last helped", "lastHelped"], ["Events posted", "events"]];
+      const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
+      const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(p => cols.map(c => cell(typeof c[1] === "function" ? c[1](p) : p[c[1]])).join(","))).join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+      a.download = "heirloom-people-" + H.dayKey(new Date()) + ".csv";
+      document.body.appendChild(a); a.click(); a.remove();
+    };
     draw();
+  }
+  function roleChip(p) {
+    if (p.role === "Resident") return `<span class="status news">Resident</span>`;
+    if (p.role === "Volunteer") return `<span class="status${p.status === "New" ? " new" : ""}">${p.status === "Active volunteer" ? "Volunteer" : "Volunteer · " + esc(p.status)}</span>`;
+    return p.events ? "" : `<span class="status off">Contact</span>`;
+  }
+
+  function editTrainings() {
+    const cur = (state.ppl && state.ppl.trainings) || (state.person && state.person.trainings) || [];
+    openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line.</p>
+      <textarea id="trnList" style="min-height:160px">${esc(cur.join("\n"))}</textarea>
+      <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Save</button></div>`);
+    $("#go").onclick = async e => {
+      const b = e.currentTarget, list = $("#trnList").value.split("\n").map(x => x.trim()).filter(Boolean);
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try { const r = await call({ action: "adminTrainingsSave", list }); if (state.ppl) state.ppl.trainings = r.trainings; state.chores = null; dlg.close(); flash("Trainings updated."); if (qs.get("p")) person(qs.get("p")); }
+      catch (err) { b.disabled = false; b.textContent = "Save"; flash(err.message, true); }
+    };
+  }
+
+  function addPerson() {
+    openDlg(`<h2>Add a person</h2><p>For residents, pre-approved volunteers, or anyone who hasn't filled out a form. They can log in right away with this email.</p>
+      <form id="addP" class="f2" novalidate>
+        <div class="two"><label class="lbl">First name<input type="text" name="first" maxlength="60" autocomplete="off"></label>
+        <label class="lbl">Last name<input type="text" name="last" maxlength="60" autocomplete="off"></label></div>
+        <label class="lbl">Email<input type="email" name="email" maxlength="120" autocomplete="off"></label>
+        <label class="lbl">Phone <span class="opt">(optional)</span><input type="tel" name="phone" maxlength="40" autocomplete="off"></label>
+        <span class="lbl">They are…</span>
+        <div class="checks" role="radiogroup"><label><input type="radio" name="role" value="Resident" checked> A resident</label><label><input type="radio" name="role" value="Volunteer"> A volunteer</label><label><input type="radio" name="role" value=""> Neither (posts events, or a contact)</label></div>
+        <p class="hint" style="margin:0">You can set everything else (stage, background check, trainings, permissions, chores) on their profile next.</p>
+      </form>
+      <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Add and open profile</button></div>`);
+    const f = $("#addP");
+    $("#go").onclick = async e => {
+      const b = e.currentTarget, fd = new FormData(f);
+      const body = { action: "adminPersonSave", create: true, first: fd.get("first"), last: fd.get("last"), email: String(fd.get("email") || "").trim().toLowerCase(), phone: fd.get("phone"), role: fd.get("role"), status: "Active volunteer" };
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try { state.person = await call(body); state.ppl = null; dlg.close(); flash(`Added ${body.first}. They can log in with ${body.email}.`); goPerson(body.email); }
+      catch (err) {
+        if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); }
+        b.disabled = false; b.textContent = "Add and open profile";
+        if (!dlgIn.querySelector(".msg.err")) dlgIn.insertAdjacentHTML("beforeend", `<p class="msg err"></p>`);
+        dlgIn.querySelector(".msg.err").textContent = err.message + ".";
+      }
+    };
+  }
+
+  /* ---------- One person's profile ---------- */
+  async function person(email) {
+    app.innerHTML = `<p><button type="button" class="btn-back" id="back">← All people</button></p><div id="prof"><p class="loading">Loading…</p></div>`;
+    $("#back").onclick = () => goPerson("");
+    try {
+      if (!state.person || state.person.person.email !== email.toLowerCase()) state.person = await call({ action: "adminPerson", email });
+      if (state.tab === "people" && qs.get("p")) renderPerson();
+    } catch (err) { handle(err, $("#prof")); }
+  }
+  function renderPerson() {
+    const R = state.person, p = R.person, me = String(R.me || session.email || "").toLowerCase();
+    const res = p.role === "Resident", stage = p.role === "Volunteer" ? p.status : NOT_VOL;
+    const stages = [NOT_VOL].concat(R.statuses);
+    const field = (k, label, val, type, opt, ph) => `<label class="lbl">${label}${opt ? ` <span class="opt">(optional)</span>` : ""}<input type="${type || "text"}" data-k="${k}" value="${esc(val || "")}" maxlength="${k === "address" ? 300 : 200}"${ph ? ` placeholder="${esc(ph)}"` : ""} autocomplete="off"></label>`;
+    const mine = R.slots.filter(s => s.volunteer === p.email);
+    const free = R.slots.filter(s => s.volunteer !== p.email);
+    const since = p.firstText ? `Helping since ${esc(p.firstText)}` : "";
+    $("#prof").innerHTML = `
+      <section class="phead">
+        <span class="av big${res ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
+        <div><h2>${esc(nameOf(p))}</h2>
+          <p class="sub"><a href="mailto:${esc(p.email)}">${esc(p.email)}</a>${p.phone ? ` · <a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""}${p.submitted ? ` · since ${esc(dateLong(p.submitted))}` : ""}</p>
+          <div class="chips2" style="margin:6px 0 0">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted ? `<span class="status">Trusted poster</span>` : ""}</div></div>
+        <div class="impact">${p.hours || p.shifts ? `<b>${esc(hrs(p.hours))}</b><span>${p.shifts} shift${p.shifts === 1 ? "" : "s"}${p.lastText ? " · last helped " + esc(p.lastText) : ""}</span>${since ? `<span>${since}</span>` : ""}` : `<span>No volunteer hours yet</span>`}</div>
+      </section>
+
+      <form class="pgrid" id="pform" novalidate>
+        <section class="pcard">
+          <h3>Contact</h3>
+          <div class="two">${field("first", "First name", p.first)}${field("last", "Last name", p.last)}</div>
+          <label class="lbl">Email<input type="email" value="${esc(p.email)}" disabled></label>
+          ${field("phone", "Phone", p.phone, "tel", true)}
+          ${field("address", "Address", p.address, "text", true)}
+          ${field("emergency", "Emergency contact", p.emergency, "text", true, "Name, relationship, phone")}
+          <label class="chk"><input type="checkbox" data-k="news"${p.news ? " checked" : ""}> Wants news &amp; updates</label>
+          <p class="hint privacy">🔒 Phone, address and emergency contact are only shown to admins and to ${esc(p.first || "them")} on their own profile.</p>
+        </section>
+
+        <section class="pcard">
+          <h3>Role &amp; permissions</h3>
+          <label class="switch"><input type="checkbox" data-k="resident"${res ? " checked" : ""}><span class="track" aria-hidden="true"></span><span><b>Resident</b><br><span class="hint">Lives at Heirloom</span></span></label>
+          <p class="hint res-note" ${res ? "" : "hidden"}>Residents count as approved volunteers, with a cleared background check and every training. Turning this on also lets them post events without review.</p>
+          <span class="lbl">Can</span>
+          <label class="chk"><input type="checkbox" data-k="trusted"${p.trusted ? " checked" : ""}> Post events without review</label>
+          <label class="chk"><input type="checkbox" data-k="approver"${p.approver ? " checked" : ""}> Approve other people's events <span class="hint">(gets the approval emails)</span></label>
+          <label class="chk"><input type="checkbox" data-k="admin"${p.admin ? " checked" : ""}> Use this Admin page${p.email === me ? " <span class='hint'>(that's you)</span>" : ""}</label>
+
+          <div class="vbox" ${res ? "hidden" : ""}>
+            <h3 style="margin-top:6px">Volunteer</h3>
+            <label class="lbl">Stage<select data-k="stage">${stages.concat(stages.includes(stage) ? [] : [stage]).map(s => `<option${s === stage ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+            <div class="vfields" ${stage === NOT_VOL ? "hidden" : ""}>
+              <label class="lbl">Background check<select data-k="bg">${BG.map(([v, l]) => `<option value="${v}"${v === (p.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+              <span class="lbl">Trainings</span>
+              <div class="trn">${R.trainings.map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${p.trainings.includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("") || `<span class="hint">No trainings set up yet.</span>`}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="pcard wide">
+          <h3>Admin notes</h3>
+          <textarea data-k="notes" maxlength="3000" placeholder="Called Tuesday, coming Saturday…">${esc(p.notes)}</textarea>
+          <p class="hint" style="margin:0">Only admins see these.</p>
+        </section>
+        <div class="savebar wide"><button class="btn btn-primary" id="psave" disabled>Save changes</button><p id="pmsg">Changes take effect as soon as you save.</p></div>
+      </form>
+
+      <section class="pcard">
+        <h3>Chore chart</h3>
+        <p class="hint" style="margin:0">Their regular weekly chores. These show up for ${esc(p.first || "them")} when they log in, with an "I need coverage" button for each date.</p>
+        ${mine.length ? `<ul class="clist">${mine.map(s => `<li><span><b>${esc(s.day)}s · ${esc(s.chore)}</b><span class="hint">${esc(s.time)}${s.since ? " · since " + esc(dateLong(s.since)) : ""}${s.reminders ? " · reminders on" : ""}</span></span>
+            <button type="button" class="btn-quiet" data-off="${esc(s.id)}">Take off</button></li>`).join("")}</ul>` : `<p class="hint" style="margin:0"><i>Not on any chores yet.</i></p>`}
+        ${res || stage !== NOT_VOL ? `<div class="addslot"><select id="slotPick" aria-label="Chore slot"><option value="">Add to a chore slot…</option>${free.map(s => `<option value="${esc(s.id)}">${esc(s.day)} · ${esc(s.chore)} · ${esc(s.time)}${s.who ? " (now " + esc(s.who) + ")" : " (open)"}</option>`).join("")}</select><button type="button" class="btn btn-forest btn-sm" id="slotAdd" disabled>Add</button></div>`
+          : `<p class="hint" style="margin:0">Set them as a resident or a volunteer to add chores.</p>`}
+      </section>
+
+      <section class="pcard">
+        <h3>Activity</h3>
+        ${actList("Volunteer sign-ups", R.signups.map(s => `${esc(s.title)} · ${esc(s.when)}${s.status === "Waitlist" ? " (waitlist)" : ""}`), R.signups.map(s => s.past))}
+        ${actList("Coverage", R.coverage.map(c => `${esc(c.chore)} · ${esc(c.when)} · ${c.asked ? (c.status === "Covered" ? "covered by " + esc(c.other) : "asked for coverage") : "covered for " + esc(c.other)}`), R.coverage.map(c => c.past))}
+        ${actList("Events posted", R.posted.map(e => `${esc(e.title)} · ${esc(e.when)} · ${esc(e.status)}`), R.posted.map(() => false))}
+        ${!R.signups.length && !R.coverage.length && !R.posted.length ? `<p class="hint" style="margin:0"><i>Nothing yet.</i></p>` : ""}
+      </section>
+
+      ${p.interests || p.heard || p.comments ? `<section class="pcard">
+        <h3>Volunteer form</h3>
+        ${p.interests ? `<p><span class="lbl">Interested in</span>${esc(p.interests)}</p>` : ""}
+        ${p.heard ? `<p><span class="lbl">Heard about us</span>${esc(p.heard)}</p>` : ""}
+        ${p.comments ? `<p><span class="lbl">Comments</span><span class="cm">${esc(p.comments)}</span></p>` : ""}
+      </section>` : ""}`;
+
+    const f = $("#pform"), save = $("#psave"), msg = $("#pmsg");
+    const q = k => f.querySelector(`[data-k="${k}"]`);
+    const dirty = () => { save.disabled = false; msg.textContent = "You have unsaved changes."; };
+    f.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", dirty));
+    q("resident").addEventListener("change", () => {
+      const on = q("resident").checked;
+      f.querySelector(".res-note").hidden = !on; f.querySelector(".vbox").hidden = on;
+      if (on && !q("trusted").checked) { q("trusted").checked = true; flash("Residents can post events without review, so that's on too. Approving events stays separate."); }
+    });
+    q("stage").addEventListener("change", () => { f.querySelector(".vfields").hidden = q("stage").value === NOT_VOL; });
+    f.onsubmit = e => e.preventDefault();
+    save.onclick = async () => {
+      if (!q("first").value.trim()) { q("first").focus(); return flash("Add a first name first.", true); }
+      const admin = q("admin").checked;
+      if (p.email === me && !admin && !save.dataset.ok) {
+        openDlg(`<h2>Remove yourself as an admin?</h2><p>You won't be able to use this page anymore. Another admin would need to add you back.</p>
+          <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep me</button><button class="btn btn-primary btn-sm" id="go">Remove me</button></div>`);
+        $("#go").onclick = () => { save.dataset.ok = "1"; dlg.close(); save.click(); };
+        return;
+      }
+      const resident = q("resident").checked, st = q("stage").value;
+      const body = { action: "adminPersonSave", email: p.email, first: q("first").value, last: q("last").value, phone: q("phone").value, address: q("address").value,
+        emergency: q("emergency").value, news: q("news").checked, notes: q("notes").value,
+        role: resident ? "Resident" : st === NOT_VOL ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("bg").value,
+        trainings: [...f.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value),
+        trusted: q("trusted").checked, approver: q("approver").checked, admin };
+      save.disabled = true; save.innerHTML = `<span class="spinner"></span> Saving…`;
+      try {
+        const r = await call(body);
+        if (r.stillAdmin === false) return gate("notAdmin");
+        state.person = r; state.ppl = null; state.chores = null;
+        renderPerson(); flash("Saved.");
+      } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); save.disabled = false; save.textContent = "Save changes"; msg.textContent = err.message + "."; }
+    };
+    // Chores
+    const pick = $("#slotPick"), add = $("#slotAdd");
+    const chore = async (body, btn, done) => {
+      const label = btn.textContent; btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
+      try { state.person = await call(Object.assign({ action: "adminPersonChore", email: p.email }, body)); state.ppl = null; state.chores = null; renderPerson(); flash(done); }
+      catch (err) { if (err.signedOut || err.notAdmin) return handle(err); btn.disabled = false; btn.textContent = label; flash(err.message, true); }
+    };
+    if (pick) {
+      pick.onchange = () => add.disabled = !pick.value;
+      add.onclick = () => {
+        const s = R.slots.find(x => x.id === pick.value); if (!s) return;
+        if (s.who) {
+          openDlg(`<h2>Move ${esc(p.first || "them")} onto this slot?</h2><p>${esc(s.day)}s · ${esc(s.chore)} is ${esc(s.who)}'s right now. ${esc(s.who)} comes off it (their hours so far are kept).</p>
+            <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Move</button></div>`);
+          $("#go").onclick = e => { dlg.close(); chore({ slotId: s.id, on: true, replace: true }, add, `Added. We emailed ${p.first || "them"} the details.`); };
+        } else chore({ slotId: s.id, on: true }, add, `Added. We emailed ${p.first || "them"} the details.`);
+      };
+    }
+    $("#prof").querySelectorAll("[data-off]").forEach(b => b.onclick = () => chore({ slotId: b.dataset.off, on: false }, b, "Taken off. We let qualified volunteers know the slot is open."));
+  }
+  function actList(title, items, past) {
+    if (!items.length) return "";
+    return `<div class="act"><span class="lbl">${title}</span><ul>${items.slice(0, 12).map((t, i) => `<li${past[i] ? ' class="past"' : ""}>${t}</li>`).join("")}</ul>${items.length > 12 ? `<p class="hint" style="margin:0">and ${items.length - 12} more</p>` : ""}</div>`;
   }
 
   /* ============================================================
@@ -720,19 +788,61 @@
     ] };
     if (b.action === "adminLibrary") return { ok: true, photos: demoLib };
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
-    if (b.action === "adminVolunteers") return { ok: true, trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"], statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], volunteers: [
-      { row: 4, submitted: "2026-11-10 18:42", first: "Ana", last: "Diaz", email: "ana@example.com", news: true, interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", status: "Active volunteer", notes: "", bg: "Cleared", trainings: ["Animal chores"], slots: ["Tuesday Evening animal chores"], upcoming: 2 },
-      { row: 3, submitted: "2026-11-10 18:15", first: "Marcus", last: "Lee", email: "marcus@example.com", news: false, interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", comments: "", status: "Contacted", notes: "Coming to the Dec workday" },
-      { row: 2, submitted: "2026-11-09 12:03", first: "Priya", last: "Shah", email: "priya@example.com", news: true, interests: "I'm not sure", heard: "Social Media", comments: "", status: "New", notes: "" }
-    ] };
-    if (b.action === "adminVolunteerSave") return { ok: true, status: b.status };
-    if (b.action === "adminTrainingsSave") return { ok: true, trainings: b.list };
-    if (b.action === "adminVolunteerAdd") { const v = state.vols; v.volunteers.unshift({ row: 99, submitted: "just now", first: b.first, last: b.last, email: b.email, news: false, interests: "Added by an admin", heard: "", comments: "", status: "Active volunteer", notes: b.notes, bg: b.bg, trainings: b.trainings, role: b.role, trusted: b.trusted, approver: b.approver, slots: [], upcoming: 0 }); return JSON.parse(JSON.stringify(v)); }
+    if (/^adminPerson|^adminTrainings/.test(b.action)) return demoPeople(b);
     if (b.action === "adminChores" || b.action === "adminChoreSave" || b.action === "adminChoreRemove") return demoChores(b);
-    if (b.action === "adminPeople") return { ok: true, me: session.email, admins: [session.email, "staff@heirloomeastbay.com", "community@heirloomeastbay.com", "admin@heirloomeastbay.com"],
-      approvers: ["community@heirloomeastbay.com", "staff@heirloomeastbay.com", "admin@heirloomeastbay.com", "kkostelnick@iliff.edu", "lindsey.j.huffman@gmail.com"],
-      trusted: ["community@heirloomeastbay.com", "mkhamiter@gmail.com", "nik@heirloomeastbay.com", "toku@plantify.org", "keegan@plantify.org"] };
-    if (b.action === "adminPeopleSave") return { ok: true, me: session.email, admins: b.admins, approvers: b.approvers, trusted: b.trusted, stillAdmin: b.admins.includes(session.email) };
+    return { ok: true };
+  }
+
+  // Sample people for preview mode
+  let demoP = null;
+  function demoPeople(b) {
+    const d = n => H.dayKey(new Date(Date.now() + n * 86400000));
+    if (!demoP) {
+      const T = ["Animal chores", "Goat milking", "Garden tools", "Power tools"];
+      const base = (o) => Object.assign({ last: "", phone: "", role: "", status: "", bg: "", trainings: [], admin: false, approver: false, trusted: false, news: false, submitted: d(-60), hours: 0, shifts: 0, lastHelped: "", lastText: "", slots: 0, events: 0,
+        address: "", emergency: "", interests: "", heard: "", comments: "", notes: "", firstHelped: "", firstText: "" }, o);
+      demoP = { trainings: T, statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], people: [
+        base({ email: session.email, first: "You", role: "Resident", status: "Resident", admin: true, approver: true, trusted: true, hours: 31.5, shifts: 30, lastHelped: d(-2), lastText: "Nov 8", slots: 1, events: 6, firstHelped: d(-200), firstText: "Apr 24" }),
+        base({ email: "ana@example.com", first: "Ana", last: "Diaz", phone: "510-555-0142", role: "Volunteer", status: "Active volunteer", bg: "Cleared", trainings: ["Animal chores"], news: true, hours: 12, shifts: 11, lastHelped: d(-6), lastText: "Nov 4", slots: 1,
+          interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", emergency: "Luis Diaz (husband) 510-555-0199", firstHelped: d(-80), firstText: "Aug 22" }),
+        base({ email: "marcus@example.com", first: "Marcus", last: "Lee", role: "Volunteer", status: "Contacted", interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", notes: "Coming to the Dec workday" }),
+        base({ email: "priya@example.com", first: "Priya", last: "Shah", role: "Volunteer", status: "New", news: true, interests: "I'm not sure", heard: "Social Media", submitted: d(-1) }),
+        base({ email: "nik@heirloomeastbay.com", first: "Nik", last: "R", role: "Resident", status: "Resident", trusted: true, events: 3, hours: 4, shifts: 4, lastHelped: d(-9), lastText: "Nov 1" }),
+        base({ email: "sue@example.com", first: "Sue", last: "Miller", phone: "510-555-0101", events: 2 }) ] };
+      demoP.slots = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].flatMap((day, i) => [
+        { id: "S-" + i + "a", chore: "AM animal chores", day, start: "07:00", time: "7am–8am", training: "Animal chores", volunteer: i === 1 ? "ana@example.com" : i === 4 ? session.email : "", reminders: i === 1, since: i === 1 ? d(-80) : d(-200) },
+        { id: "S-" + i + "b", chore: "PM animal chores", day, start: "17:00", time: "5pm–6pm", training: "Animal chores", volunteer: i === 3 ? "nik@heirloomeastbay.com" : "", reminders: false, since: d(-30) }]);
+    }
+    const P = demoP, find = e => P.people.find(x => x.email === e);
+    const detail = e => {
+      const p = find(e);
+      P.slots.forEach(s => { const v = find(s.volunteer); s.who = s.volunteer ? (v ? v.first : s.volunteer) : ""; });
+      P.people.forEach(x => x.slots = P.slots.filter(s => s.volunteer === x.email).length);
+      return JSON.parse(JSON.stringify({ ok: true, me: session.email, person: p, slots: P.slots, statuses: P.statuses, trainings: P.trainings,
+        signups: e === "ana@example.com" ? [{ title: "Fence workday", when: "Nov 22", status: "Going", past: false }, { title: "Fall cleanup", when: "Oct 18", status: "Going", past: true }] : [],
+        coverage: e === "ana@example.com" ? [{ chore: "AM animal chores", when: "Nov 3", status: "Covered", asked: true, other: "Nik", past: true }] : [],
+        posted: p.events ? [{ title: "Knit & Sip on the Porch", when: "Nov 20", status: "Pending" }] : [] }));
+    };
+    if (b.action === "adminPersons") return JSON.parse(JSON.stringify({ ok: true, me: session.email, people: P.people, statuses: P.statuses, trainings: P.trainings }));
+    if (b.action === "adminPerson") return detail(b.email);
+    if (b.action === "adminTrainingsSave") { P.trainings = b.list; return { ok: true, trainings: b.list }; }
+    if (b.action === "adminPersonSave") {
+      let p = find(b.email);
+      if (b.create && p) return { ok: false, error: b.email + " is already in People" };
+      if (!p) { p = { email: b.email, trainings: [], hours: 0, shifts: 0, lastText: "", slots: 0, events: 0, submitted: d(0), interests: "", heard: "", comments: "", notes: "", address: "", emergency: "", bg: "" }; P.people.push(p); }
+      const wasRes = p.role === "Resident";
+      Object.assign(p, { first: b.first, last: b.last || "", phone: b.phone || "", role: b.role, status: b.role === "Resident" ? "Resident" : b.role ? (b.status || "New") : "" });
+      ["address", "emergency", "news", "notes", "bg", "trainings", "approver", "admin"].forEach(k => { if (b[k] !== undefined) p[k] = b[k]; });
+      p.trusted = b.trusted !== undefined ? b.trusted : p.trusted;
+      if (b.role === "Resident" && !wasRes) p.trusted = true;
+      return Object.assign(detail(b.email), { stillAdmin: b.email === session.email && b.admin === false ? false : true });
+    }
+    if (b.action === "adminPersonChore") {
+      const s = P.slots.find(x => x.id === b.slotId);
+      if (b.on) { if (s.volunteer && !b.replace) return { ok: false, error: "That slot already has someone" }; s.volunteer = b.email; s.since = d(0); s.reminders = false; }
+      else if (s.volunteer === b.email) s.volunteer = "";
+      return detail(b.email);
+    }
     return { ok: true };
   }
 

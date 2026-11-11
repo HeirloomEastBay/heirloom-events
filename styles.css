@@ -251,6 +251,8 @@ body.res-mode #preview .card-media { display: none; }
 /* Top-right menu (nav.js) */
 .nav a.nav-link { font-size: 13.5px; padding: 6px 2px; border-bottom: 2px solid transparent; }
 .nav a.nav-link.on { color: var(--barn); border-bottom-color: var(--wheat); }
+.nav .l-short { display: none; }
+@media (max-width: 640px) { .nav .l-long { display: none; } .nav .l-short { display: inline; } }
 @media (max-width: 760px) {
   .nav { gap: 14px; }
   .nav a.nav-link { font-size: 12.5px; letter-spacing: .02em; }

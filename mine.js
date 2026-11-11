@@ -98,7 +98,9 @@
       // Remember name, email and phone so the Submit form can fill them in
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
       if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer });
-      // Came from the Admin page to sign in: go back there
+      // Came from another page to log in: go back there
+      const next = new URLSearchParams(location.search).get("next");
+      if (next === "profile" || next === "portal" || (next === "admin" && r.admin)) { location.replace(next + ".html"); return; }
       // Admins go straight to the Admin page (its "My events" link adds ?mine=1 to stay here)
       if (r.admin && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
       // Volunteers go to their portal (it links back here if they've posted events)

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261110e">
+<link rel="stylesheet" href="styles.css?v=20261110g">
 <style>
   .intro { background: var(--forest); color: #fff; padding-block: 36px 0; }
   .intro .kicker { color: var(--sage); }
@@ -94,6 +94,14 @@
   .dates label.off { opacity: .55; cursor: default; }
   .lbl { display: block; font-weight: 600; font-size: 14.5px; }
   .opt { font-weight: 400; color: var(--muted); }
+  /* How you've helped */
+  .impact { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline; margin: -8px 0 22px; color: #e1e8dc; font-size: 14.5px; }
+  .impact b { font-family: var(--f-display); font-weight: 600; font-size: 30px; color: var(--wheat); margin-right: 6px; line-height: 1; }
+  .impact .yay { flex-basis: 100%; background: var(--wheat); color: var(--forest-deep); border-radius: 12px; padding: 10px 14px; font-weight: 600; font-size: 15.5px; }
+  .rem { appearance: none; border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px 6px 10px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .rem[aria-pressed="true"] { border-color: var(--forest); color: var(--forest-deep); background: var(--sage-soft); }
+  .rem:disabled { opacity: .6; }
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
 </style>
 </head>
 <body>
@@ -114,6 +122,7 @@
       <h1 id="hello">Volunteer portal</h1>
       <p id="introText">Sign up for shifts, see the chore chart, and swap dates with other volunteers.</p>
       <div class="badges" id="badges"></div>
+      <div class="impact" id="impact" hidden></div>
       <div class="tabs" role="tablist" aria-label="Volunteer portal" id="tabs" hidden>
         <button class="tab" role="tab" aria-controls="app" data-tab="signup">Sign up</button>
         <button class="tab" role="tab" aria-controls="app" data-tab="mine">My shifts<span class="n" id="nMine" hidden></span></button>
@@ -137,9 +146,9 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261110e"></script>
-<script src="common.js?v=20261110e"></script>
-<script src="nav.js?v=20261110e"></script>
-<script src="portal.js?v=20261110e"></script>
+<script src="config.js?v=20261110g"></script>
+<script src="common.js?v=20261110g"></script>
+<script src="nav.js?v=20261110g"></script>
+<script src="portal.js?v=20261110g"></script>
 </body>
 </html>
