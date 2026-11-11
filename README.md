@@ -117,6 +117,14 @@ Repeating events from the form have **Change one date** on the Admin page and, f
 
 The changes are kept on the **Date changes** tab, and are put back automatically if someone later edits the whole series. Repeating events added straight in Google Calendar (like Supper Church) have **Change one date** too, for admins. For those, bringing back a cancelled date adds it back as a one-time event.
 
+### Resident panel
+Residents (Role "Resident" on the People tab) get a lighter version of the Admin page, called **Resident panel** in the menu (they go there after logging in):
+- **Public and Residents' calendars:** to look at (and make flyers). No approving, editing or cancelling, no review queue, and no posters' contact info.
+- **Photo library:** look, and add photos. Changing or removing photos stays with admins.
+- **Chore chart:** add chores, and change, remove or ask for coverage on the chores they added. Other chores are read-only.
+- **Guest rooms:** book and manage stays (see below).
+- **People** is admins only.
+
 ### Guest rooms (overnight stays)
 **stays.html** ("Guest rooms" in the menu, for residents and admins) and the Admin page's **Guest rooms** tab:
 - **Tonight:** a card per room, filled in with the guest if someone's staying, outlined if it's open (with who's next).

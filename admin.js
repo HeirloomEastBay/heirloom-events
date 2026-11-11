@@ -15,11 +15,18 @@
 
   let markedAdmin = false;
   async function call(body) {
-    if (DEMO) { const r = await demo(body); if (r.ok === false) throw new Error(r.error); return r; }
+    if (DEMO) {
+      const r = await demo(body); if (r.ok === false) throw new Error(r.error);
+      if (!r.viewer) r.viewer = qs.get("as") === "resident" ? "resident" : "admin"; // preview: ?as=resident shows the resident panel
+      if (r.viewer === "resident" && r.slots) r.slots.forEach(x => { if (x.canEdit == null) x.canEdit = /^S-\d+$/.test(x.id) ? false : true; });
+      if (r.viewer !== state.viewer) setViewer(r.viewer);
+      return r;
+    }
     const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(Object.assign({ token: session && session.token }, body)) });
     const r = await res.json();
-    if (r.ok && window.HLNav && !markedAdmin) { markedAdmin = true; HLNav.setRoles({ email: session.email, admin: true }); }
+    if (r.ok && r.viewer && r.viewer !== state.viewer) setViewer(r.viewer);
+    if (r.ok && window.HLNav && !markedAdmin) { markedAdmin = true; HLNav.setRoles({ email: session.email, admin: r.viewer !== "resident", resident: r.viewer === "resident" ? true : undefined }); }
     if (!r.ok) {
       const err = new Error(r.error || "Something went wrong");
       err.signedOut = r.signedOut; err.notAdmin = r.notAdmin;
@@ -32,13 +39,14 @@
   function gate(kind) {
     $("#tabs").hidden = true;
     app.innerHTML = kind === "notAdmin"
-      ? `<div class="empty"><h2>This page is for Heirloom admins</h2><p>You're signed in as <b>${esc(session && session.email)}</b>, which isn't on the Admins list. Ask an admin to add you, or sign in with a different email.</p>
+      ? `<div class="empty"><h2>This page is for Heirloom residents and admins</h2><p>You're signed in as <b>${esc(session && session.email)}</b>, which isn't set up as a resident or admin. Ask an admin to add you, or sign in with a different email.</p>
          <p><a class="btn btn-primary" href="mine.html">Go to My events</a></p></div>`
       : `<div class="empty"><h2>Please sign in</h2><p>Admins sign in on My events with a code we email you. You'll come right back here.</p>
          <p><a class="btn btn-primary" href="mine.html?next=admin">Sign in</a></p></div>`;
   }
   function handle(err, box) {
     if (err.signedOut) { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } return gate("signin"); }
+    if (err.notAdmin && state && state.viewer === "resident") { (box || app).innerHTML = `<div class="empty"><h2>Just for admins</h2><p>${esc(err.message)}.</p></div>`; return; }
     if (err.notAdmin) return gate("notAdmin");
     (box || app).innerHTML = `<div class="empty"><h2>Something went wrong</h2><p>${esc(err.message)}</p><p><button class="btn btn-primary" id="retry">Try again</button></p></div>`;
     $("#retry").onclick = () => show(state.tab, true);
@@ -47,7 +55,20 @@
 
   /* ---------- Tabs ---------- */
   if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
-  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
+  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
+  const RES = () => state.viewer === "resident";
+  // Residents get a lighter panel: no People tab, calendars to look at, add photos and chores
+  function setViewer(v) {
+    state.viewer = v;
+    const res = v === "resident";
+    $("#tab-people").hidden = res;
+    $("#panelTitle").textContent = res ? "Resident panel" : "Admin";
+    $("#panelIntro").textContent = res ? "Both calendars, the photo library, the chore chart and the guest rooms, in one place. You can add photos and chores, and book guest rooms. Approving and editing events stays with the admins."
+      : "Edit, cancel or delete anything on either calendar, no matter who added it. Manage people, roles and the chore chart, and the photo library.";
+    document.title = (res ? "Resident panel" : "Admin") + " · Heirloom Activities";
+    if (res) { const rv = document.querySelector('[data-view="review"]'); if (rv) rv.remove(); if (state.view === "review") state.view = "upcoming"; }
+    if (res && state.tab === "people") show("public");
+  }
   $("#tabs").hidden = false;
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { qs.delete("p"); show(t.dataset.tab); });
   $("#tabs").addEventListener("keydown", e => {
@@ -61,6 +82,7 @@
     document.querySelectorAll(".tab").forEach(t => { const on = t.dataset.tab === tab; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; });
     if (tab !== "people" || !qs.get("p")) { qs.delete("p"); history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab); }
     if (tab === "photos") return photos(fresh);
+    if (tab === "people" && RES()) return show("public");
     if (tab === "people") return people(fresh);
     if (tab === "stays") { app.innerHTML = `<div class="panel-h"><div><h2>Guest rooms</h2><p>Who's in the 4 guest rooms, and when. Stays come from the residents' calendar ("Room 1: Sarah (Sabbath 365)") and from the Guest rooms page residents use. Admins can change any stay and block rooms.</p></div></div><div id="stays"></div>`; return HLStays.mount($("#stays"), { refresh: fresh }); }
     if (tab === "chores") return chores(fresh);
@@ -93,7 +115,7 @@
         <input type="search" id="q" placeholder="Search by name, place or person" value="${esc(state.q)}" aria-label="Search events">
         <div class="seg" role="group" aria-label="Show">
           <button type="button" data-view="upcoming" aria-pressed="${state.view === "upcoming"}">Upcoming</button>
-          <button type="button" data-view="review" aria-pressed="${state.view === "review"}">Waiting for review<span class="n" id="nReview" hidden></span></button>
+          ${RES() ? "" : `<button type="button" data-view="review" aria-pressed="${state.view === "review"}">Waiting for review<span class="n" id="nReview" hidden></span></button>`}
           <button type="button" data-view="past" aria-pressed="${state.view === "past"}">Past</button>
         </div>
       </div>`;
@@ -169,6 +191,7 @@
       if (!past && i.recurring && window.HLDates) acts.push(`<button class="btn btn-outline btn-sm" data-act="dates">Change one date</button>`);
       acts.push(`<button class="btn-quiet" data-act="delete">Delete</button>`);
     }
+    if (RES()) acts.length = 0;
     if (which === "public" && !past && !i.hidden && !/^(Declined|Cancelled|Unpublished)$/.test(i.status || "") && window.HLFlyer)
       acts.push(`<button class="btn btn-outline btn-sm" data-act="flyer">Flyer &amp; images</button>`);
     const img = i.image ? `<img class="thumb" src="${esc(i.image)}" alt="" loading="lazy">` : `<div class="thumb">${ICON_CAL}</div>`;
@@ -331,11 +354,11 @@
         </div></form>
       <div class="photos">${lib.map((p, n) => `<div class="photo" data-n="${n}">
         <div class="img"><img src="${esc(p.image)}" alt="" loading="lazy"><span class="rank">#${n + 1}</span>${p.used ? `<span class="used">${p.used} event${p.used > 1 ? "s" : ""}</span>` : ""}</div>
-        <div class="body f2">
+        <div class="body f2"${RES() ? ' inert' : ""}>
           <div><label class="lbl2" for="l${n}">Name</label><input type="text" id="l${n}" data-k="label" maxlength="40" value="${esc(p.label)}"></div>
           <div><label class="lbl2" for="k${n}">Keywords</label><textarea id="k${n}" data-k="keywords" maxlength="600">${esc(p.keywords)}</textarea></div>
           <div class="checks"><label><input type="checkbox" data-k="gallery"${p.gallery ? " checked" : ""}> In the form's gallery</label><label><input type="checkbox" data-k="fallback"${p.fallback ? " checked" : ""}> Use when nothing matches</label></div>
-          <div class="row2">
+          <div class="row2"${RES() ? " hidden" : ""}>
             <button type="button" class="icon-btn" data-do="up" aria-label="Move earlier"${n === 0 ? " disabled" : ""}>↑</button>
             <button type="button" class="icon-btn" data-do="down" aria-label="Move later"${n === lib.length - 1 ? " disabled" : ""}>↓</button>
             <span style="flex:1"></span>
@@ -431,15 +454,15 @@
       ${slotForm({}, d, -1)}
       <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile.</p>
       ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? `<details class="slotd${!s.volunteer ? " open-slot" : ""}"${state.openSlot === s.id ? " open" : ""} data-id="${esc(s.id)}">
-        <summary><b>${esc(s.chore)}</b><span class="w">${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
+        <summary${s.canEdit === false ? ' class="ro"' : ""}><b>${esc(s.chore)}</b><span class="w">${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
           <span class="who${!s.volunteer ? " open" : s.volunteer === "Volunteers" ? " pool" : ""}">${!s.volunteer ? "Open" : s.volunteer === "Volunteers" ? "Volunteers" : esc((d.volunteers.find(v => v.email === s.volunteer) || { name: s.volunteer }).name)}</span>
-          ${d.coverage.some(c => c.slotId === s.id && c.status === "Open") ? `<span class="status pending">Needs coverage</span>` : ""}<span class="ed">Edit</span></summary>
-        ${slotForm(s, d, n)}</details>` : "").join("")}</section>`).join("")}
+          ${d.coverage.some(c => c.slotId === s.id && c.status === "Open") ? `<span class="status pending">Needs coverage</span>` : ""}<span class="ed">${s.canEdit === false ? "" : "Edit"}</span></summary>
+        ${s.canEdit === false ? `<p class="hint" style="margin:0;padding:10px 14px">${esc(s.notes || "")}${s.notes ? " · " : ""}Ask an admin to change this one.</p>` : slotForm(s, d, n)}</details>` : "").join("")}</section>`).join("")}
       <div class="panel-h" style="margin-top:26px"><div><h2 style="font-size:22px">Coverage requests</h2><p>Dates that need someone, coming up.</p></div></div>
       ${d.coverage.length ? `<div class="alist">${d.coverage.map((c, i) => `<article class="arow" style="grid-template-columns:1fr"><div>
         <h3>${esc(c.chore)}</h3><p class="when">${esc(H.fmt(H.zoned(...c.date.split("-").map(Number), 12), { weekday: "long", month: "long", day: "numeric" }))} · ${esc(c.time)}</p>
         <div class="chips2"><span class="status src">${c.pool ? "Needs someone" : "Asked by " + esc(c.by)}</span>${c.status === "Covered" ? `<span class="status">Covered by ${esc(c.coveredBy)}</span>` : `<span class="status pending">Still open</span>`}</div>
-        ${c.note ? `<p class="hint" style="margin:0 0 8px">“${esc(c.note)}”</p>` : ""}<div class="acts"><button class="btn-quiet" data-cc="${i}" style="padding:2px 0">Cancel this request</button></div></div></article>`).join("")}</div>`
+        ${c.note ? `<p class="hint" style="margin:0 0 8px">“${esc(c.note)}”</p>` : ""}${RES() ? "" : `<div class="acts"><button class="btn-quiet" data-cc="${i}" style="padding:2px 0">Cancel this request</button></div>`}</div></article>`).join("")}</div>`
         : `<div class="empty"><h2>No coverage requests</h2><p>When a date needs someone, it shows up here.</p></div>`}`;
     $("#ch").querySelectorAll(".slotd").forEach(x => x.addEventListener("toggle", () => { if (x.open) state.openSlot = x.dataset.id; }));
     $("#ch").querySelectorAll(".slotf").forEach(f => {
