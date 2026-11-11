@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261110c">
 <style>
   /* Layout: a one-page events splash. Green hero with the next event,
      the schedule, a photo strip, then buttons back to the main site. */
@@ -158,6 +158,9 @@
   body.embed .seg[aria-label="View"] { display: none; }
   html.sized, html.sized body { overflow: hidden; }   /* the host page sizes the frame, so no inner scrollbar */
   .list-sec { margin-top: 44px; }
+  .load-more { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 26px 0 8px; }
+  .load-more .btn { min-width: 200px; }
+  .load-more span { color: var(--muted); font-size: 14px; }
   .list-title { font-size: clamp(28px, 4vw, 38px); color: var(--forest); margin: 0 0 4px; }
   .day .pill.past { opacity: .55; }
   .card.past { opacity: .78; }
@@ -313,9 +316,9 @@
     <div class="rsvp-done" id="rsvpDone" hidden></div>
   </dialog>
 
-<script src="config.js"></script>
-<script src="common.js"></script>
-<script src="flyer.js"></script>
-<script src="calendar.js"></script>
+<script src="config.js?v=20261110c"></script>
+<script src="common.js?v=20261110c"></script>
+<script src="flyer.js?v=20261110c"></script>
+<script src="calendar.js?v=20261110c"></script>
 </body>
 </html>

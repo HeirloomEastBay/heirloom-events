@@ -47,6 +47,9 @@
   let monthCursor = (() => { const p = H.parts(now); return { y: p.y, m: p.m }; })();
   let selectedDay = null;
   let source = "all";
+  // The list shows every date (repeating events too), 10 at a time
+  const PAGE = 10;
+  let listLimit = PAGE;
   let partners = (C.PARTNERS || []).slice();
   // Neighbors and friends hosting something: grouped with community partners
   const COMMUNITY = { slug: "community", label: "Community members", name: "Community member", color: "#4f7a64" };
@@ -128,7 +131,7 @@
     const seg = $("#sourceSeg");
     seg.innerHTML = [["all", "All"], ["heirloom", "Heirloom"], ["partners", "Community partners"]]
       .map(([v, l]) => `<button type="button" data-source="${v}" aria-pressed="${v === top}">${l}</button>`).join("");
-    seg.querySelectorAll("button").forEach(b => b.onclick = () => { source = b.dataset.source; selectedDay = null; render(); });
+    seg.querySelectorAll("button").forEach(b => b.onclick = () => { source = b.dataset.source; selectedDay = null; listLimit = PAGE; render(); });
 
     const bar = $("#partnerBar");
     bar.hidden = top !== "partners";
@@ -137,7 +140,7 @@
         <button type="button" class="p-chip" data-p="partners" aria-pressed="${source === "partners"}">All partners</button>
         ${live.map(p => `<button type="button" class="p-chip" style="--c:${esc(p.color)}" data-p="p:${esc(p.slug)}" aria-pressed="${source === "p:" + p.slug}"><i></i>${esc(p.label)}</button>`).join("")}
       </div>`;
-      bar.querySelectorAll(".p-chip").forEach(b => b.onclick = () => { source = b.dataset.p; selectedDay = null; render(); });
+      bar.querySelectorAll(".p-chip").forEach(b => b.onclick = () => { source = b.dataset.p; selectedDay = null; listLimit = PAGE; render(); });
     }
   }
   // The ⓘ next to the tabs: tap to open, tap anywhere else to close
@@ -240,7 +243,8 @@
   }
 
   function renderList(target) {
-    const list = collapseSeries(upcoming());
+    const all = upcoming();
+    const list = all.slice(0, listLimit);
     if (!list.length) {
       target.innerHTML = `<div class="empty"><h3>Nothing on the calendar just yet</h3><p>New events are added often, so check back soon.</p></div>`;
       return;
@@ -251,8 +255,17 @@
       if (m !== lastMonth) { html += (lastMonth ? "</div>" : "") + `<div class="month-head"><h3>${esc(m)}</h3></div><div class="cards">`; lastMonth = m; }
       html += cardHTML(e);
     });
-    target.innerHTML = html + "</div>";
+    const left = all.length - list.length;
+    target.innerHTML = html + "</div>" + (left > 0
+      ? `<div class="load-more"><button type="button" class="btn btn-outline" id="loadMore">Load more</button><span>${left} more coming up</span></div>` : "");
     wireCards(target);
+    const more = $("#loadMore", target);
+    if (more) more.onclick = () => {
+      const firstNew = list.length;
+      listLimit += PAGE; renderList(target); resize();
+      const cards = target.querySelectorAll(".card");
+      if (cards[firstNew]) { const b = cards[firstNew].querySelector(".title-btn"); if (b) b.focus({ preventScroll: true }); }
+    };
   }
 
   function eventsByDay() {
