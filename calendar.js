@@ -10,6 +10,7 @@
   const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
 
   if (EMBED) document.body.classList.add("embed");
+  if (EMBED) { const h = $("#events .toolbar h2"); if (h) h.textContent = "Calendar"; }
 
   /* ---------- Fill in links from config ---------- */
   const LINKS = {
@@ -111,7 +112,8 @@
     document.querySelectorAll(".seg button[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
     renderSourceTabs();
     renderNextUp();
-    if (view === "list") renderList(); else renderMonth();
+    if (EMBED) renderEmbed();
+    else if (view === "list") renderList($("#view")); else renderMonth($("#view"));
     resize();
   }
 
@@ -173,7 +175,9 @@
     const link = safeUrl(e.link);
     byId[e.id] = e;
     const more = e.hasDetails || e.details;
-    return `<article class="card">
+    const past = +(e.end || e.start) < +now;
+    if (past) chips.unshift(`<span class="chip">Already happened</span>`);
+    return `<article class="card${past ? " past" : ""}">
       <div class="card-media">
         <img src="${esc(e.image)}" alt="" loading="lazy">
         <button type="button" class="media-btn" data-open="${esc(e.id)}" aria-label="See the photo and details for ${esc(e.title)}"></button>
@@ -192,9 +196,9 @@
         ${e.description ? `<p class="desc">${esc(e.description)}</p>` : ""}
         <button class="more" type="button" data-open="${esc(e.id)}"${more ? "" : " hidden"}>${more ? "More details" : "Read more"}</button>
         <div class="card-actions">
-          ${e.rsvp ? `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
-          ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
-          <a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
+          ${e.rsvp && !past ? `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
+          ${link ? `<a class="btn ${e.rsvp && !past ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
+          ${past ? "" : `<a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>`}
           <a class="btn btn-ghost btn-sm" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
         </div>
       </div>
@@ -226,10 +230,19 @@
     return out;
   }
 
-  function renderList() {
+  // The embed shows both: the month (past events too) on top, then the upcoming list
+  function renderEmbed() {
+    const v = $("#view");
+    if (!$("#monthView", v)) v.innerHTML = `<section id="monthView" aria-label="Month calendar"></section>
+      <section class="list-sec" aria-labelledby="listH"><h2 class="list-title" id="listH">Coming up</h2><div id="listView"></div></section>`;
+    renderMonth($("#monthView"));
+    renderList($("#listView"));
+  }
+
+  function renderList(target) {
     const list = collapseSeries(upcoming());
     if (!list.length) {
-      $("#view").innerHTML = `<div class="empty"><h3>Nothing on the calendar just yet</h3><p>New events are added often, so check back soon.</p></div>`;
+      target.innerHTML = `<div class="empty"><h3>Nothing on the calendar just yet</h3><p>New events are added often, so check back soon.</p></div>`;
       return;
     }
     let html = "", lastMonth = "";
@@ -238,8 +251,8 @@
       if (m !== lastMonth) { html += (lastMonth ? "</div>" : "") + `<div class="month-head"><h3>${esc(m)}</h3></div><div class="cards">`; lastMonth = m; }
       html += cardHTML(e);
     });
-    $("#view").innerHTML = html + "</div>";
-    wireCards($("#view"));
+    target.innerHTML = html + "</div>";
+    wireCards(target);
   }
 
   function eventsByDay() {
@@ -257,7 +270,7 @@
     return map;
   }
 
-  function renderMonth() {
+  function renderMonth(target) {
     const { y, m } = monthCursor;
     const first = H.zoned(y, m, 1, 12);
     const startDow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(H.parts(first).wd);
@@ -276,7 +289,7 @@
       const label = `${H.fmt(H.zoned(y, m, dnum, 12), { weekday: "long", month: "long", day: "numeric" })}, ${list.length || "no"} event${list.length === 1 ? "" : "s"}`;
       grid += `<button type="button" class="${cls}" data-day="${key}" aria-label="${esc(label)}">
         <span class="n">${dnum}</span>
-        ${list.slice(0, 2).map(e => `<span class="pill${partnerOf(e) ? " partner" : ""}"${partnerOf(e) ? ` style="--c:${esc(partnerOf(e).color)}"` : ""}>${e.allDay ? "" : `<b>${esc(H.fmtTimeRange(e.start, null, false))}</b> `}${esc(e.title)}</span>`).join("")}
+        ${list.slice(0, 2).map(e => `<span class="pill${partnerOf(e) ? " partner" : ""}${+(e.end || e.start) < +now ? " past" : ""}"${partnerOf(e) ? ` style="--c:${esc(partnerOf(e).color)}"` : ""}>${e.allDay ? "" : `<b>${esc(H.fmtTimeRange(e.start, null, false))}</b> `}${esc(e.title)}</span>`).join("")}
         ${list.length > 2 ? `<span class="more-n">+${list.length - 2} more</span>` : ""}
         ${list.length ? `<span class="dots">${list.slice(0, 3).map(() => "<i></i>").join("")}</span>` : ""}
       </button>`;
@@ -290,11 +303,13 @@
     const heading = selectedDay
       ? H.fmt(H.zoned(+selectedDay.slice(0, 4), +selectedDay.slice(5, 7), +selectedDay.slice(8, 10), 12), { weekday: "long", month: "long", day: "numeric" })
       : "Coming up this month";
-    detail = shown.length
+    // In the embed the upcoming list sits right below, so only a picked day gets its own list here
+    if (EMBED && !selectedDay) detail = "";
+    else detail = shown.length
       ? `<div class="day-list"><h3>${esc(heading)}</h3><div class="cards">${shown.map(cardHTML).join("")}</div></div>`
       : `<div class="day-list"><div class="empty"><h3>${esc(heading)}</h3><p>${selectedDay ? "Nothing scheduled this day." : "Nothing else scheduled this month."}</p></div></div>`;
 
-    $("#view").innerHTML = `
+    target.innerHTML = `
       <div class="month-nav">
         <button class="icon-btn" type="button" id="prevM" aria-label="Previous month">${ICON.left}</button>
         <h3>${esc(H.fmt(first, { month: "long", year: "numeric" }))}</h3>
@@ -302,12 +317,12 @@
       </div>
       <div class="grid">${grid}</div>${detail}`;
 
-    $("#prevM").onclick = () => { monthCursor = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }; selectedDay = null; render(); };
-    $("#nextM").onclick = () => { monthCursor = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }; selectedDay = null; render(); };
-    $("#view").querySelectorAll(".day[data-day]").forEach(b => b.onclick = () => {
+    $("#prevM", target).onclick = () => { monthCursor = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }; selectedDay = null; render(); };
+    $("#nextM", target).onclick = () => { monthCursor = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }; selectedDay = null; render(); };
+    target.querySelectorAll(".day[data-day]").forEach(b => b.onclick = () => {
       selectedDay = selectedDay === b.dataset.day ? null : b.dataset.day; render();
     });
-    wireCards($("#view"));
+    wireCards(target);
   }
 
   function renderSkeleton() {
@@ -416,7 +431,8 @@
     if (also) $("#popDesc").textContent += (e.description ? "\n\n" : "") + also.textContent;
     $("#popDesc").hidden = !$("#popDesc").textContent;
     const link = safeUrl(e.link);
-    $("#popActions").innerHTML = `
+    const past = +(e.end || e.start) < +now;
+    $("#popActions").innerHTML = past ? `<a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>` : `
       ${e.rsvp ? `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
       ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
       <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
@@ -425,7 +441,7 @@
     // Flyer + social images (flyer.js)
     const share = $("#popShare");
     share.innerHTML = "";
-    if (window.HLFlyer) {
+    if (window.HLFlyer && !past) {
       const p = partnerOf(e);
       share.appendChild(window.HLFlyer.buttons(async () => Object.assign({}, e, { partnerName: p && e.source !== "community" ? p.name || p.label : "" })));
     }
@@ -456,6 +472,7 @@
   const closePop = () => { pop.close ? pop.close() : pop.removeAttribute("open"); };
   $("#popClose").onclick = closePop;
   pop.addEventListener("click", ev => { if (ev.target === pop) closePop(); });
+  pop.addEventListener("close", resize);
 
   // Links: ?rsvp=EV-123 opens the RSVP popup; ?event=<id> opens an event's details
   function openFromLink() {
@@ -474,13 +491,34 @@
   }
 
   /* ---------- Tell the parent page how tall we are (embed) ---------- */
+  // Measures the content itself (not the frame), so the frame can shrink as well as grow.
+  // An open popup counts too, since it's placed next to the button that opened it.
+  function contentHeight() {
+    let h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+    [pop, dlg].forEach(d => { if (d.open) h = Math.max(h, Math.ceil(d.getBoundingClientRect().bottom + window.scrollY) + 16); });
+    return h + 2;
+  }
+  let lastH = 0;
   function resize() {
     if (!EMBED || window.parent === window) return;
-    requestAnimationFrame(() => window.parent.postMessage({ heirloomHeight: document.documentElement.scrollHeight }, "*"));
+    requestAnimationFrame(() => {
+      const h = contentHeight();
+      if (h !== lastH) { lastH = h; window.parent.postMessage({ heirloomHeight: h }, "*"); }
+    });
   }
   window.addEventListener("load", resize);
-  window.addEventListener("resize", resize);
+  window.addEventListener("resize", () => { lastH = 0; resize(); });
   if (EMBED && "ResizeObserver" in window) new ResizeObserver(resize).observe(document.body);
+  if (EMBED) {
+    // The host page says hello when its listener is ready (and answers each height),
+    // so we resend, and turn off our own scrollbar once we know it's sizing the frame.
+    window.addEventListener("message", ev => {
+      if (!ev.data) return;
+      if (ev.data.heirloomHello) { lastH = 0; resize(); }
+      if (ev.data.heirloomHello || ev.data.heirloomAck) document.documentElement.classList.add("sized");
+    });
+    [400, 1200, 3000].forEach(t => setTimeout(() => { lastH = 0; resize(); }, t)); // fonts and photos settle
+  }
 
   load();
 })();

@@ -147,16 +147,24 @@ In Google Calendar → public calendar → **Settings and sharing → Access per
 On the Upcoming Events page, add a **Code** block with:
 
 ```html
-<iframe id="heirloom-cal" src="https://YOUR-NAME.github.io/heirloom-events/?embed=1"
-  style="width:100%;border:0;min-height:700px" loading="lazy" title="Heirloom events"></iframe>
+<iframe id="heirloom-cal"
+  src="https://heirloomeastbay.github.io/heirloom-events/?embed=1"
+  style="width:100%;border:0;min-height:700px;display:block"
+  title="Heirloom events"></iframe>
 <script>
-  window.addEventListener("message", function (e) {
-    if (e.data && e.data.heirloomHeight) document.getElementById("heirloom-cal").style.height = e.data.heirloomHeight + "px";
-  });
+  (function () {
+    var f = document.getElementById("heirloom-cal");
+    window.addEventListener("message", function (e) {
+      if (e.origin !== "https://heirloomeastbay.github.io" || !e.data || !e.data.heirloomHeight) return;
+      f.style.height = e.data.heirloomHeight + "px";
+      f.contentWindow.postMessage({ heirloomAck: 1 }, "*");
+    });
+    f.addEventListener("load", function () { f.contentWindow.postMessage({ heirloomHello: 1 }, "*"); });
+  })();
 </script>
 ```
 
-The iframe grows to fit the calendar, so there's no inner scrollbar. Add `&view=month` to the URL to open in month view.
+The embed shows the month calendar on top (including the last 6 months of past events, faded) and the list of upcoming events underneath. The frame resizes itself to fit, with no inner scrollbar. If the script can't run (for example in Squarespace's editor preview), the calendar still works with its own scrollbar.
 
 ### 5. Test it
 

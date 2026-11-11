@@ -154,6 +154,13 @@
   body.embed { background: transparent; }
   body.embed .hero, body.embed .strip, body.embed .closing, body.embed .foot { display: none; }
   body.embed .wrap { padding: 0 4px; max-width: none; }
+  /* Embed: month on top (with past events), then the upcoming list */
+  body.embed .seg[aria-label="View"] { display: none; }
+  html.sized, html.sized body { overflow: hidden; }   /* the host page sizes the frame, so no inner scrollbar */
+  .list-sec { margin-top: 44px; }
+  .list-title { font-size: clamp(28px, 4vw, 38px); color: var(--forest); margin: 0 0 4px; }
+  .day .pill.past { opacity: .55; }
+  .card.past { opacity: .78; }
 </style>
 </head>
 <body>
