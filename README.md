@@ -166,6 +166,30 @@ On the Upcoming Events page, add a **Code** block with:
 
 The embed shows the month calendar on top (including the last 6 months of past events, faded) and the list of upcoming events underneath. The frame resizes itself to fit, with no inner scrollbar. If the script can't run (for example in Squarespace's editor preview), the calendar still works with its own scrollbar.
 
+### Volunteer form on heirloomeastbay.com/volunteer
+
+Add a **Code** block with:
+
+```html
+<iframe id="heirloom-volunteer"
+  src="https://heirloomeastbay.github.io/heirloom-events/volunteer.html?embed=1"
+  style="width:100%;border:0;min-height:400px;display:block"
+  title="Heirloom volunteer form"></iframe>
+<script>
+  (function () {
+    var f = document.getElementById("heirloom-volunteer");
+    window.addEventListener("message", function (e) {
+      if (e.origin !== "https://heirloomeastbay.github.io" || e.source !== f.contentWindow || !e.data) return;
+      if (e.data.heirloomHeight) { f.style.height = e.data.heirloomHeight + "px"; f.contentWindow.postMessage({ heirloomAck: 1 }, "*"); }
+      if (e.data.heirloomScrollTo) f.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    f.addEventListener("load", function () { f.contentWindow.postMessage({ heirloomHello: 1 }, "*"); });
+  })();
+</script>
+```
+
+Answers go to the Volunteers tab and to the "Volunteer applications go to" address on Settings.
+
 ### 5. Test it
 
 - In Apps Script, run **testSubmission**. It sends a fake event from an untrusted address, so approvers should get an Approve/Decline email.

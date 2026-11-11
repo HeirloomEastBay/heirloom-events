@@ -44,7 +44,7 @@
   if (!session || !session.token) return gate("signin");
 
   /* ---------- Tabs ---------- */
-  const state = { tab: ["public", "residents", "photos", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
+  const state = { tab: ["public", "residents", "photos", "volunteers", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
   $("#tabs").hidden = false;
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.tab));
   $("#tabs").addEventListener("keydown", e => {
@@ -59,6 +59,7 @@
     history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab);
     if (tab === "photos") return photos(fresh);
     if (tab === "people") return people();
+    if (tab === "volunteers") return volunteers(fresh);
     calendar(tab, fresh);
   }
 
@@ -361,6 +362,93 @@
   }
 
   /* ============================================================
+     Volunteers (from the volunteer form)
+     ============================================================ */
+  const vstate = { q: "", status: "", interest: "", news: false };
+  async function volunteers(fresh) {
+    app.innerHTML = `<div class="panel-h"><div><h2>Volunteers</h2>
+      <p>Everyone who's filled out the volunteer form, newest first. Set a status and keep notes as you follow up. It all lives on the Volunteers tab in the Sheet too.</p></div></div>
+      <div id="vols"><p class="loading">Loading volunteers…</p></div>`;
+    try {
+      if (fresh || !state.vols) state.vols = await call({ action: "adminVolunteers" });
+      if (state.tab === "volunteers") renderVolunteers();
+    } catch (err) { handle(err, $("#vols")); }
+  }
+
+  const short = s => String(s).replace(/\s*\(.*?\)\s*/g, "").trim();
+  function renderVolunteers() {
+    const all = state.vols.volunteers, statuses = state.vols.statuses;
+    const interests = [...new Set(all.flatMap(v => v.interests.split(/,\s*(?![^()]*\))/).map(x => x.trim()).filter(Boolean)))];
+    $("#vols").innerHTML = `<div class="toolbar">
+        <input type="search" id="vq" placeholder="Search names, emails, comments" value="${esc(vstate.q)}" aria-label="Search volunteers">
+        <select id="vs" aria-label="Status"><option value="">Any status</option>${statuses.map(s => `<option${s === vstate.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
+        <select id="vi" aria-label="Interested in"><option value="">Any interest</option>${interests.map(s => `<option value="${esc(s)}"${s === vstate.interest ? " selected" : ""}>${esc(short(s))}</option>`).join("")}</select>
+        <label class="tog"><input type="checkbox" id="vn"${vstate.news ? " checked" : ""}> Wants news &amp; updates</label>
+      </div>
+      <div class="toolbar" style="justify-content:space-between"><p class="hint" id="vcount" style="margin:0"></p>
+        <div class="acts"><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
+      <div class="vlist" id="vlist"></div>`;
+    const filtered = () => all.filter(v =>
+      (!vstate.status || v.status === vstate.status) && (!vstate.interest || v.interests.includes(vstate.interest)) && (!vstate.news || v.news) &&
+      (!vstate.q || [v.first, v.last, v.email, v.comments, v.notes, v.heard, v.interests].join(" ").toLowerCase().includes(vstate.q.toLowerCase())));
+    const draw = () => {
+      const list = filtered();
+      $("#vcount").textContent = `${list.length} of ${all.length} volunteer${all.length === 1 ? "" : "s"}`;
+      $("#vlist").innerHTML = list.length ? list.map(v => `<article class="vol" data-row="${v.row}">
+          <div>
+            <h3>${esc(v.first)} ${esc(v.last)}</h3>
+            <p class="sub"><a href="mailto:${esc(v.email)}">${esc(v.email)}</a>${v.phone ? " · " + esc(v.phone) : ""} · ${esc(v.submitted)}</p>
+            <div class="chips2">${v.status === "New" ? `<span class="status new">New</span>` : ""}
+              ${v.interests.split(/,\s*(?![^()]*\))/).filter(Boolean).map(i => `<span class="status">${esc(i.trim())}</span>`).join("")}
+              ${v.news ? `<span class="status news">✓ News &amp; updates</span>` : ""}
+              ${v.heard ? `<span class="status src">Heard via ${esc(v.heard)}</span>` : ""}</div>
+            ${v.comments ? `<p class="cm">${esc(v.comments)}</p>` : ""}
+          </div>
+          <div class="side">
+            <label class="lbl" for="st${v.row}">Status</label>
+            <select id="st${v.row}" data-k="status">${statuses.concat(statuses.includes(v.status) ? [] : [v.status]).map(s => `<option${s === v.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
+            <label class="lbl" for="nt${v.row}">Notes</label>
+            <textarea id="nt${v.row}" data-k="notes" maxlength="3000" placeholder="Called Tuesday, coming Saturday…">${esc(v.notes)}</textarea>
+            <div class="row3"><span class="saved" aria-live="polite"></span><button class="btn btn-forest btn-sm" data-save disabled>Save</button></div>
+          </div></article>`).join("")
+        : `<div class="empty"><h2>${all.length ? "No one matches" : "No volunteers yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here."}</p></div>`;
+      $("#vlist").querySelectorAll(".vol").forEach(card => {
+        const v = all.find(x => x.row === +card.dataset.row), btn = card.querySelector("[data-save]"), msg = card.querySelector(".saved");
+        card.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => { btn.disabled = false; msg.textContent = ""; }));
+        btn.onclick = async () => {
+          btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
+          const status = card.querySelector('[data-k="status"]').value, notes = card.querySelector('[data-k="notes"]').value.trim();
+          try {
+            await call({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, status, notes });
+            v.status = status; v.notes = notes; btn.textContent = "Save"; msg.textContent = "Saved";
+            const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
+          } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); btn.disabled = false; btn.textContent = "Save"; msg.textContent = err.message; }
+        };
+      });
+    };
+    $("#vq").addEventListener("input", e => { vstate.q = e.target.value; draw(); });
+    $("#vs").onchange = e => { vstate.status = e.target.value; draw(); };
+    $("#vi").onchange = e => { vstate.interest = e.target.value; draw(); };
+    $("#vn").onchange = e => { vstate.news = e.target.checked; draw(); };
+    $("#vcopy").onclick = async () => {
+      const emails = [...new Set(filtered().map(v => v.email).filter(Boolean))].join(", ");
+      try { await navigator.clipboard.writeText(emails); flash(`Copied ${filtered().length} email${filtered().length === 1 ? "" : "s"}. Paste them into the To or Bcc line.`); }
+      catch (e) { openDlg(`<h2>Emails</h2><p>Copy these:</p><textarea readonly style="min-height:140px">${esc(emails)}</textarea><div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Done</button></div>`); }
+    };
+    $("#vcsv").onclick = () => {
+      const cols = [["Submitted", "submitted"], ["First name", "first"], ["Last name", "last"], ["Email", "email"], ["News & updates", "news"], ["Interested in", "interests"], ["Heard about us", "heard"], ["Comments", "comments"], ["Status", "status"], ["Notes", "notes"]];
+      const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
+      const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(v => cols.map(c => cell(v[c[1]])).join(","))).join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
+      a.download = "heirloom-volunteers-" + H.dayKey(new Date()) + ".csv";
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
+    draw();
+  }
+
+  /* ============================================================
      People
      ============================================================ */
   async function people() {
@@ -453,6 +541,12 @@
     ] };
     if (b.action === "adminLibrary") return { ok: true, photos: demoLib };
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
+    if (b.action === "adminVolunteers") return { ok: true, statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], volunteers: [
+      { row: 4, submitted: "2026-11-10 18:42", first: "Ana", last: "Diaz", email: "ana@example.com", news: true, interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", status: "New", notes: "" },
+      { row: 3, submitted: "2026-11-10 18:15", first: "Marcus", last: "Lee", email: "marcus@example.com", news: false, interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", comments: "", status: "Contacted", notes: "Coming to the Dec workday" },
+      { row: 2, submitted: "2026-11-09 12:03", first: "Priya", last: "Shah", email: "priya@example.com", news: true, interests: "I'm not sure", heard: "Social Media", comments: "", status: "New", notes: "" }
+    ] };
+    if (b.action === "adminVolunteerSave") return { ok: true, status: b.status };
     if (b.action === "adminPeople") return { ok: true, me: session.email, admins: [session.email, "staff@heirloomeastbay.com", "community@heirloomeastbay.com", "admin@heirloomeastbay.com"],
       approvers: ["community@heirloomeastbay.com", "staff@heirloomeastbay.com", "admin@heirloomeastbay.com", "kkostelnick@iliff.edu", "lindsey.j.huffman@gmail.com"],
       trusted: ["community@heirloomeastbay.com", "mkhamiter@gmail.com", "nik@heirloomeastbay.com", "toku@plantify.org", "keegan@plantify.org"] };

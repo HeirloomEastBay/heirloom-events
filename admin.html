@@ -113,6 +113,27 @@
   .savebar { margin-top: 18px; background: var(--cream); padding: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--line); }
   .savebar p { margin: 0; color: var(--ink-soft); font-size: 14px; }
 
+  /* Volunteers */
+  .tab-n { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--wheat); color: var(--forest-deep); font-size: 12px; text-align: center; }
+  .toolbar select { min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: 14.5px; }
+  .toolbar .tog { display: inline-flex; align-items: center; gap: 7px; font-size: 14.5px; cursor: pointer; }
+  .toolbar .tog input { width: 18px; height: 18px; accent-color: var(--forest); }
+  .vlist { display: grid; gap: 10px; }
+  .vol { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; }
+  .vol h3 { font-size: 20px; margin: 0 0 2px; }
+  .vol .sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 8px; word-break: break-word; }
+  .vol .sub a { color: var(--forest); font-weight: 600; }
+  .vol .cm { margin: 8px 0 0; font-size: 14.5px; white-space: pre-wrap; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+  .vol .side { display: grid; gap: 8px; align-content: start; }
+  .vol .side select, .vol .side textarea { width: 100%; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 14.5px; }
+  .vol .side textarea { min-height: 64px; resize: vertical; }
+  .vol .side .lbl { font-size: 13px; }
+  .vol .side .row3 { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .vol .saved { font-size: 13px; color: var(--forest); }
+  .status.new { background: #f3e5c4; color: #6b4a12; }
+  .status.news { background: #e6eadc; }
+  @media (max-width: 680px) { .vol { grid-template-columns: 1fr; gap: 12px; } }
+
   .opt { font-weight: 400; color: var(--muted); }
   .lbl { display: block; font-weight: 600; font-size: 14.5px; }
   .hint { color: var(--muted); font-size: 14px; }
@@ -152,11 +173,12 @@
     <div class="wrap">
       <span class="kicker">Heirloom Activities</span>
       <h1>Admin</h1>
-      <p>Edit, cancel or delete anything on either calendar, no matter who added it. Manage the photo library and who can post.</p>
+      <p>Edit, cancel or delete anything on either calendar, no matter who added it. See who has signed up to volunteer, and manage the photo library and who can post.</p>
       <div class="tabs" role="tablist" aria-label="Admin sections" id="tabs" hidden>
         <button class="tab" role="tab" id="tab-public" aria-controls="app" data-tab="public"><span class="dot"></span>Public calendar</button>
         <button class="tab" role="tab" id="tab-residents" aria-controls="app" data-tab="residents"><span class="dot res"></span>Residents' calendar</button>
         <button class="tab" role="tab" id="tab-photos" aria-controls="app" data-tab="photos">Photo library</button>
+        <button class="tab" role="tab" id="tab-volunteers" aria-controls="app" data-tab="volunteers">Volunteers<span class="tab-n" id="volCount" hidden></span></button>
         <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People</button>
       </div>
     </div>

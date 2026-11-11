@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Volunteer · Heirloom Activities</title>
-<meta name="description" content="Apply to volunteer at Heirloom: land, animals, garden and workshops.">
+<meta name="description" content="Volunteer at Heirloom: weekly animal chores, monthly workdays and one-off projects.">
 <link rel="icon" href="images/logo-badge.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +47,21 @@
   .areas label:has(input:checked)::before { content: "✓"; margin-right: 6px; font-weight: 700; }
   .areas label:has(input:focus-visible) { outline: 3px solid var(--wheat); outline-offset: 2px; }
 
+  .section-h { font-size: 24px; color: var(--forest); margin: 6px 0 -6px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .checks { display: grid; gap: 8px; }
+  .check { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-size: 16px; }
+  .check input { width: 20px; height: 20px; flex: none; margin: 0; accent-color: var(--forest); }
+  .check:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
+  .check:has(input:focus-visible) { outline: 3px solid var(--wheat); outline-offset: 2px; }
+  .field > label.check { display: flex; font-weight: 500; margin-bottom: 0; }
+  .invalid .checks .check { border-color: var(--barn); }
+
+  /* Embedded on heirloomeastbay.com/volunteer: just the form */
+  body.embed { background: transparent; }
+  body.embed .site-header, body.embed .intro, body.embed .site-footer, body.embed .demo-banner { display: none; }
+  body.embed .vol { max-width: none; padding: 4px; }
+  html.sized, html.sized body { overflow: hidden; }
+
   .notice { display: flex; gap: 12px; align-items: flex-start; background: #f3e5c4; color: #5a3f10; border-radius: 12px; padding: 14px 16px; font-size: 15px; line-height: 1.5; }
   .notice svg { width: 20px; height: 20px; flex: none; margin-top: 2px; }
   .notice p { margin: 0; }
@@ -83,7 +98,7 @@
     <div class="wrap">
       <span class="kicker">Heirloom Activities</span>
       <h1>Volunteer with us</h1>
-      <p>Tell us where you'd like to lend a hand: tending the land, caring for the animals, working in the garden or helping with workshops. We'll reach out about opportunities that fit.</p>
+      <p>Weekly animal chores, monthly workdays, one-off projects and clean-ups. Kids are welcome with a grown-up. Fill out the form and one of the residents will be in touch soon!</p>
     </div>
   </section>
 
@@ -102,49 +117,35 @@
             <div class="err">Add your last name.</div>
           </div>
         </div>
-        <div class="row">
-          <div class="field" data-f="phone">
-            <label for="phone">Phone <span class="req">*</span></label>
-            <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="30" required>
-            <div class="err">Add a phone number.</div>
-          </div>
-          <div class="field" data-f="email">
-            <label for="email">Email <span class="req">*</span></label>
-            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" maxlength="120" required>
-            <div class="err">Add an email we can reach you at.</div>
-          </div>
+        <div class="field" data-f="email">
+          <label for="email">Email <span class="req">*</span></label>
+          <input type="email" id="email" name="email" autocomplete="email" inputmode="email" maxlength="120" required>
+          <div class="err">Add an email we can reach you at.</div>
+          <label class="check" style="margin-top:12px"><input type="checkbox" id="news" name="news" value="yes"> Sign up for news and updates</label>
         </div>
+
+        <h2 class="section-h">Areas</h2>
 
         <div class="field" data-f="areas">
-          <span class="lbl" id="areasLbl">I'd like to volunteer with… <span class="req">*</span></span>
-          <div class="areas" id="areas" role="group" aria-labelledby="areasLbl"></div>
-          <div id="otherRow" hidden style="margin-top:10px">
-            <label class="visually-hidden" for="otherArea">Other</label>
-            <input type="text" id="otherArea" maxlength="120" placeholder="What else would you like to help with?">
-          </div>
-          <div class="err" id="areasErr">Pick at least one.</div>
-          <p class="hint">Pick as many as you like.</p>
+          <span class="lbl" id="areasLbl">I'm interested in: <span class="req">*</span></span>
+          <div class="checks" id="areas" role="group" aria-labelledby="areasLbl"></div>
+          <div class="err" id="areasErr">Pick at least one (or "I'm not sure").</div>
+        </div>
+
+        <div class="field" data-f="heard">
+          <span class="lbl" id="heardLbl">How did you hear about us?</span>
+          <div class="checks" id="heard" role="radiogroup" aria-labelledby="heardLbl"></div>
         </div>
 
         <div class="field">
-          <label for="enjoy">Anything in particular you'd enjoy? <span class="opt">(optional)</span></label>
-          <textarea id="enjoy" name="enjoy" maxlength="1500" placeholder="Milking the goats, building trails, teaching a class, weekday mornings…"></textarea>
-        </div>
-
-        <div class="field">
-          <label for="heard">How did you hear about volunteering with us? <span class="opt">(optional)</span></label>
-          <input type="text" id="heard" name="heard" maxlength="200" placeholder="A friend, Instagram, Supper Church…">
+          <label for="comments">Comments <span class="opt">(optional)</span></label>
+          <textarea id="comments" name="comments" maxlength="3000"></textarea>
         </div>
 
         <div class="hp" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
 
-        <div class="notice" role="note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>
-          <p><b>Please note:</b> this application does not guarantee approval. You'll be sent an email to authorize a background check in the next 2 business days.</p>
-        </div>
-
         <div class="form-error" id="formError" role="alert"></div>
-        <button type="submit" class="btn btn-primary submit" id="submitBtn">Send my application</button>
+        <button type="submit" class="btn btn-primary submit" id="submitBtn">Submit</button>
       </form>
     </div>
   </main>
