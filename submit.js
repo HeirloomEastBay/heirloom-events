@@ -97,8 +97,61 @@
       if (d.ok && d.partners) { partners = d.partners; renderHosts(); }
       if (d.ok && d.channels && d.channels.length) { channels = d.channels; renderChannels(); }
       if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
-      if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); update(); }
+      if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); renderMulti(); update(); }
     }).catch(() => {});
+
+  /* ---------- Several photos that take turns (repeating events) ---------- */
+  let multi = [];          // [{ kind: "preset" | "upload" | "url", url, data? }]
+  const MULTI_MAX = 6;
+  const isRepeating = () => $("#repeat").value !== "none" || !!(CALMODE && original && original.recurring);
+  function syncMultiRow() {
+    const show = isRepeating() && !$("#imageStep").hidden;
+    $("#multiRow").hidden = !show;
+    if (!show && $("#multi").checked) { $("#multi").checked = false; setMulti(false); }
+  }
+  function setMulti(on) {
+    $("#multiPanel").hidden = !on;
+    $("#imageStep .photo-modes").hidden = on;
+    if (on) { $("#keepPhoto").hidden = true; document.querySelectorAll("[data-panel]").forEach(p => p.classList.remove("on")); }
+    else {
+      if (original && original.image && $("#m-keep")) { $("#keepPhoto").hidden = false; }
+      const m = form.querySelector('input[name="imageMode"]:checked'); setPanel(m ? m.value : "auto");
+    }
+    renderMulti(); update();
+  }
+  function renderMulti() {
+    $("#multiList").innerHTML = multi.map((it, i) => `<div class="m-thumb"><img src="${esc(it.url)}" alt=""><span class="n">${i + 1}</span>
+      <button type="button" class="x" data-i="${i}" aria-label="Remove photo ${i + 1}">×</button></div>`).join("");
+    $("#multiList").querySelectorAll(".x").forEach(b => b.onclick = () => { multi.splice(+b.dataset.i, 1); renderMulti(); update(); });
+    $("#multiGallery").innerHTML = presets.filter(p => p.gallery !== false).map(p => {
+      const i = multi.findIndex(it => it.url === p.image);
+      return `<button type="button" data-url="${esc(p.image)}" aria-pressed="${i !== -1}"><img src="${esc(p.image)}" alt="" loading="lazy">${i !== -1 ? `<span class="n">${i + 1}</span>` : ""}<span>${esc(p.label)}</span></button>`;
+    }).join("");
+    $("#multiGallery").querySelectorAll("button").forEach(b => b.onclick = () => {
+      const i = multi.findIndex(it => it.url === b.dataset.url);
+      if (i !== -1) multi.splice(i, 1);
+      else if (multi.length < MULTI_MAX) multi.push({ kind: "preset", url: b.dataset.url });
+      renderMulti(); update();
+    });
+    $("#multiHint").textContent = multi.length >= MULTI_MAX ? "That's 6, the most it can hold. Remove one to add another."
+      : "or tap photos below to add them. Up to 6, used in this order.";
+  }
+  $("#multi").addEventListener("change", () => setMulti($("#multi").checked));
+  $("#repeat").addEventListener("change", syncMultiRow);
+  $("#multiFiles").addEventListener("change", async e => {
+    const files = [...e.target.files].slice(0, MULTI_MAX - multi.length);
+    for (const f of files) {
+      try {
+        const img = await loadImage(f);
+        const scale = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        const url = c.toDataURL("image/jpeg", 0.82);
+        multi.push({ kind: "upload", url, data: url.split(",")[1] });
+      } catch (err) { console.error(err); }
+    }
+    e.target.value = ""; renderMulti(); update();
+  });
 
   /* ---------- Photo mode switching ---------- */
   form.querySelectorAll('input[name="imageMode"]').forEach(r => r.addEventListener("change", () => {
@@ -323,7 +376,7 @@
       spots: fd.get("spots") || "",
       link: fd.get("rsvpMode") === "link" ? (fd.get("link") || "").trim() : "",
       linkLabel: fd.get("linkLabel"),
-      imageMode: fd.get("imageMode"),
+      imageMode: $("#multi").checked && multi.length ? "multi" : fd.get("imageMode"),
       presetImage: fd.get("preset") || "",
       calendars: fd.getAll("calendars"),
       name: (fd.get("name") || "").trim(),
@@ -335,6 +388,7 @@
   }
 
   function chosenImage(v) {
+    if (v.imageMode === "multi") return multi[0].url;
     if (v.imageMode === "keep" && original) return original.image;
     if (v.imageMode === "upload" && upload) return upload.url;
     if (v.imageMode === "preset" && v.presetImage) return v.presetImage;
@@ -430,6 +484,7 @@
     payloadNotified = !!($("#adminNotify") && $("#adminNotify").checked);
     const payload = Object.assign({}, v, detailsPayload(), {
       imageData: v.imageMode === "upload" ? upload.data : "",
+      images: v.imageMode === "multi" ? multi.map(it => it.kind === "upload" ? { kind: "upload", data: it.data } : { kind: it.kind, url: it.url }) : [],
       elapsed: Date.now() - openedAt
     }, EDIT ? { action: "update", id: EDIT.id, by: EDIT.by, sig: EDIT.sig } : {});
     if (ADMIN) Object.assign(payload, { token: SESSION && SESSION.token },
@@ -558,6 +613,10 @@
     $("#email").readOnly = true; $("#email").title = "Edits stay linked to the email that shared the event";
     if (e.image) {
       $("#keepImg").src = e.image; $("#keepPhoto").hidden = false; $("#m-keep").checked = true; setPanel("keep");
+    }
+    syncMultiRow();
+    if ((e.images || []).length > 1 && !$("#multiRow").hidden) {
+      multi = e.images.map(url => ({ kind: "url", url })); $("#multi").checked = true; setMulti(true);
     }
     update();
   }
