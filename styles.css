@@ -247,3 +247,12 @@ body.res-mode #preview .card-media { display: none; }
 
 /* Volunteer opportunities */
 .chip.vol { background: #e9e1f3; color: #4a3d6a; }
+
+/* Top-right menu (nav.js) */
+.nav a.nav-link { font-size: 13.5px; padding: 6px 2px; border-bottom: 2px solid transparent; }
+.nav a.nav-link.on { color: var(--barn); border-bottom-color: var(--wheat); }
+@media (max-width: 760px) {
+  .nav { gap: 14px; }
+  .nav a.nav-link { font-size: 12.5px; letter-spacing: .02em; }
+  .nav:has(.nav-link + .nav-link) .nav-cal { display: none; } /* signed in: the badge is the way home */
+}

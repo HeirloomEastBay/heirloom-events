@@ -13,11 +13,13 @@
   if (DEMO) { $("#demoBanner").hidden = false; session = session || { token: "demo", email: "you@example.com" }; }
   $("#footLine").textContent = `${C.ADDRESS} · ${C.EMAIL}`;
 
+  let markedAdmin = false;
   async function call(body) {
     if (DEMO) return demo(body);
     const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(Object.assign({ token: session && session.token }, body)) });
     const r = await res.json();
+    if (r.ok && window.HLNav && !markedAdmin) { markedAdmin = true; HLNav.setRoles({ email: session.email, admin: true }); }
     if (!r.ok) {
       const err = new Error(r.error || "Something went wrong");
       err.signedOut = r.signedOut; err.notAdmin = r.notAdmin;
@@ -164,6 +166,8 @@
       if (!past) acts.push(`<a class="btn btn-forest btn-sm" href="${editHref(which, i)}">Edit</a>`);
       acts.push(`<button class="btn-quiet" data-act="delete">Delete</button>`);
     }
+    if (which === "public" && !past && !i.hidden && !/^(Declined|Cancelled|Unpublished)$/.test(i.status || "") && window.HLFlyer)
+      acts.push(`<button class="btn btn-outline btn-sm" data-act="flyer">Flyer &amp; images</button>`);
     const img = i.image ? `<img class="thumb" src="${esc(i.image)}" alt="" loading="lazy">` : `<div class="thumb">${ICON_CAL}</div>`;
     return `<article class="arow${i.hidden || past ? " dim" : ""}">${img}
       <div><h3>${esc(i.title)}</h3>
@@ -233,6 +237,24 @@
         kind === "hide" ? `“${i.title}” is hidden from the website.` : `“${i.title}” is back on the website.`);
     }
     if (kind === "image") pickImage(i);
+    if (kind === "flyer") {
+      openDlg(`<h2>Flyer &amp; images</h2><p>For “${esc(i.title)}”, ${esc(i.when)}. Made fresh from the event's current photo and details each time, so if you change something, just make a new one.</p><div id="flyBox"></div>
+        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Done</button></div>`);
+      $("#flyBox").appendChild(HLFlyer.buttons(async () => flyerEvent(i)));
+    }
+  }
+
+  // What the flyer maker needs, from an Admin list row
+  function flyerEvent(i) {
+    const form = i.kind === "form";
+    return {
+      title: i.title, start: new Date(i.start), end: i.end ? new Date(i.end) : null, allDay: !!i.allDay,
+      location: i.location && i.location !== "Heirloom" ? i.location : "", cost: i.cost || "", description: i.description || "",
+      image: i.image || "", recurring: i.repeatText || "", rsvp: form && !!i.rsvp, eventId: form ? i.id : "",
+      ref: form ? i.id : "", id: form ? i.id : i.eventId,
+      source: i.kind === "partner" ? "partner" : /community member/i.test(i.hostName || "") || (i.kind === "calendar" && i.hostName) ? "community" : "heirloom",
+      partnerName: i.partner || "", hostName: (i.hostName || "").replace(/^a community member$/i, "")
+    };
   }
 
   /* Partner image: pick from the library, upload, or go back to theirs */
@@ -365,7 +387,35 @@
   /* ============================================================
      Volunteers (from the volunteer form)
      ============================================================ */
-  const vstate = { q: "", status: "", interest: "", news: false };
+  const vstate = { q: "", status: "", interest: "", news: false, role: "" };
+  const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]];
+  // The role bits of a person's card (and of the "Add a person" form)
+  function roleFields(v, statuses, id) {
+    const res = v.role === "Resident";
+    return `<label class="lbl" for="rl${id}">Role</label>
+      <select id="rl${id}" data-k="role"><option${res ? "" : " selected"}>Volunteer</option><option${res ? " selected" : ""}>Resident</option></select>
+      <p class="hint res-note" ${res ? "" : "hidden"} style="margin:0;font-size:13px">Residents count as approved, background-checked and trained for everything, and get every volunteer announcement. When someone moves out, switch them to Volunteer and set their check and trainings.</p>
+      <div class="vfields" ${res ? "hidden" : ""} style="display:grid;gap:8px">
+        <label class="lbl" for="st${id}">Status</label>
+        <select id="st${id}" data-k="status">${statuses.concat(statuses.includes(v.status) ? [] : [v.status]).map(s => `<option${s === v.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
+        <label class="lbl" for="bg${id}">Background check</label>
+        <select id="bg${id}" data-k="bg">${BG.map(([val, l]) => `<option value="${val}"${val === (v.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select>
+        <span class="lbl">Trainings</span>
+        <div class="trn">${(state.vols.trainings || []).map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${(v.trainings || []).includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("")}</div>
+      </div>
+      <span class="lbl">Can also</span>
+      <div class="trn"><label><input type="checkbox" data-k="trusted"${v.trusted ? " checked" : ""}>Post events without review</label>
+        <label><input type="checkbox" data-k="approver"${v.approver ? " checked" : ""}>Approve events</label></div>`;
+  }
+  function wireRole(box) {
+    const sel = box.querySelector('[data-k="role"]');
+    sel.addEventListener("change", () => { const r = sel.value === "Resident"; box.querySelector(".vfields").hidden = r; box.querySelector(".res-note").hidden = !r; });
+  }
+  const readRole = box => ({
+    role: box.querySelector('[data-k="role"]').value, status: box.querySelector('[data-k="status"]').value, bg: box.querySelector('[data-k="bg"]').value,
+    trainings: [...box.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value),
+    trusted: box.querySelector('[data-k="trusted"]').checked, approver: box.querySelector('[data-k="approver"]').checked
+  });
   async function volunteers(fresh) {
     app.innerHTML = `<div class="panel-h"><div><h2>Volunteers</h2>
       <p>Everyone who's filled out the volunteer form, newest first. Set a status and keep notes as you follow up. It all lives on the Volunteers tab in the Sheet too.</p></div></div>
@@ -384,13 +434,14 @@
         <input type="search" id="vq" placeholder="Search names, emails, comments" value="${esc(vstate.q)}" aria-label="Search volunteers">
         <select id="vs" aria-label="Status"><option value="">Any status</option>${statuses.map(s => `<option${s === vstate.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
         <select id="vi" aria-label="Interested in"><option value="">Any interest</option>${interests.map(s => `<option value="${esc(s)}"${s === vstate.interest ? " selected" : ""}>${esc(short(s))}</option>`).join("")}</select>
+        <select id="vr" aria-label="Role"><option value="">Residents &amp; volunteers</option><option${vstate.role === "Resident" ? " selected" : ""}>Resident</option><option${vstate.role === "Volunteer" ? " selected" : ""}>Volunteer</option></select>
         <label class="tog"><input type="checkbox" id="vn"${vstate.news ? " checked" : ""}> Wants news &amp; updates</label>
       </div>
       <div class="toolbar" style="justify-content:space-between"><p class="hint" id="vcount" style="margin:0"></p>
-        <div class="acts"><button class="btn btn-outline btn-sm" id="vtrn">Edit trainings list</button><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
+        <div class="acts"><button class="btn btn-forest btn-sm" id="vadd">Add a person</button><button class="btn btn-outline btn-sm" id="vtrn">Edit trainings list</button><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
       <div class="vlist" id="vlist"></div>`;
     const filtered = () => all.filter(v =>
-      (!vstate.status || v.status === vstate.status) && (!vstate.interest || v.interests.includes(vstate.interest)) && (!vstate.news || v.news) &&
+      (!vstate.role || v.role === vstate.role) && (!vstate.status || v.status === vstate.status) && (!vstate.interest || v.interests.includes(vstate.interest)) && (!vstate.news || v.news) &&
       (!vstate.q || [v.first, v.last, v.email, v.comments, v.notes, v.heard, v.interests].join(" ").toLowerCase().includes(vstate.q.toLowerCase())));
     const draw = () => {
       const list = filtered();
@@ -399,7 +450,8 @@
           <div>
             <h3>${esc(v.first)} ${esc(v.last)}</h3>
             <p class="sub"><a href="mailto:${esc(v.email)}">${esc(v.email)}</a>${v.phone ? " · " + esc(v.phone) : ""} · ${esc(v.submitted)}</p>
-            <div class="chips2">${v.status === "New" ? `<span class="status new">New</span>` : ""}
+            <div class="chips2">${v.role === "Resident" ? `<span class="status news">Resident</span>` : v.status === "New" ? `<span class="status new">New</span>` : ""}
+              ${v.admin ? `<span class="status">Admin</span>` : ""}${v.approver ? `<span class="status">Events approver</span>` : ""}${v.trusted ? `<span class="status">Trusted poster</span>` : ""}
               ${v.interests.split(/,\s*(?![^()]*\))/).filter(Boolean).map(i => `<span class="status">${esc(i.trim())}</span>`).join("")}
               ${v.news ? `<span class="status news">✓ News &amp; updates</span>` : ""}
               ${v.heard ? `<span class="status src">Heard via ${esc(v.heard)}</span>` : ""}</div>
@@ -407,12 +459,7 @@
             ${(v.slots || []).length || v.upcoming ? `<p class="sub" style="margin-top:8px">${(v.slots || []).length ? "Chore chart: " + esc(v.slots.join(", ")) : ""}${(v.slots || []).length && v.upcoming ? " · " : ""}${v.upcoming ? v.upcoming + " upcoming sign-up" + (v.upcoming > 1 ? "s" : "") : ""}</p>` : ""}
           </div>
           <div class="side">
-            <label class="lbl" for="st${v.row}">Status</label>
-            <select id="st${v.row}" data-k="status">${statuses.concat(statuses.includes(v.status) ? [] : [v.status]).map(s => `<option${s === v.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
-            <label class="lbl" for="bg${v.row}">Background check</label>
-            <select id="bg${v.row}" data-k="bg">${[["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]].map(([val, l]) => `<option value="${val}"${val === (v.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select>
-            <span class="lbl">Trainings</span>
-            <div class="trn">${(state.vols.trainings || []).map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${(v.trainings || []).includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("")}</div>
+            ${roleFields(v, statuses, v.row)}
             <label class="lbl" for="nt${v.row}">Notes</label>
             <textarea id="nt${v.row}" data-k="notes" maxlength="3000" placeholder="Called Tuesday, coming Saturday…">${esc(v.notes)}</textarea>
             <div class="row3"><span class="saved" aria-live="polite"></span><button class="btn btn-forest btn-sm" data-save disabled>Save</button></div>
@@ -420,18 +467,45 @@
         : `<div class="empty"><h2>${all.length ? "No one matches" : "No volunteers yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here."}</p></div>`;
       $("#vlist").querySelectorAll(".vol").forEach(card => {
         const v = all.find(x => x.row === +card.dataset.row), btn = card.querySelector("[data-save]"), msg = card.querySelector(".saved");
+        wireRole(card);
         card.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => { btn.disabled = false; msg.textContent = ""; }));
         btn.onclick = async () => {
           btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
-          const status = card.querySelector('[data-k="status"]').value, notes = card.querySelector('[data-k="notes"]').value.trim();
-          const bg = card.querySelector('[data-k="bg"]').value, trainings = [...card.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value);
+          const notes = card.querySelector('[data-k="notes"]').value.trim(), r = readRole(card);
           try {
-            await call({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, status, notes, bg, trainings });
-            v.status = status; v.notes = notes; v.bg = bg; v.trainings = trainings; btn.textContent = "Save"; msg.textContent = "Saved";
+            await call(Object.assign({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, notes }, r));
+            Object.assign(v, r, { notes }); if (r.role === "Resident") v.status = "Active volunteer";
+            btn.textContent = "Save"; msg.textContent = "Saved";
             const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
           } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); btn.disabled = false; btn.textContent = "Save"; msg.textContent = err.message; }
         };
       });
+    };
+    $("#vr").onchange = e => { vstate.role = e.target.value; draw(); };
+    $("#vadd").onclick = () => {
+      openDlg(`<h2>Add a person</h2><p>For residents and pre-approved volunteers who haven't filled out the form. They can log in right away with this email.</p>
+        <form id="addP" class="f2" novalidate style="display:grid;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="lbl">First name<input type="text" name="first" maxlength="60" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label>
+          <label class="lbl">Last name<input type="text" name="last" maxlength="60" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label></div>
+          <label class="lbl">Email<input type="email" name="email" maxlength="120" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit"></label>
+          <div class="side" style="display:grid;gap:8px">${roleFields({ role: "Resident", status: "Active volunteer", trainings: [] }, state.vols.statuses, "new")}</div>
+          <label class="lbl">Notes <span class="opt">(optional)</span><textarea name="notes" maxlength="3000" style="width:100%;min-height:60px"></textarea></label>
+        </form>
+        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Add</button></div>`);
+      const f = $("#addP"); wireRole(f);
+      f.querySelectorAll("select").forEach(s => s.style.cssText = "width:100%;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff");
+      $("#go").onclick = async e => {
+        const b = e.currentTarget, fd = new FormData(f);
+        const body = Object.assign({ action: "adminVolunteerAdd", first: fd.get("first"), last: fd.get("last"), email: fd.get("email"), notes: fd.get("notes") }, readRole(f));
+        b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+        try { state.vols = await call(body); dlg.close(); renderVolunteers(); flash(`Added ${body.first}. They can log in with ${body.email}.`); }
+        catch (err) {
+          if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); }
+          b.disabled = false; b.textContent = "Add";
+          if (!dlgIn.querySelector(".msg.err")) dlgIn.insertAdjacentHTML("beforeend", `<p class="msg err"></p>`);
+          dlgIn.querySelector(".msg.err").textContent = err.message + ".";
+        }
+      };
     };
     $("#vtrn").onclick = () => {
       openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line.</p>
@@ -653,6 +727,7 @@
     ] };
     if (b.action === "adminVolunteerSave") return { ok: true, status: b.status };
     if (b.action === "adminTrainingsSave") return { ok: true, trainings: b.list };
+    if (b.action === "adminVolunteerAdd") { const v = state.vols; v.volunteers.unshift({ row: 99, submitted: "just now", first: b.first, last: b.last, email: b.email, news: false, interests: "Added by an admin", heard: "", comments: "", status: "Active volunteer", notes: b.notes, bg: b.bg, trainings: b.trainings, role: b.role, trusted: b.trusted, approver: b.approver, slots: [], upcoming: 0 }); return JSON.parse(JSON.stringify(v)); }
     if (b.action === "adminChores" || b.action === "adminChoreSave" || b.action === "adminChoreRemove") return demoChores(b);
     if (b.action === "adminPeople") return { ok: true, me: session.email, admins: [session.email, "staff@heirloomeastbay.com", "community@heirloomeastbay.com", "admin@heirloomeastbay.com"],
       approvers: ["community@heirloomeastbay.com", "staff@heirloomeastbay.com", "admin@heirloomeastbay.com", "kkostelnick@iliff.edu", "lindsey.j.huffman@gmail.com"],

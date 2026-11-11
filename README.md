@@ -55,6 +55,8 @@ Admins sign in on **My events** (same emailed code), then tap **Admin**. The Adm
 
 ### Volunteers: opportunities, portal, chore chart and coverage
 
+**Residents:** set someone's Role to **Resident** (or add them with **Add a person**). Residents count as approved, background-checked and trained for everything, and get every volunteer announcement. When someone moves out, switch their Role to Volunteer and set their check and trainings. Each person's card also has **Post events without review** (trusted poster) and **Approve events** (events approver). These are the same lists as the People tab.
+
 **Who's a volunteer:** anyone on the **Volunteers** tab. On the Admin page's Volunteers tab, set each person's:
 - **Status:** "Active volunteer" makes them an approved volunteer.
 - **Background check:** Not yet / Sent / Cleared.
@@ -74,6 +76,9 @@ Sign-ups reuse the RSVP system: spots, waitlist, reminders and the guest list.
 - **Coverage:** ask for coverage on certain dates, or pick up someone else's request.
 
 **Chore chart:** manage it on the Admin page's **Chore chart** tab (or the Chore chart tab in the Sheet). Each slot is one person, every week. When a slot becomes Open, all qualified active volunteers get an email. Coverage requests email qualified volunteers, and both people get an email when someone covers. Admin FYIs go to "Volunteer applications go to".
+
+### Menu and flyers for admins
+Once signed in, every page's top-right menu shows **My events**, plus **Volunteer portal** and **Admin panel** for the people who have them. On the Admin page's Public calendar tab, each event has **Flyer & images**. They're made fresh from the event's current photo and details every time.
 
 ### Flyers and social images
 Every public event gets three ready-made graphics in Heirloom's colors and fonts, made from the event's photo, title, date, place and cost:

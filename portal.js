@@ -53,12 +53,12 @@
   function header() {
     const me = data.me;
     $("#hello").textContent = me && me.first ? `Hi, ${me.first}!` : "Volunteer portal";
-    $("#myEventsLink").hidden = !data.hasEvents;
-    $("#adminLink").hidden = !data.admin;
+    if (window.HLNav) HLNav.setRoles({ email: data.email, admin: !!data.admin, volunteer: !!data.me });
     $("#signOut").hidden = false;
-    $("#signOut").onclick = () => { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } location.href = "index.html"; };
+    $("#signOut").onclick = () => { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } if (window.HLNav) HLNav.signedOut(); location.href = "index.html"; };
     const b = [];
-    if (me) {
+    if (me && me.resident) b.push(`<span class="ok">Resident</span>`);
+    else if (me) {
       b.push(me.active ? `<span class="ok">Approved volunteer</span>` : `<span>${esc(me.status)}</span>`);
       if (me.bgCleared) b.push(`<span class="ok">Background check cleared</span>`);
       me.trainings.forEach(t => b.push(`<span>${esc(t)}</span>`));

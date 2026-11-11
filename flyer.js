@@ -37,9 +37,10 @@
   // then fall back to a farm photo.
   async function photo(src) {
     const fallback = "images/farmhouse.jpg";
-    if (!src) return img(fallback);
+    const farm = () => img(fallback).then(i => { i._fallback = !!src; return i; });
+    if (!src) return farm();
     const local = /^(data:|blob:)/.test(src) || !/^https?:/i.test(src) || new URL(src, location.href).origin === location.origin;
-    if (local) return img(src).catch(() => img(fallback));
+    if (local) return img(src).catch(farm);
     try { return await img(src, true); } catch (e) { /* try the backend */ }
     if (C.API_URL) {
       try {
@@ -47,7 +48,7 @@
         if (r.ok && r.data) return await img(r.data);
       } catch (e) { /* use the farm photo */ }
     }
-    return img(fallback);
+    return farm();
   }
   async function fonts() {
     if (!document.fonts || !document.fonts.load) return;
@@ -290,10 +291,10 @@
       const pdf = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
       pdf.setProperties({ title: e.title + " · Heirloom Activities" });
       pdf.addImage(c.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, 612, 792);
-      return { blob: pdf.output("blob"), filename: name + "-flyer.pdf", canvas: c };
+      return { blob: pdf.output("blob"), filename: name + "-flyer.pdf", canvas: c, usedFallback: !!im._fallback };
     }
     const c = kind === "story" ? drawStory(e, im, badge) : drawSquare(e, im, badge);
-    return { blob: await toBlob(c, "image/jpeg", 0.92), filename: name + (kind === "story" ? "-story.jpg" : "-post.jpg"), canvas: c };
+    return { blob: await toBlob(c, "image/jpeg", 0.92), filename: name + (kind === "story" ? "-story.jpg" : "-post.jpg"), canvas: c, usedFallback: !!im._fallback };
   }
 
   // Phones: open the share sheet (Instagram, Messages…); computers: download
@@ -333,7 +334,8 @@
         const e = await getEvent();
         const r = await make(e, b.dataset.kind);
         const how = await deliver(r, e.title);
-        msg.textContent = how === "downloaded" ? `Saved ${r.filename} to your downloads.` : how === "shared" ? "Shared!" : "";
+        msg.textContent = (how === "downloaded" ? `Saved ${r.filename} to your downloads.` : how === "shared" ? "Shared!" : "")
+          + (r.usedFallback ? " We couldn't load this event's photo, so it uses a farm photo instead. Try again in a minute, or change the event's photo." : "");
       } catch (err) {
         console.error(err);
         msg.textContent = "Sorry, that didn't work. Please try again.";

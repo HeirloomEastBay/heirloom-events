@@ -72,6 +72,7 @@
         const r = await call({ action: "loginVerify", email, code: input.value });
         if (!r.ok) throw new Error(r.error);
         store.set(KEY, { token: r.token, email: r.email });
+        if (window.HLNav) HLNav.setRoles({ email: r.email });
         load();
       } catch (err) { showErr((err.message || "Something went wrong") + "."); unbusy($("#go"), "Sign in"); input.select(); }
     };
@@ -91,11 +92,12 @@
     try {
       const r = await call({ action: "myEvents", token: s.token });
       if (!r.ok) {
-        if (r.signedOut) { store.del(KEY); return askEmail(s.email, "Your sign-in expired. We'll send you a new code."); }
+        if (r.signedOut) { store.del(KEY); if (window.HLNav) HLNav.signedOut(); return askEmail(s.email, "Your sign-in expired. We'll send you a new code."); }
         throw new Error(r.error);
       }
       // Remember name, email and phone so the Submit form can fill them in
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
+      if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer });
       // Came from the Admin page to sign in: go back there
       // Admins go straight to the Admin page (its "My events" link adds ?mine=1 to stay here)
       if (r.admin && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
@@ -150,7 +152,7 @@
         <p><a class="btn btn-primary" href="submit.html">Submit an event</a></p></div>` : ""}
       ${up.length ? `<div class="group-h"><h2>Upcoming</h2></div><div class="mine-list">${up.map(card).join("")}</div>` : ""}
       ${past.length ? `<div class="group-h"><h2>Past</h2></div><div class="mine-list">${past.slice(0, 30).map(card).join("")}</div>` : ""}`;
-    $("#out").onclick = () => { store.del(KEY); askEmail(r.email); };
+    $("#out").onclick = () => { store.del(KEY); if (window.HLNav) HLNav.signedOut(); askEmail(r.email); };
   }
 
   /* ---------- Little helpers ---------- */
