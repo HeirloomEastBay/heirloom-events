@@ -1,6 +1,6 @@
 /* Heirloom Activities — the top-right menu, the same on every page.
-   Signed out: Log in. Signed in: My events, Volunteer portal and Admin panel
-   (for the people who have them), and Profile. Pages tell it who's signed in with HLNav.setRoles(). */
+   Signed out: Log in. Signed in: My events, Volunteer portal, Guest rooms and
+   Admin panel (for the people who have them), and Profile. Pages tell it who's signed in with HLNav.setRoles(). */
 (function () {
   const nav = document.querySelector(".site-header .nav");
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
@@ -12,7 +12,7 @@
     const signed = !!(session && session.token);
     const r = signed && roles && roles.email === session.email ? roles : {};
     const links = signed
-      ? [["mine.html?mine=1", "My events", "Events"], (r.volunteer || r.admin) && ["portal.html", "Volunteer portal", "Volunteer"], r.admin && ["admin.html", "Admin panel", "Admin"], ["profile.html", "Profile"]].filter(Boolean)
+      ? [["mine.html?mine=1", "My events", "Events"], (r.volunteer || r.admin) && ["portal.html", "Volunteer portal", "Volunteer"], (r.resident || r.admin) && ["stays.html", "Guest rooms", "Rooms"], r.admin && ["admin.html", "Admin panel", "Admin"], ["profile.html", "Profile"]].filter(Boolean)
       : [["mine.html", "Log in"]];
     nav.innerHTML = links.map(([href, label, short]) => {
       const on = here === href.split("?")[0];

@@ -117,6 +117,18 @@ Repeating events from the form have **Change one date** on the Admin page and, f
 
 The changes are kept on the **Date changes** tab, and are put back automatically if someone later edits the whole series. Repeating events added straight in Google Calendar (like Supper Church) have **Change one date** too, for admins. For those, bringing back a cancelled date adds it back as a one-time event.
 
+### Guest rooms (overnight stays)
+**stays.html** ("Guest rooms" in the menu, for residents and admins) and the Admin page's **Guest rooms** tab:
+- **Tonight:** a card per room, filled in with the guest if someone's staying, outlined if it's open (with who's next).
+- **Timeline:** the rooms across the next 4 weeks (2 on phones); stays are bars with the guest's name. Tap an empty day to add a stay, or a name to see it.
+- **Upcoming / Past stays / Cancelled**, with search.
+- **Add a stay:** one or more rooms (taken rooms can't be picked), check-in and check-out, guest name, who they are / why (shows in parentheses), optional arriving/leaving times, how many people, host, guest email and phone (only admins and whoever booked it can see those), notes. With an email, you can send the guest a confirmation using "Guest arrival info" from Settings. Admins can also **block** rooms (no guests).
+- Whoever booked a stay, or an admin, can edit or cancel it. Admins get an FYI email when a resident books ("Email admins about new guest stays").
+
+Each stay is one all-day block on the residents' calendar, titled like staff already write them: "Room 1: Sarah (Sabbath 365)", "Rooms 1 & 2: Tanya (BK friend)". Stays typed straight into Google Calendar in that style are picked up too: `setup()` reads in the whole history, and the Guest rooms page re-checks every few minutes (changes and deletions made in Google Calendar carry over). Everything is on the **Guest stays** tab in the Sheet.
+
+Settings: **Guest rooms** (the room names, "1, 2, 3, 4"), **Guest stay blocks include the check-out day** (TRUE: a block shown Nov 6–10 means the guest leaves the 10th; set FALSE if blocks only cover the nights, then re-run setup), **Guest check-in time**, **Guest check-out time**, **Guest arrival info**.
+
 ### RSVPs
 
 When someone shares an event they choose **Just show up**, **Collect RSVPs here**, or **Use my own link**. With *Collect RSVPs here*:

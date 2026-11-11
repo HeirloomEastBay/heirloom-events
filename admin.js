@@ -47,7 +47,7 @@
 
   /* ---------- Tabs ---------- */
   if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
-  const state = { tab: ["public", "residents", "photos", "chores", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
+  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
   $("#tabs").hidden = false;
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { qs.delete("p"); show(t.dataset.tab); });
   $("#tabs").addEventListener("keydown", e => {
@@ -62,6 +62,7 @@
     if (tab !== "people" || !qs.get("p")) { qs.delete("p"); history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab); }
     if (tab === "photos") return photos(fresh);
     if (tab === "people") return people(fresh);
+    if (tab === "stays") { app.innerHTML = `<div class="panel-h"><div><h2>Guest rooms</h2><p>Who's in the 4 guest rooms, and when. Stays come from the residents' calendar ("Room 1: Sarah (Sabbath 365)") and from the Guest rooms page residents use. Admins can change any stay and block rooms.</p></div></div><div id="stays"></div>`; return HLStays.mount($("#stays"), { refresh: fresh }); }
     if (tab === "chores") return chores(fresh);
     calendar(tab, fresh);
   }

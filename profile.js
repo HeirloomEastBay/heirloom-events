@@ -39,7 +39,7 @@
   }
 
   function render(r) {
-    if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer });
+    if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident });
     try { localStorage.setItem("heirloom-me", JSON.stringify({ email: r.email, name: (r.first + " " + r.last).trim(), phone: r.phone })); } catch (e) { /* fine */ }
     const s = r.stats;
     const hours = s && s.hours ? (s.hours === 1 ? "1" : String(s.hours)) : "0";
