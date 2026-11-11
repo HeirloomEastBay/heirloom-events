@@ -483,7 +483,7 @@
   const nameOf = p => (p.first + " " + p.last).trim() || p.email;
   const initials = p => ((p.first || p.email)[0] + (p.last ? p.last[0] : "")).toUpperCase();
   const hrs = h => (h === 1 ? "1 hour" : (Math.round(h * 4) / 4) + " hours");
-  const dateLong = ymd => ymd ? H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { month: "short", day: "numeric", year: "numeric" }) : "";
+  const dateLong = ymd => /^\d{4}-\d{2}-\d{2}/.test(ymd || "") ? H.fmt(H.zoned(...ymd.slice(0, 10).split("-").map(Number), 12), { month: "short", day: "numeric", year: "numeric" }) : "";
 
   function setNewCount(list) { const n = list.filter(p => p.role === "Volunteer" && p.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n; }
 
