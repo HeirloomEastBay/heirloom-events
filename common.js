@@ -136,7 +136,10 @@
       cost: "Free", location: "Meet at the parking area" });
     add({ title: "Garden Workday", start: at(nextDow(6), 9), end: at(nextDow(6), 12),
       description: "Help us put the garden to bed for winter: pulling squash vines, spreading compost and planting garlic. Gloves and snacks provided.",
-      cost: "Free", location: "The garden" });
+      cost: "Free", location: "The garden", rsvp: true, eventId: "EV-demo-workday", spotsLeft: 6, volunteer: { area: "Workday", bg: false, training: "" } });
+    add({ title: "Fence repair on the back pasture", start: at(nextDow(5) + 7, 13), end: at(nextDow(5) + 7, 16),
+      description: "Help us restring the goat fence before winter. We'll show you the ropes, but you'll be using post drivers and fence pliers.",
+      location: "Back pasture", rsvp: true, eventId: "EV-demo-fence", spotsLeft: 3, volunteer: { area: "One-off project", bg: true, training: "Power tools" } });
     add({ title: "Kids' Morning with the Chickens", start: at(nextDow(6) + 7, 10), end: at(nextDow(6) + 7, 11, 30),
       description: "Little ones can help collect eggs, scatter feed and hold a hen (if she's willing). Grown-ups stay with their kids.",
       cost: "$5 per family, suggested", location: "Chicken coop", rsvp: true, eventId: "EV-demo-chickens", spotsLeft: 0 });

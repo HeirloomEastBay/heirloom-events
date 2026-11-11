@@ -44,7 +44,7 @@
   if (!session || !session.token) return gate("signin");
 
   /* ---------- Tabs ---------- */
-  const state = { tab: ["public", "residents", "photos", "volunteers", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
+  const state = { tab: ["public", "residents", "photos", "volunteers", "chores", "people"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {} };
   $("#tabs").hidden = false;
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.tab));
   $("#tabs").addEventListener("keydown", e => {
@@ -60,6 +60,7 @@
     if (tab === "photos") return photos(fresh);
     if (tab === "people") return people();
     if (tab === "volunteers") return volunteers(fresh);
+    if (tab === "chores") return chores(fresh);
     calendar(tab, fresh);
   }
 
@@ -386,7 +387,7 @@
         <label class="tog"><input type="checkbox" id="vn"${vstate.news ? " checked" : ""}> Wants news &amp; updates</label>
       </div>
       <div class="toolbar" style="justify-content:space-between"><p class="hint" id="vcount" style="margin:0"></p>
-        <div class="acts"><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
+        <div class="acts"><button class="btn btn-outline btn-sm" id="vtrn">Edit trainings list</button><button class="btn btn-outline btn-sm" id="vcopy">Copy emails</button><button class="btn btn-outline btn-sm" id="vcsv">Download spreadsheet</button></div></div>
       <div class="vlist" id="vlist"></div>`;
     const filtered = () => all.filter(v =>
       (!vstate.status || v.status === vstate.status) && (!vstate.interest || v.interests.includes(vstate.interest)) && (!vstate.news || v.news) &&
@@ -403,10 +404,15 @@
               ${v.news ? `<span class="status news">✓ News &amp; updates</span>` : ""}
               ${v.heard ? `<span class="status src">Heard via ${esc(v.heard)}</span>` : ""}</div>
             ${v.comments ? `<p class="cm">${esc(v.comments)}</p>` : ""}
+            ${(v.slots || []).length || v.upcoming ? `<p class="sub" style="margin-top:8px">${(v.slots || []).length ? "Chore chart: " + esc(v.slots.join(", ")) : ""}${(v.slots || []).length && v.upcoming ? " · " : ""}${v.upcoming ? v.upcoming + " upcoming sign-up" + (v.upcoming > 1 ? "s" : "") : ""}</p>` : ""}
           </div>
           <div class="side">
             <label class="lbl" for="st${v.row}">Status</label>
             <select id="st${v.row}" data-k="status">${statuses.concat(statuses.includes(v.status) ? [] : [v.status]).map(s => `<option${s === v.status ? " selected" : ""}>${esc(s)}</option>`).join("")}</select>
+            <label class="lbl" for="bg${v.row}">Background check</label>
+            <select id="bg${v.row}" data-k="bg">${[["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]].map(([val, l]) => `<option value="${val}"${val === (v.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select>
+            <span class="lbl">Trainings</span>
+            <div class="trn">${(state.vols.trainings || []).map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${(v.trainings || []).includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("")}</div>
             <label class="lbl" for="nt${v.row}">Notes</label>
             <textarea id="nt${v.row}" data-k="notes" maxlength="3000" placeholder="Called Tuesday, coming Saturday…">${esc(v.notes)}</textarea>
             <div class="row3"><span class="saved" aria-live="polite"></span><button class="btn btn-forest btn-sm" data-save disabled>Save</button></div>
@@ -414,17 +420,29 @@
         : `<div class="empty"><h2>${all.length ? "No one matches" : "No volunteers yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here."}</p></div>`;
       $("#vlist").querySelectorAll(".vol").forEach(card => {
         const v = all.find(x => x.row === +card.dataset.row), btn = card.querySelector("[data-save]"), msg = card.querySelector(".saved");
-        card.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => { btn.disabled = false; msg.textContent = ""; }));
+        card.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => { btn.disabled = false; msg.textContent = ""; }));
         btn.onclick = async () => {
           btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
           const status = card.querySelector('[data-k="status"]').value, notes = card.querySelector('[data-k="notes"]').value.trim();
+          const bg = card.querySelector('[data-k="bg"]').value, trainings = [...card.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value);
           try {
-            await call({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, status, notes });
-            v.status = status; v.notes = notes; btn.textContent = "Save"; msg.textContent = "Saved";
+            await call({ action: "adminVolunteerSave", row: v.row, email: v.email, name: v.first + " " + v.last, status, notes, bg, trainings });
+            v.status = status; v.notes = notes; v.bg = bg; v.trainings = trainings; btn.textContent = "Save"; msg.textContent = "Saved";
             const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
           } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); btn.disabled = false; btn.textContent = "Save"; msg.textContent = err.message; }
         };
       });
+    };
+    $("#vtrn").onclick = () => {
+      openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line.</p>
+        <textarea id="trnList" style="min-height:160px">${esc((state.vols.trainings || []).join("\n"))}</textarea>
+        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Save</button></div>`);
+      $("#go").onclick = async e => {
+        const b = e.currentTarget, list = $("#trnList").value.split("\n").map(x => x.trim()).filter(Boolean);
+        b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+        try { const r = await call({ action: "adminTrainingsSave", list }); state.vols.trainings = r.trainings; state.chores = null; dlg.close(); renderVolunteers(); flash("Trainings updated."); }
+        catch (err) { b.disabled = false; b.textContent = "Save"; flash(err.message, true); }
+      };
     };
     $("#vq").addEventListener("input", e => { vstate.q = e.target.value; draw(); });
     $("#vs").onchange = e => { vstate.status = e.target.value; draw(); };
@@ -446,6 +464,93 @@
     };
     const n = all.filter(x => x.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n;
     draw();
+  }
+
+  /* ============================================================
+     Chore chart (regular weekly slots) + coverage requests
+     ============================================================ */
+  async function chores(fresh) {
+    app.innerHTML = `<div class="panel-h"><div><h2>Chore chart</h2>
+      <p>Regular weekly slots, one person each. When a slot is set to Open, qualified volunteers get an email and can take it in their portal.
+      Volunteers can also ask for coverage on certain dates. It all lives on the Chore chart and Coverage tabs in the Sheet too.</p></div></div>
+      <div id="ch"><p class="loading">Loading the chore chart…</p></div>`;
+    try {
+      if (fresh || !state.chores) state.chores = await call({ action: "adminChores" });
+      if (state.tab === "chores") renderChores();
+    } catch (err) { handle(err, $("#ch")); }
+  }
+  function slotForm(s, d, n) {
+    const opt = (list, val, blank) => (blank != null ? `<option value="">${esc(blank)}</option>` : "") + list.map(x => `<option${x === val ? " selected" : ""}>${esc(x)}</option>`).join("");
+    const vols = d.volunteers.slice();
+    if (s.volunteer && !vols.some(v => v.email === s.volunteer)) vols.push({ email: s.volunteer, name: s.volunteer + " (not active)" });
+    return `<form class="slotf${s.id && !s.volunteer ? " open" : ""}${s.id ? "" : " add-slot"}" data-n="${n}" novalidate>
+      <label>Chore<input name="chore" maxlength="80" value="${esc(s.chore || "")}" placeholder="Evening animal chores" required></label>
+      <label>Day<select name="day">${opt(d.days, s.day || "Monday")}</select></label>
+      <label>Start<input type="time" name="start" value="${esc(s.start || "15:00")}"></label>
+      <label>End<input type="time" name="end" value="${esc(s.end || "")}"></label>
+      <label>Training needed<select name="training">${opt(d.trainings, s.training, "None")}</select></label>
+      <label>Volunteer<select name="volunteer"><option value="">Open (needs someone)</option>${vols.map(v => `<option value="${esc(v.email)}"${v.email === s.volunteer ? " selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      <div class="sbtns">${s.id ? `<button type="button" class="btn-quiet" data-rm>Remove</button><button class="btn btn-forest btn-sm" disabled>Save</button>` : `<button class="btn btn-primary btn-sm">Add slot</button>`}</div>
+      <label class="notes">Notes <span class="opt">(shown to volunteers)</span><input name="notes" maxlength="500" value="${esc(s.notes || "")}" placeholder="Feed, water, collect eggs. Gate code is on the barn door."></label>
+    </form>`;
+  }
+  function renderChores() {
+    const d = state.chores;
+    const days = d.days.filter(day => d.slots.some(s => s.day === day));
+    const open = d.slots.filter(s => !s.volunteer).length;
+    $("#ch").innerHTML = `<h3 class="day-h" style="font-family:var(--f-label);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 8px">Add a slot</h3>
+      ${slotForm({}, d, -1)}
+      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}. Only active volunteers (and only those with the training, if one is needed) can be picked or take a slot.</p>
+      ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? slotForm(s, d, n) : "").join("")}</section>`).join("")}
+      <div class="panel-h" style="margin-top:26px"><div><h2 style="font-size:22px">Coverage requests</h2><p>Dates volunteers asked to have covered, coming up.</p></div></div>
+      ${d.coverage.length ? `<div class="alist">${d.coverage.map(c => `<article class="arow" style="grid-template-columns:1fr"><div>
+        <h3>${esc(c.chore)}</h3><p class="when">${esc(H.fmt(H.zoned(...c.date.split("-").map(Number), 12), { weekday: "long", month: "long", day: "numeric" }))} · ${esc(c.time)}</p>
+        <div class="chips2"><span class="status src">Asked by ${esc(c.by)}</span>${c.status === "Covered" ? `<span class="status">Covered by ${esc(c.coveredBy)}</span>` : `<span class="status pending">Still open</span>`}</div>
+        ${c.note ? `<p class="hint" style="margin:0">“${esc(c.note)}”</p>` : ""}</div></article>`).join("")}</div>`
+        : `<div class="empty"><h2>No coverage requests</h2><p>When a volunteer asks for a date to be covered, it shows up here.</p></div>`}`;
+    $("#ch").querySelectorAll(".slotf").forEach(f => {
+      const n = +f.dataset.n, s = n >= 0 ? d.slots[n] : null, save = f.querySelector(".sbtns .btn");
+      if (s) f.querySelectorAll("input, select").forEach(el => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => save.disabled = false));
+      f.onsubmit = async e => {
+        e.preventDefault();
+        const body = Object.fromEntries(new FormData(f).entries());
+        if (!body.chore.trim()) { f.querySelector('[name="chore"]').focus(); return flash("Name the chore first.", true); }
+        const wasVol = s && s.volunteer;
+        const label = save.innerHTML; save.disabled = true; save.innerHTML = `<span class="spinner"></span>`;
+        try {
+          state.chores = await call(Object.assign({ action: "adminChoreSave", id: s ? s.id : "" }, body));
+          renderChores();
+          flash(!body.volunteer && (!s || wasVol) ? "Saved. We emailed qualified volunteers that it's open." : "Saved.");
+        } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); save.disabled = false; save.innerHTML = label; flash(err.message, true); }
+      };
+      const rm = f.querySelector("[data-rm]");
+      if (rm) rm.onclick = () => {
+        openDlg(`<h2>Remove this slot?</h2><p>${esc(s.chore)}, ${esc(s.day)}s. It comes off the chore chart${s.volunteer ? ` and ${esc(s.volunteer)} won't see it anymore` : ""}.</p>
+          <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
+        $("#go").onclick = async e => {
+          const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+          try { state.chores = await call({ action: "adminChoreRemove", id: s.id }); dlg.close(); renderChores(); flash("Removed."); }
+          catch (err) { b.disabled = false; b.textContent = "Remove"; flash(err.message, true); }
+        };
+      };
+    });
+  }
+  function demoChores(b) {
+    const base = state.chores || { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"],
+      volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }],
+      slots: [
+        { id: "S-1", chore: "Evening animal chores", day: "Tuesday", start: "15:00", end: "16:00", training: "Animal chores", volunteer: "ana@example.com", notes: "Feed, water, collect eggs." },
+        { id: "S-2", chore: "Evening animal chores", day: "Thursday", start: "15:00", end: "16:00", training: "Animal chores", volunteer: "", notes: "" },
+        { id: "S-3", chore: "Morning milking", day: "Saturday", start: "07:00", end: "08:00", training: "Goat milking", volunteer: "bo@example.com", notes: "" }],
+      coverage: [{ id: "C-1", chore: "Evening animal chores", date: H.dayKey(new Date(Date.now() + 6 * 86400000)), time: "3pm–4pm", by: "ana@example.com", status: "Open", coveredBy: "", note: "Out of town" }] };
+    if (b.action === "adminChoreSave") {
+      const s = { id: b.id || "S-" + Date.now(), chore: b.chore, day: b.day, start: b.start, end: b.end, training: b.training, volunteer: b.volunteer, notes: b.notes };
+      const i = base.slots.findIndex(x => x.id === b.id);
+      if (i === -1) base.slots.push(s); else base.slots[i] = s;
+      const days = base.days; base.slots.sort((a, c) => days.indexOf(a.day) - days.indexOf(c.day) || a.start.localeCompare(c.start));
+    }
+    if (b.action === "adminChoreRemove") base.slots = base.slots.filter(x => x.id !== b.id);
+    return Object.assign({ ok: true }, JSON.parse(JSON.stringify(base)));
   }
 
   /* ============================================================
@@ -541,12 +646,14 @@
     ] };
     if (b.action === "adminLibrary") return { ok: true, photos: demoLib };
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
-    if (b.action === "adminVolunteers") return { ok: true, statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], volunteers: [
-      { row: 4, submitted: "2026-11-10 18:42", first: "Ana", last: "Diaz", email: "ana@example.com", news: true, interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", status: "New", notes: "" },
+    if (b.action === "adminVolunteers") return { ok: true, trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"], statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], volunteers: [
+      { row: 4, submitted: "2026-11-10 18:42", first: "Ana", last: "Diaz", email: "ana@example.com", news: true, interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", status: "Active volunteer", notes: "", bg: "Cleared", trainings: ["Animal chores"], slots: ["Tuesday Evening animal chores"], upcoming: 2 },
       { row: 3, submitted: "2026-11-10 18:15", first: "Marcus", last: "Lee", email: "marcus@example.com", news: false, interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", comments: "", status: "Contacted", notes: "Coming to the Dec workday" },
       { row: 2, submitted: "2026-11-09 12:03", first: "Priya", last: "Shah", email: "priya@example.com", news: true, interests: "I'm not sure", heard: "Social Media", comments: "", status: "New", notes: "" }
     ] };
     if (b.action === "adminVolunteerSave") return { ok: true, status: b.status };
+    if (b.action === "adminTrainingsSave") return { ok: true, trainings: b.list };
+    if (b.action === "adminChores" || b.action === "adminChoreSave" || b.action === "adminChoreRemove") return demoChores(b);
     if (b.action === "adminPeople") return { ok: true, me: session.email, admins: [session.email, "staff@heirloomeastbay.com", "community@heirloomeastbay.com", "admin@heirloomeastbay.com"],
       approvers: ["community@heirloomeastbay.com", "staff@heirloomeastbay.com", "admin@heirloomeastbay.com", "kkostelnick@iliff.edu", "lindsey.j.huffman@gmail.com"],
       trusted: ["community@heirloomeastbay.com", "mkhamiter@gmail.com", "nik@heirloomeastbay.com", "toku@plantify.org", "keegan@plantify.org"] };

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volunteer portal · Heirloom Activities</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="images/logo-badge.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261110d">
+<style>
+  .intro { background: var(--forest); color: #fff; padding-block: 36px 0; }
+  .intro .kicker { color: var(--sage); }
+  .intro h1 { font-size: clamp(32px, 5vw, 46px); margin: 8px 0 8px; }
+  .intro p { margin: 0 0 14px; max-width: 42em; color: #e1e8dc; font-size: 16.5px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 22px; }
+  .badges span { font-family: var(--f-label); font-weight: 700; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; }
+  .badges span.ok { background: var(--wheat); color: var(--forest-deep); }
+
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: none; appearance: none; border: 0; cursor: pointer; font: inherit; font-family: var(--f-label); font-weight: 700; font-size: 14px;
+    padding: 13px 18px 12px; border-radius: 12px 12px 0 0; background: rgba(255,255,255,.1); color: #e1e8dc; display: inline-flex; align-items: center; gap: 8px; }
+  .tab:hover { background: rgba(255,255,255,.18); color: #fff; }
+  .tab[aria-selected="true"] { background: var(--cream); color: var(--forest-deep); }
+  .tab:focus-visible { outline: 3px solid var(--wheat); outline-offset: -3px; }
+  .tab .n { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--wheat); color: var(--forest-deep); font-size: 12px; text-align: center; }
+
+  .page { padding-top: 24px; padding-bottom: 56px; }
+  .panel-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .panel-h h2 { font-size: 26px; color: var(--forest); }
+  .panel-h p { margin: 4px 0 0; color: var(--ink-soft); font-size: 15px; max-width: 46em; }
+  .note { background: #f3e5c4; color: #5a3f10; border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 0 0 16px; }
+  .note a { color: inherit; font-weight: 700; }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .filters button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; color: var(--ink-soft); }
+  .filters button[aria-pressed="true"] { background: var(--forest); border-color: var(--forest); color: #fff; }
+  .day-h { font-family: var(--f-label); font-weight: 700; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--barn); margin: 22px 0 8px; }
+  .day-h:first-child { margin-top: 0; }
+  .list { display: grid; gap: 10px; }
+  .item { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; align-items: start; }
+  .item.noimg { grid-template-columns: minmax(0, 1fr); }
+  .item img { width: 84px; height: 66px; border-radius: 10px; object-fit: cover; background: var(--sage-soft); }
+  .item h3 { font-size: 18.5px; margin: 1px 0 3px; text-wrap: balance; }
+  .item .when { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 8px; }
+  .item .desc { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 9px; border-radius: 999px; background: var(--sage-soft); color: var(--forest-deep); }
+  .tag.vol { background: #e9e1f3; color: #4a3d6a; }
+  .tag.warn { background: #f3e5c4; color: #6b4a12; }
+  .tag.mine { background: var(--forest); color: #fff; }
+  .tag.plain { background: #fff; border: 1px solid var(--line); color: var(--ink-soft); }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .acts .btn { min-height: 38px; }
+  .needs { font-size: 14px; color: var(--muted); }
+  .btn-quiet { background: none; border: 0; color: var(--barn); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 8px 6px; cursor: pointer; font: inherit; font-size: 14px; }
+  @media (max-width: 520px) { .item { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; } .item img { width: 64px; height: 64px; } }
+
+  /* Chore chart: a column per day on wide screens, a list on phones */
+  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .dcol h3 { font-family: var(--f-label); font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--barn); margin: 0 0 8px; }
+  .slot { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 10px; margin-bottom: 8px; display: grid; gap: 6px; border: 2px solid transparent; }
+  .slot.mine { border-color: var(--forest); }
+  .slot.open { border: 2px dashed var(--wheat); }
+  .slot b { font-size: 14.5px; line-height: 1.3; }
+  .slot .t { font-size: 13.5px; color: var(--ink-soft); }
+  .slot .who { font-size: 13.5px; font-weight: 600; color: var(--forest); }
+  .slot .who.open { color: #8a6516; }
+  .slot .btn { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+  .slot .tag { justify-self: start; }
+  .dcol .empty-day { font-size: 13px; color: var(--muted); }
+  @media (max-width: 900px) { .week { grid-template-columns: 1fr; gap: 14px; } .dcol .empty-day { display: none; } .dcol:has(.empty-day) { display: none; } }
+
+  .empty { background: var(--paper); border-radius: var(--radius); padding: 32px 24px; text-align: center; color: var(--ink-soft); box-shadow: var(--shadow); }
+  .empty h2 { font-size: 22px; color: var(--forest); margin-bottom: 6px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px 0; }
+  .msg { margin: 0 0 14px; border-radius: 10px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; }
+  .msg.err { background: #f7e1dd; color: var(--barn-dark); }
+  .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
+
+  dialog.adlg { border: 0; border-radius: 18px; padding: 0; width: min(520px, calc(100vw - 24px)); max-height: calc(100vh - 32px); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(20,30,22,.35); }
+  dialog.adlg::backdrop { background: rgba(20,30,22,.55); }
+  .adlg .in { padding: 22px; display: grid; gap: 14px; }
+  .adlg h2 { font-size: 23px; }
+  .adlg p { margin: 0; color: var(--ink-soft); }
+  .adlg textarea { width: 100%; min-height: 70px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; background: #fff; }
+  .adlg .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .dates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .dates label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; font-size: 14.5px; }
+  .dates label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
+  .dates input { width: 18px; height: 18px; accent-color: var(--forest); }
+  .dates label.off { opacity: .55; cursor: default; }
+  .lbl { display: block; font-weight: 600; font-size: 14.5px; }
+  .opt { font-weight: 400; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="demo-banner" id="demoBanner" hidden>Preview mode with sample shifts. Nothing you do here is saved.</div>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Heirloom Activities">
+        <img class="badge" src="images/logo-badge.png" alt="">
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a class="nav-text keep" href="mine.html?mine=1" id="myEventsLink" hidden>My events</a>
+        <a class="nav-text keep" href="admin.html" id="adminLink" hidden>Admin</a>
+        <a class="btn btn-outline btn-sm" href="index.html">See the calendar</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="intro">
+    <div class="wrap">
+      <span class="kicker">Heirloom Activities</span>
+      <h1 id="hello">Volunteer portal</h1>
+      <p id="introText">Sign up for shifts, see the chore chart, and swap dates with other volunteers.</p>
+      <div class="badges" id="badges"></div>
+      <div class="tabs" role="tablist" aria-label="Volunteer portal" id="tabs" hidden>
+        <button class="tab" role="tab" aria-controls="app" data-tab="signup">Sign up</button>
+        <button class="tab" role="tab" aria-controls="app" data-tab="mine">My shifts<span class="n" id="nMine" hidden></span></button>
+        <button class="tab" role="tab" aria-controls="app" data-tab="chores">Chore chart</button>
+        <button class="tab" role="tab" aria-controls="app" data-tab="coverage">Coverage<span class="n" id="nCover" hidden></span></button>
+      </div>
+    </div>
+  </section>
+
+  <main class="wrap page" id="app" role="tabpanel" aria-live="polite"><p class="loading">Loading…</p></main>
+
+  <dialog class="adlg" id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-small" style="border:0;margin:0;padding:0">
+        <p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p>
+        <p id="footLine"></p>
+        <p><button type="button" class="btn btn-ghost-light btn-sm" id="signOut" hidden>Sign out</button></p>
+      </div>
+    </div>
+  </footer>
+
+<script src="config.js?v=20261110d"></script>
+<script src="common.js?v=20261110d"></script>
+<script src="portal.js?v=20261110d"></script>
+</body>
+</html>

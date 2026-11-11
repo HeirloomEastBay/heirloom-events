@@ -99,6 +99,8 @@
       // Came from the Admin page to sign in: go back there
       // Admins go straight to the Admin page (its "My events" link adds ?mine=1 to stay here)
       if (r.admin && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
+      // Volunteers go to their portal (it links back here if they've posted events)
+      if (r.volunteer && !new URLSearchParams(location.search).has("mine")) { location.replace("portal.html"); return; }
       render(r);
     } catch (err) {
       app.innerHTML = `<div class="empty"><h2>We couldn't load your events</h2><p>${esc(err.message || "Please try again in a minute.")}</p>

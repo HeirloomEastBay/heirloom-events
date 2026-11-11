@@ -60,6 +60,7 @@
   const shownEvents = () => source === "all" ? events
     : source === "heirloom" ? events.filter(e => !isPartner(e))
     : source === "partners" ? events.filter(isPartner)
+    : source === "volunteer" ? events.filter(e => e.volunteer)
     : events.filter(e => e.source === source.slice(2));
 
   /* ---------- Load ---------- */
@@ -124,17 +125,23 @@
   // All · Heirloom · Community partners (with a row to narrow to one partner)
   function renderSourceTabs() {
     const live = partners.concat([COMMUNITY]).filter(p => events.some(e => e.source === p.slug && +(e.end || e.start) >= +now));
-    $("#sourceWrap").hidden = !live.length;
-    if (!live.length) { $("#partnerBar").hidden = true; source = "all"; return; }
+    const vols = events.some(e => e.volunteer && +(e.end || e.start) >= +now);
+    $("#sourceWrap").hidden = !live.length && !vols;
+    if (!live.length && !vols) { $("#partnerBar").hidden = true; source = "all"; return; }
     if (source.startsWith("p:") && !live.some(p => "p:" + p.slug === source)) source = "partners";
+    if ((source === "partners" && !live.length) || (source === "volunteer" && !vols)) source = "all";
     const top = source.startsWith("p:") ? "partners" : source;
     const seg = $("#sourceSeg");
-    seg.innerHTML = [["all", "All"], ["heirloom", "Heirloom"], ["partners", "Community partners"]]
+    seg.innerHTML = [["all", "All"], ["heirloom", "Heirloom"], live.length ? ["partners", "Community partners"] : null, vols ? ["volunteer", "Volunteer"] : null].filter(Boolean)
       .map(([v, l]) => `<button type="button" data-source="${v}" aria-pressed="${v === top}">${l}</button>`).join("");
     seg.querySelectorAll("button").forEach(b => b.onclick = () => { source = b.dataset.source; selectedDay = null; listLimit = PAGE; render(); });
 
     const bar = $("#partnerBar");
-    bar.hidden = top !== "partners";
+    bar.hidden = top !== "partners" && top !== "volunteer";
+    if (top === "volunteer") {
+      const t = EMBED ? ' target="_top"' : "";
+      bar.innerHTML = `<p>Ways to help on the farm. New here? <a href="volunteer.html"${t}>Fill out the volunteer form</a>. Already volunteering? <a href="mine.html"${t}>Log in</a> to see your shifts and the chore chart.</p>`;
+    }
     if (top === "partners") {
       bar.innerHTML = `<p>${esc($("#partnerInfo p").textContent)}</p><div class="p-chips" role="group" aria-label="Partner">
         <button type="button" class="p-chip" data-p="partners" aria-pressed="${source === "partners"}">All partners</button>
@@ -164,12 +171,20 @@
       <span class="when">${esc(H.fmt(e.start, { weekday: "long", month: "long", day: "numeric" }))} · ${esc(H.fmtTimeRange(e.start, e.end, e.allDay))}</span></div>`;
   }
 
+  // Volunteer opportunities that need a background check or training: sign up in the volunteer portal
+  const needsLogin = e => !!(e.volunteer && (e.volunteer.bg || e.volunteer.training));
+
   function cardHTML(e) {
     const p = H.parts(e.start);
     const chips = [];
     const partner = partnerOf(e);
     if (e.source === "community") chips.push(`<span class="chip partner" style="--c:${esc(COMMUNITY.color)}" title="Hosted by a member of the wider Heirloom community">Hosted by ${esc(e.hostName || "a community member")}</span>`);
     else if (partner) chips.push(`<span class="chip partner" style="--c:${esc(partner.color)}" title="Community partner event">With ${esc(partner.label)}</span>`);
+    if (e.volunteer) {
+      chips.unshift(`<span class="chip vol">Volunteer · ${esc(e.volunteer.area)}</span>`);
+      if (e.volunteer.bg) chips.push(`<span class="chip">Background check needed</span>`);
+      if (e.volunteer.training) chips.push(`<span class="chip">${esc(e.volunteer.training)} training needed</span>`);
+    }
     if (e.recurring) chips.push(`<span class="chip">${esc(e.recurring)}</span>`);
     if (e.cost) chips.push(`<span class="chip cost">${esc(e.cost)}</span>`);
     if (e.rsvp && e.spotsLeft != null) chips.push(e.spotsLeft > 0
@@ -199,7 +214,8 @@
         ${e.description ? `<p class="desc">${esc(e.description)}</p>` : ""}
         <button class="more" type="button" data-open="${esc(e.id)}"${more ? "" : " hidden"}>${more ? "More details" : "Read more"}</button>
         <div class="card-actions">
-          ${e.rsvp && !past ? `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
+          ${e.rsvp && !past ? (needsLogin(e) ? `<a class="btn btn-primary btn-sm" href="mine.html"${EMBED ? ' target="_top"' : ""}>Volunteers: log in to sign up</a>`
+            : `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : e.volunteer ? "Sign up to help" : "RSVP"}</button>`) : ""}
           ${link ? `<a class="btn ${e.rsvp && !past ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
           ${past ? "" : `<a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>`}
           <a class="btn btn-ghost btn-sm" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
@@ -446,7 +462,8 @@
     const link = safeUrl(e.link);
     const past = +(e.end || e.start) < +now;
     $("#popActions").innerHTML = past ? `<a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>` : `
-      ${e.rsvp ? `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : "RSVP"}</button>` : ""}
+      ${e.rsvp ? (needsLogin(e) ? `<a class="btn btn-primary" href="mine.html"${EMBED ? ' target="_top"' : ""}>Volunteers: log in to sign up</a>`
+        : `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : e.volunteer ? "Sign up to help" : "RSVP"}</button>`) : ""}
       ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
       <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
       <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>`;

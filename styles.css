@@ -244,3 +244,6 @@ dialog.event-pop .x { position: absolute; top: 12px; right: 12px; width: 40px; h
 .cancel-confirm textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 15px; background: #fff; margin: 6px 0 10px; min-height: 70px; }
 .cancel-confirm .lbl, .admin-notify .lbl { display: block; font-weight: 600; font-size: 14.5px; margin: 0; }
 body.res-mode #preview .card-media { display: none; }
+
+/* Volunteer opportunities */
+.chip.vol { background: #e9e1f3; color: #4a3d6a; }

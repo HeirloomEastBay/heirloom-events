@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261110c">
+<link rel="stylesheet" href="styles.css?v=20261110d">
 <style>
   .intro { background: var(--forest); color: #fff; padding: 44px 0 40px; position: relative; overflow: hidden; }
   .intro .kicker { color: var(--sage); }
@@ -150,6 +150,12 @@
   .keep-photo img { width: 96px; height: 64px; object-fit: cover; border-radius: 8px; flex: none; }
   .keep-photo input:checked + label { border-color: var(--forest); background: var(--sage-soft); box-shadow: inset 0 0 0 1px var(--forest); }
   .keep-photo input:focus-visible + label { outline: 3px solid var(--wheat); outline-offset: 2px; }
+  .vol-box { margin-top: 6px; padding: 14px 16px; border: 1.5px dashed var(--line); border-radius: 14px; background: #fff; }
+  .vol-box:has(#volunteer:checked) { border-style: solid; border-color: var(--forest); background: var(--sage-soft); }
+  .vol-box > .toggle { align-items: flex-start; }
+  .vol-box > .toggle input { margin-top: 2px; }
+  #volFields { margin-top: 14px; }
+  #volFields select { width: 100%; min-height: 46px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15.5px; }
   .multi-row { margin: 14px 0 4px; align-items: flex-start; }
   .multi-row input { margin-top: 2px; }
   .multi-panel { margin-top: 10px; display: grid; gap: 12px; }
@@ -229,6 +235,33 @@
             <label for="title">Event name <span class="req">*</span></label>
             <input type="text" id="title" name="title" maxlength="90" placeholder="Happy hour with the goats" autocomplete="off" required>
             <div class="err">Give your event a name.</div>
+          </div>
+          <div class="vol-box" id="volBox">
+            <label class="toggle"><input type="checkbox" id="volunteer" name="volunteer">
+              <span><b>This is a volunteer opportunity</b><br><span class="hint" style="margin:0">For trusted posters and admins. People sign up right on the calendar or in the volunteer portal.</span></span></label>
+            <div id="volFields" hidden>
+              <div class="row">
+                <div class="field">
+                  <label for="volArea">Area</label>
+                  <select id="volArea" name="volArea"></select>
+                </div>
+                <div class="field">
+                  <label for="volTraining">Needs training <span class="opt">(optional)</span></label>
+                  <select id="volTraining" name="volTraining"><option value="">No training needed</option></select>
+                </div>
+              </div>
+              <label class="toggle" style="margin:2px 0 14px"><input type="checkbox" id="volBg" name="volBg"><span>Needs a background check</span></label>
+              <div class="field" style="margin-bottom:0">
+                <span class="lbl">Who can sign up?</span>
+                <div class="cal-choice">
+                  <div class="cal-opt"><input type="radio" name="volWho" id="vw-anyone" value="anyone" checked><label for="vw-anyone">
+                    <strong>Anyone</strong><small>Shows on the public calendar. Great for workdays and open projects.</small></label></div>
+                  <div class="cal-opt"><input type="radio" name="volWho" id="vw-volunteers" value="volunteers"><label for="vw-volunteers">
+                    <strong>Approved volunteers only</strong><small>Only shows in volunteers' portals, not on the public calendar.</small></label></div>
+                </div>
+                <p class="hint">If it needs a background check or training, only volunteers who have it can sign up. Everyone else sees how to get involved.</p>
+              </div>
+            </div>
           </div>
         </fieldset>
 
@@ -425,6 +458,7 @@
                 <strong>Residents' calendar</strong><small>Heirloom's private community calendar.</small></label></div>
             </div>
             <div class="err">Pick at least one calendar.</div>
+            <p class="hint" id="volCalNote" hidden>Approved-volunteers-only opportunities don't go on the public calendar. They show in volunteers' portals, and you can add them to the residents' calendar too.</p>
           </div>
         </fieldset>
 
@@ -507,9 +541,9 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261110c"></script>
-<script src="common.js?v=20261110c"></script>
-<script src="flyer.js?v=20261110c"></script>
-<script src="submit.js?v=20261110c"></script>
+<script src="config.js?v=20261110d"></script>
+<script src="common.js?v=20261110d"></script>
+<script src="flyer.js?v=20261110d"></script>
+<script src="submit.js?v=20261110d"></script>
 </body>
 </html>

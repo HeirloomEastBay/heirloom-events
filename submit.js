@@ -53,6 +53,32 @@
   // Discord only posts public events
   $("#cal-public").addEventListener("change", renderChannels);
   let fallbacks = C.FALLBACKS.slice();
+
+  /* ---------- Volunteer opportunity ---------- */
+  let volAreas = ["Animal chores", "Workday", "One-off project", "Garden", "Other"];
+  let trainings = ["Animal chores", "Goat milking", "Garden tools", "Power tools"];
+  function renderVolChoices() {
+    const a = $("#volArea").value, t = $("#volTraining").value;
+    $("#volArea").innerHTML = volAreas.map(x => `<option${x === a ? " selected" : ""}>${esc(x)}</option>`).join("");
+    $("#volTraining").innerHTML = `<option value="">No training needed</option>` + trainings.map(x => `<option${x === t ? " selected" : ""}>${esc(x)}</option>`).join("");
+  }
+  renderVolChoices();
+  function syncVolunteer() {
+    const on = $("#volunteer").checked, only = on && $("#vw-volunteers").checked;
+    $("#volFields").hidden = !on;
+    // Volunteers sign up through the built-in sign-up list
+    $("#r-none").closest(".rsvp-modes").hidden = on;
+    if (on) { $("#r-form").checked = true; document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== "form"); }
+    $('label[for="spots"]').textContent = on ? "How many volunteers do you need?" : "How many spots?";
+    // Approved-volunteers-only: never on the public calendar
+    const pub = $("#cal-public");
+    if (only) { pub.checked = false; pub.disabled = true; } else if (pub.disabled) { pub.disabled = false; pub.checked = true; }
+    $("#volCalNote").hidden = !only;
+    $("[data-f=calendars]").classList.remove("invalid");
+    renderChannels(); update();
+  }
+  $("#volunteer").addEventListener("change", syncVolunteer);
+  form.querySelectorAll('input[name="volWho"]').forEach(r => r.addEventListener("change", syncVolunteer));
   let upload = null; // { data: base64, url: objectURL }
 
   if (!C.API_URL) $("#demoBanner").hidden = false;
@@ -96,6 +122,7 @@
     fetch(C.API_URL + "?action=presets").then(r => r.json()).then(d => {
       if (d.ok && d.partners) { partners = d.partners; renderHosts(); }
       if (d.ok && d.channels && d.channels.length) { channels = d.channels; renderChannels(); }
+      if (d.ok && d.volAreas && d.volAreas.length) { volAreas = d.volAreas; trainings = d.trainings || []; renderVolChoices(); }
       if (d.ok && d.locations && d.locations.length) { places = d.locations; renderPlaces(); }
       if (d.ok && d.presets && d.presets.length) { presets = d.presets; fallbacks = d.fallbacks || fallbacks; renderGallery(); renderMulti(); update(); }
     }).catch(() => {});
@@ -372,7 +399,9 @@
       hostName: fd.get("host") === "community" ? (fd.get("hostName") || "").trim() : "",
       types: fd.get("discordShare") === "yes" && fd.getAll("calendars").includes("public") ? fd.getAll("types") : [],
       noDiscord: !(fd.get("discordShare") === "yes" && fd.getAll("calendars").includes("public")),
-      rsvpMode: fd.get("rsvpMode") || "none",
+      rsvpMode: $("#volunteer").checked ? "form" : (fd.get("rsvpMode") || "none"),
+      volunteer: $("#volunteer").checked, volArea: $("#volArea").value, volWho: fd.get("volWho") || "anyone",
+      volBg: $("#volBg").checked, volTraining: $("#volTraining").value,
       spots: fd.get("spots") || "",
       link: fd.get("rsvpMode") === "link" ? (fd.get("link") || "").trim() : "",
       linkLabel: fd.get("linkLabel"),
@@ -419,7 +448,8 @@
     if (v.host === "community") chips.push(`<span class="chip partner" style="--c:#4f7a64">Hosted by ${esc(v.hostName || "a community member")}</span>`);
     const rt = repeatText(v); if (rt) chips.push(`<span class="chip">${esc(rt)}</span>`);
     if (v.cost) chips.push(`<span class="chip cost">${esc(v.cost)}</span>`);
-    if (v.rsvpMode === "form" && v.spots) chips.push(`<span class="chip spots">${esc(v.spots)} spots</span>`);
+    if (v.volunteer) chips.unshift(`<span class="chip vol">Volunteer · ${esc(v.volArea)}</span>`);
+    if (v.rsvpMode === "form" && v.spots) chips.push(`<span class="chip spots">${esc(v.spots)} ${v.volunteer ? "needed" : "spots"}</span>`);
     $("#preview").innerHTML = `<article class="card">
       <div class="card-media"><img src="${esc(chosenImage(v))}" alt="">
         <div class="date-tile" aria-hidden="true"><div class="dow">${p ? esc(p.wd) : "Day"}</div><div class="num">${p ? p.d : "–"}</div><div class="mon">${start ? esc(H.fmt(start, { month: "short" })) : "Mon"}</div></div>
@@ -430,7 +460,7 @@
         ${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}
         <p class="desc ${v.description ? "" : "placeholder"}">${esc(v.description || "Your description will show here.")}</p>
         <div class="card-actions">
-          ${v.rsvpMode === "form" ? `<span class="btn btn-primary btn-sm">RSVP</span>` : v.rsvpMode === "link" ? `<span class="btn btn-primary btn-sm">${esc(v.linkLabel)}</span>` : ""}
+          ${v.rsvpMode === "form" ? `<span class="btn btn-primary btn-sm">${v.volunteer ? "Sign up to help" : "RSVP"}</span>` : v.rsvpMode === "link" ? `<span class="btn btn-primary btn-sm">${esc(v.linkLabel)}</span>` : ""}
           <span class="btn btn-outline btn-sm">Add to calendar</span>
         </div>
       </div></article>
@@ -456,7 +486,7 @@
     if (!CALMODE && $("#d-yes").checked && v.calendars.includes("public") && !v.types.length) bad.push("discord");
     if (v.rsvpMode === "link" && (!v.link || !/^https?:\/\/\S+\.\S+/i.test(v.link))) bad.push("link");
     if (!CALMODE) {
-      if (!v.calendars.length) bad.push("calendars");
+      if (!v.calendars.length && !(v.volunteer && v.volWho === "volunteers")) bad.push("calendars");
       if (!v.name) bad.push("name");
       if (!/^\S+@\S+\.\S+$/.test(v.email)) bad.push("email");
     }
@@ -544,9 +574,11 @@
     }
     const live = r.status === "published";
     const onlyPrivate = v.calendars.length === 1 && v.calendars[0] === "private";
-    const title = live ? "It's on the calendar!" : "Thanks! We got it.";
+    const volOnly = v.volunteer && v.volWho === "volunteers";
+    const title = live ? (volOnly ? "It's posted for volunteers!" : "It's on the calendar!") : "Thanks! We got it.";
     const msg = live
-      ? (onlyPrivate ? `"${v.title}" is on the residents' calendar.` : `"${v.title}" is live on the Heirloom calendar. We sent a confirmation to ${v.email}.`)
+      ? (volOnly ? `"${v.title}" is in the volunteer portal, where approved volunteers can sign up. We sent a confirmation to ${v.email}.`
+        : onlyPrivate ? `"${v.title}" is on the residents' calendar.` : `"${v.title}" is live on the Heirloom calendar. We sent a confirmation to ${v.email}.`)
       : `Someone from the Heirloom team will take a quick look and add "${v.title}" to the calendar. We'll email ${v.email} as soon as it's up.`;
     doneCard(title, msg,
       (r.editUrl ? `<p class="hint">Need to change something later? <a href="${esc(r.editUrl)}">Edit or cancel your event</a>. The link is in your email too.</p>` : "") +
@@ -607,6 +639,15 @@
     document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== mode);
     set("spots", e.spots); set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
     form.querySelectorAll('input[name="calendars"]').forEach(c => c.checked = (e.calendars || []).includes(c.value));
+    $("#volunteer").checked = !!e.volunteer;
+    if (e.volunteer) {
+      if (e.volArea && !volAreas.includes(e.volArea)) volAreas.push(e.volArea);
+      if (e.volTraining && !trainings.includes(e.volTraining)) trainings.push(e.volTraining);
+      renderVolChoices(); $("#volArea").value = e.volArea; $("#volTraining").value = e.volTraining || "";
+      $("#volBg").checked = !!e.volBg; $(e.volWho === "volunteers" ? "#vw-volunteers" : "#vw-anyone").checked = true;
+    }
+    syncVolunteer();
+    if (e.volunteer && e.volWho !== "volunteers") $("#cal-public").checked = (e.calendars || []).includes("public");
     renderChannels();
     set("name", e.name); set("email", e.email); set("phone", e.phone); set("notes", e.notes);
     rte.innerHTML = H.sanitize(e.details || "");
@@ -732,7 +773,7 @@
   function setupCalendarMode(e) {
     const sets = form.querySelectorAll("fieldset");
     [5, 6].forEach(i => hideField(sets[i]));            // Which calendar? · About you
-    hideField($("#discordStep"));
+    hideField($("#discordStep")); hideField($("#volBox"));
     hideField($("#repeat").closest(".field")); hideField($("#untilField"));
     $("#r-form").closest(".mode").hidden = true;        // built-in RSVPs need an event from the form
     $("#description").removeAttribute("required"); $("#description").maxLength = 8000;

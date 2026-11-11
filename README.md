@@ -53,6 +53,28 @@ Admins sign in on **My events** (same emailed code), then tap **Admin**. The Adm
 - **Deleting** an event added in Google Calendar saves a full backup copy on the **Admin log** tab first. For repeating events you choose "just this date" or "every date".
 - Everything admins do is listed on the **Admin log** tab (who, when, what).
 
+### Volunteers: opportunities, portal, chore chart and coverage
+
+**Who's a volunteer:** anyone on the **Volunteers** tab. On the Admin page's Volunteers tab, set each person's:
+- **Status:** "Active volunteer" makes them an approved volunteer.
+- **Background check:** Not yet / Sent / Cleared.
+- **Trainings:** checkboxes. Edit the list itself with "Edit trainings list" (saved as "Volunteer trainings" on Settings).
+
+**Volunteer opportunities:** trusted posters and admins tick **"This is a volunteer opportunity"** in the Submit form, then pick:
+- an area,
+- who can sign up: **Anyone** (on the public calendar, under a new **Volunteer** tab) or **Approved volunteers only** (only in the portal, never on the public calendar),
+- and optional requirements: a background check and/or a training. If an opportunity has requirements, the public calendar shows "Volunteers: log in to sign up", and only volunteers who meet them can sign up in the portal.
+
+Sign-ups reuse the RSVP system: spots, waitlist, reminders and the guest list.
+
+**Volunteer portal (portal.html):** volunteers tap **Log in** on the home page and land here. Admins land on Admin, which links to the portal.
+- **Sign up:** opportunities for the next 3 months.
+- **My shifts:** their sign-ups, chore slots and dates they're covering, plus **Add to my calendar** (a calendar file).
+- **Chore chart:** take an open slot or give one up.
+- **Coverage:** ask for coverage on certain dates, or pick up someone else's request.
+
+**Chore chart:** manage it on the Admin page's **Chore chart** tab (or the Chore chart tab in the Sheet). Each slot is one person, every week. When a slot becomes Open, all qualified active volunteers get an email. Coverage requests email qualified volunteers, and both people get an email when someone covers. Admin FYIs go to "Volunteer applications go to".
+
 ### Flyers and social images
 Every public event gets three ready-made graphics in Heirloom's colors and fonts, made from the event's photo, title, date, place and cost:
 - **Printable flyer** (PDF, letter size) with a QR code. It opens the RSVP form for RSVP events, or the event's details otherwise.
