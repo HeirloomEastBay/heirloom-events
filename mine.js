@@ -97,7 +97,8 @@
       // Remember name, email and phone so the Submit form can fill them in
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
       // Came from the Admin page to sign in: go back there
-      if (r.admin && new URLSearchParams(location.search).get("next") === "admin") { location.replace("admin.html"); return; }
+      // Admins go straight to the Admin page (its "My events" link adds ?mine=1 to stay here)
+      if (r.admin && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
       render(r);
     } catch (err) {
       app.innerHTML = `<div class="empty"><h2>We couldn't load your events</h2><p>${esc(err.message || "Please try again in a minute.")}</p>
@@ -138,7 +139,7 @@
       <div class="who">
         <p>Signed in as <b>${esc(r.email)}</b></p>
         <div class="tools">
-          ${r.admin ? `<a class="btn btn-forest btn-sm" href="admin.html">Admin</a>` : ""}
+          ${r.admin ? `<a class="btn btn-forest btn-sm" href="admin.html">Back to Admin</a>` : ""}
           <a class="btn btn-primary btn-sm" href="submit.html">Submit a new event</a>
           <button type="button" class="btn btn-outline btn-sm" id="out">Sign out</button>
         </div>
