@@ -132,6 +132,7 @@
         <div class="row">${statusChip(e)}${rsvp}</div>
         <div class="acts">
           ${edit && !e.past ? `<a class="btn btn-primary btn-sm" href="${esc(edit)}">Edit or cancel</a>` : ""}
+          ${e.until && e.status === "Published" && !e.past && window.HLDates ? `<button type="button" class="btn btn-outline btn-sm" data-dates="${esc(e.id)}">Change one date</button>` : ""}
           ${guests ? `<a class="btn btn-outline btn-sm" href="${esc(guests)}" target="_blank" rel="noopener">Guest list</a>` : ""}
           ${e.status === "Published" && !e.past && /public/i.test(e.calendars || "") ? `<a class="btn btn-outline btn-sm" href="index.html?event=${encodeURIComponent(e.id)}&flyer=1">Flyer &amp; images</a>` : ""}
         </div>
@@ -168,6 +169,7 @@
           <p>${mineTab === "up" ? "Your next event will show up here once you submit it." : "They'll show up here."}</p>
           ${mineTab === "up" ? `<p><a class="btn btn-primary" href="submit.html">Submit an event</a></p>` : ""}</div>`}`}`;
     app.querySelectorAll(".mtabs [data-t]").forEach(b => b.onclick = () => { mineTab = b.dataset.t; render(r); });
+    app.querySelectorAll("[data-dates]").forEach(b => b.onclick = () => HLDates.open(b.dataset.dates));
     $("#out").onclick = () => { store.del(KEY); if (window.HLNav) HLNav.signedOut(); askEmail(r.email); };
   }
 
@@ -184,7 +186,7 @@
     const s = store.get(KEY) || {};
     const d = n => { const x = new Date(Date.now() + n * 86400000); return x.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); };
     return { ok: true, email: s.email || "you@example.com", name: "", phone: "", admin: true, events: [
-      { id: "1", title: "Happy Hour with the Goats", when: d(2) + ", 4–6pm · Every Thursday", location: "Goat pen", status: "Published", image: "images/goats.jpg", rsvp: false, calendars: "Public, Residents", editUrl: "https://example.com/", past: false },
+      { id: "1", title: "Happy Hour with the Goats", when: d(2) + ", 4–6pm · Every Thursday", location: "Goat pen", status: "Published", image: "images/goats.jpg", rsvp: false, calendars: "Public, Residents", editUrl: "https://example.com/", past: false, until: "2027-04-02" },
       { id: "2", title: "Painting in the Farmhouse", when: d(9) + ", 2–4:30pm", location: "Farmhouse", status: "Published", image: "images/painting.jpg", rsvp: true, spots: 12, going: 9, calendars: "Public", editUrl: "https://example.com/", guestsUrl: "https://example.com/", past: false },
       { id: "3", title: "Knit & Sip on the Porch", when: d(16) + ", 6–8pm", location: "Farmhouse", status: "Pending", image: "images/farmhouse-lawn.jpg", editUrl: "https://example.com/", past: false },
       { id: "4", title: "Fall Harvest Potluck", when: d(-12) + ", 5–8pm", location: "The big lawn", status: "Published", image: "images/tomatoes.jpg", past: true },

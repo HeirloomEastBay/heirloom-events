@@ -157,6 +157,7 @@
     if (i.kind === "form") {
       if (!past) acts.push(`<a class="btn btn-forest btn-sm" href="${editHref(which, i)}">Edit</a>`);
       if (/^(Pending|Approved)$/.test(i.status)) acts.push(`<button class="btn btn-primary btn-sm" data-act="approve">Approve</button><button class="btn btn-outline btn-sm" data-act="decline">Decline</button>`);
+      if (!past && i.recurring && i.status === "Published" && window.HLDates) acts.push(`<button class="btn btn-outline btn-sm" data-act="dates">Change one date</button>`);
       if (!past) acts.push(`<button class="btn-quiet" data-act="cancel">Cancel event</button>`);
     } else if (i.kind === "partner") {
       if (which === "public") acts.push(`<button class="btn btn-forest btn-sm" data-act="image">Change image</button>`,
@@ -204,6 +205,7 @@
   }
 
   function act(which, kind, i) {
+    if (kind === "dates") return HLDates.open(i.id, { onChange: () => calendar(which, true) });
     if (kind === "approve") {
       openDlg(`<h2>Approve “${esc(i.title)}”?</h2><p>It goes on the calendar now, and we email ${esc(i.poster || "them")} that it's live.</p>
         <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Not yet</button><button class="btn btn-forest btn-sm" id="go">Approve and publish</button></div>`);
@@ -858,7 +860,7 @@
     if (b.action === "adminList") return { ok: true, items: [
       { kind: "calendar", eventId: "g1", key: "cal:public:g1", title: "Happy Hour with the Goats", when: when(1, 16, 18), start: iso(1, 16), location: "Goat pen", recurring: true, more: 7, image: "images/goats.jpg" },
       { kind: "form", id: "EV-2", title: "Knit & Sip on the Porch", when: when(3, 18, 20), start: iso(3, 18), status: "Pending", poster: "Sue Miller", email: "sue@example.com", calendars: "Public", location: "Farmhouse", image: "images/farmhouse.jpg" },
-      { kind: "form", id: "EV-3", title: "Play Night", when: when(4, 19, 21), start: iso(4, 19), status: "Published", poster: "Pat Doe", calendars: "Public, Residents", location: "Autoshop", image: "images/farmhouse-lawn.jpg", rsvp: true, going: 6, spots: 12 },
+      { kind: "form", id: "EV-3", title: "Play Night", when: when(4, 19, 21), start: iso(4, 19), status: "Published", poster: "Pat Doe", calendars: "Public, Residents", location: "Autoshop", image: "images/farmhouse-lawn.jpg", rsvp: true, going: 6, spots: 12, recurring: true, repeatText: "Monthly, first Friday" },
       { kind: "partner", key: "partner:soundbird:1", title: "Sound Bath at Sunset", partner: "The Soundbird Sanctuary", when: when(5, 17, 18), start: iso(5, 17), location: "Yurt", image: "images/painting.jpg", customImage: true },
       { kind: "calendar", eventId: "b1", key: "cal:public:b1", title: "Supper Church", when: when(6, 18, 20), start: iso(6, 18), location: "Farmhouse", image: "images/farmhouse-lawn.jpg", hostName: "" },
       { kind: "partner", key: "partner:plantify:2", title: "Bed prep and cover crops", partner: "Plantify", when: when(8, 11, 14), start: iso(8, 11), location: "Paradise Community Garden", image: "images/squash-tunnel.jpg", hidden: true }

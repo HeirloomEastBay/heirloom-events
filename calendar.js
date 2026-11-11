@@ -205,6 +205,7 @@
       </div>
       <div class="card-body">
         <h4><button type="button" class="title-btn" data-open="${esc(e.id)}">${esc(e.title)}</button></h4>
+        ${e.note && !past ? `<p class="card-note">${esc(e.note)}</p>` : ""}
         <div class="meta">
           <span>${ICON.clock}<span class="visually-hidden">${esc(H.fmt(e.start, { weekday: "long", month: "long", day: "numeric" }))}, </span>${esc(H.fmtTimeRange(e.start, e.end, e.allDay))}</span>
           ${e.location ? `<span>${ICON.pin}${esc(e.location)}</span>` : ""}
@@ -457,7 +458,7 @@
     const chips = tmp.querySelector(".chips"), also = tmp.querySelector(".also");
     $("#popChips").innerHTML = (chips ? chips.innerHTML : "") ;
     $("#popChips").hidden = !chips;
-    $("#popDesc").textContent = e.description || "";
+    $("#popDesc").textContent = (e.note ? "Note for this date: " + e.note + "\n\n" : "") + (e.description || "");
     if (also) $("#popDesc").textContent += (e.description ? "\n\n" : "") + also.textContent;
     $("#popDesc").hidden = !$("#popDesc").textContent;
     const link = safeUrl(e.link);

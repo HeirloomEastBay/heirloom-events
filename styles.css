@@ -258,3 +258,43 @@ body.res-mode #preview .card-media { display: none; }
   .nav a.nav-link { font-size: 12.5px; letter-spacing: .02em; }
   .nav:has(.nav-link + .nav-link) .nav-cal { display: none; } /* signed in: the badge is the way home */
 }
+
+/* Dates: change or cancel one date of a repeating event (dates.js) */
+dialog.dates-dlg { border: 0; border-radius: 18px; padding: 0; width: min(600px, calc(100vw - 24px)); max-height: calc(100vh - 32px); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(20,30,22,.35); }
+dialog.dates-dlg::backdrop { background: rgba(20,30,22,.55); }
+.dd-in { padding: 22px; display: grid; gap: 14px; }
+.dd-in h2 { font-size: 23px; color: var(--forest); margin: 0; }
+.dd-in p { margin: 0; color: var(--ink-soft); }
+.dd-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.dd-head p { font-size: 14.5px; margin-top: 2px; }
+.dd-x { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: none; font-size: 24px; line-height: 1; cursor: pointer; color: var(--muted); }
+.dd-x:hover { background: var(--cream); }
+.dd-hint { font-size: 14px; }
+.dd-ok { background: var(--sage-soft); color: var(--forest-deep) !important; border-radius: 10px; padding: 10px 13px; font-weight: 600; font-size: 14.5px; }
+.dd-err { background: #f7e1dd; color: var(--barn-dark) !important; border-radius: 10px; padding: 10px 13px; font-weight: 600; font-size: 14.5px; }
+.dd-load { text-align: center; padding: 30px 0; }
+.dd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dd-list li { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.dd-list li.chg { border-color: var(--wheat); box-shadow: inset 4px 0 0 var(--wheat); }
+.dd-list li.off { background: var(--cream); }
+.dd-list li.off .dd-date b { text-decoration: line-through; color: var(--muted); }
+.dd-date { display: grid; gap: 2px; font-size: 14.5px; }
+.dd-date span { color: var(--ink-soft); font-size: 13.5px; }
+.dd-date .dd-note { color: var(--forest-deep); font-style: italic; }
+.dd-acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dd-link { appearance: none; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--barn); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px 4px; }
+.dd-btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+#ddForm { display: grid; gap: 12px; }
+.dd-f { display: grid; gap: 4px; font-weight: 600; font-size: 14.5px; }
+.dd-f input, .dd-f textarea { width: 100%; min-height: 44px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15.5px; font-weight: 400; }
+.dd-f textarea { min-height: 70px; resize: vertical; }
+.dd-f .opt { font-weight: 400; color: var(--muted); }
+.dd-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dd-photo { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.dd-photo img { width: 120px; height: 80px; object-fit: cover; border-radius: 10px; background: var(--sage-soft); }
+.dd-photo > div { display: grid; gap: 4px; justify-items: start; }
+.dd-file { cursor: pointer; }
+.dd-chk { display: flex; gap: 9px; align-items: flex-start; font-size: 15px; cursor: pointer; }
+.dd-chk input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--forest); flex: none; }
+/* A note for one date, on the public calendar */
+.card-note { margin: 0 0 8px; background: #f3e5c4; color: #5a3d0c; border-radius: 10px; padding: 7px 11px; font-size: 14px; font-weight: 600; }

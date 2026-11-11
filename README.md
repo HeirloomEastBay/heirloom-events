@@ -108,6 +108,14 @@ Every confirmation email (and the "Thanks!" screen after posting) has an **Edit 
 - If the time, date or place changes, everyone who RSVP'd gets an update email.
 - **Cancel this event** (bottom of the form) takes it off both calendars, emails anyone who RSVP'd, and sets its Status to *Cancelled*.
 
+### Changing one date of a repeating event
+Repeating events from the form have **Change one date** on the Admin page and, for whoever posted them, on My events. Pick a date to:
+- **Cancel it:** just that date comes off both calendars. People who RSVP'd for it get an email (with an optional message), and their RSVPs for that date are cancelled.
+- **Change it:** a different time, place, note ("Moved to the barn, rain!") or photo for that date. Google Calendar is updated, the website shows the note on that date's card, and anyone who RSVP'd gets an email.
+- **Back to normal** / **Bring it back** undoes it.
+
+The changes are kept on the **Date changes** tab, and are put back automatically if someone later edits the whole series. Repeating events added straight in Google Calendar: change one date there.
+
 ### RSVPs
 
 When someone shares an event they choose **Just show up**, **Collect RSVPs here**, or **Use my own link**. With *Collect RSVPs here*:
