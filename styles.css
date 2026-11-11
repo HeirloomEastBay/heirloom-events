@@ -438,3 +438,31 @@ dialog.vn-dlg { width: min(860px, calc(100vw - 24px)); }
 .vn-er .vn-x:hover { background: #f7e1dd; }
 /* Event form: the place is already reserved then */
 .venue-note { margin: 10px 0 0; background: #f3e5c4; color: #5a3d0c; border-radius: 10px; padding: 9px 12px; font-size: 14.5px; }
+
+/* Venues: week view */
+.vn-mode { margin-right: 6px; }
+.vn-week { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+.vn-week table { border-collapse: collapse; width: 100%; min-width: 900px; table-layout: fixed; }
+.vn-week th, .vn-week td { border-bottom: 1px solid var(--line); vertical-align: top; }
+.vn-week thead th { padding: 10px 6px 8px; font-size: 12px; color: var(--ink-soft); font-weight: 600; text-align: left; }
+.vn-week thead th span { display: block; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.vn-week thead th b { font-size: 15px; color: var(--ink); }
+.vn-week thead th.today b { color: var(--barn); }
+.vn-week .vn-wv { width: 190px; position: sticky; left: 0; z-index: 2; background: var(--paper); text-align: left; padding: 8px 10px; }
+.vn-week tbody .vn-wv b { display: block; font-size: 13.5px; line-height: 1.2; color: var(--forest-deep); }
+.vn-week tbody .vn-wv span { font-size: 11.5px; color: var(--muted); font-weight: 400; }
+.vn-week td { padding: 4px; border-left: 1px solid #efeadf; cursor: copy; height: 44px; }
+.vn-week td.today { background: rgba(181,69,47,.05); }
+.vn-week td:hover { background: rgba(46,74,54,.06); }
+.vn-week tr.quiet .vn-wv b { color: var(--ink-soft); font-weight: 600; }
+.vn-wi { display: block; width: 100%; appearance: none; border: 0; border-radius: 6px; font: inherit; font-size: 12px; font-weight: 600; line-height: 1.25; text-align: left;
+  padding: 4px 6px; margin-bottom: 3px; cursor: pointer; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vn-wi i { font-style: normal; font-weight: 700; opacity: .85; }
+.vn-wi.reservation { background: var(--forest); color: #fff; }
+.vn-wi.event { background: var(--wheat); color: var(--forest-deep); }
+.vn-wi.calendar { background: #fff; color: var(--ink-soft); border: 1.5px dashed #a9b2a4; }
+.vn-wi:focus-visible { outline: 3px solid var(--barn); outline-offset: 1px; }
+
+.vn-show { display: flex; gap: 6px 18px; flex-wrap: wrap; font-weight: 400; }
+.dd-f select { width: 100%; min-height: 44px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15.5px; font-weight: 400; }
+.vn-show .dd-chk { align-items: center; }

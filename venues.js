@@ -16,9 +16,13 @@
   const mins = hm => { const m = String(hm || "").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : 0; };
   const t12 = hm => { if (!hm) return ""; const [h, m] = hm.split(":").map(Number); return ((h % 12) || 12) + (m ? ":" + p2(m) : "") + (h < 12 ? "am" : "pm"); };
   const range = (a, b) => t12(a) + "–" + t12(b);
-  const REPEATS = [["none", "Doesn't repeat"], ["weekly", "Every week"], ["biweekly", "Every other week"], ["monthlyDate", "Monthly (same date)"], ["monthlyNth", "Monthly (same weekday)"]];
+  const REPEATS = [["none", "Doesn't repeat"], ["weekly", "Every week"], ["days", "Certain days each week"], ["biweekly", "Every other week"], ["monthlyDate", "Monthly (same date)"], ["monthlyNth", "Monthly (same weekday)"]];
+  const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const wdOf = s => (parse(s).getUTCDay() + 6) % 7; // Monday = 0
 
   let root, D, day, view = "up", dlg;
+  let mode = (() => { try { return localStorage.getItem("heirloom-venue-view") || "day"; } catch (e) { return "day"; } })();
+  const monday = d => { const w = (parse(d).getUTCDay() + 6) % 7; return add(d, -w); };
 
   function token() { try { return (JSON.parse(localStorage.getItem("heirloom-session") || "null") || {}).token; } catch (e) { return ""; } }
   async function call(body) {
@@ -29,7 +33,12 @@
     return r;
   }
   async function load(d, msg) {
-    try { D = await call({ action: "venuesGet", date: d }); day = D.date; draw(msg || D.message); }
+    const week = mode === "week";
+    try {
+      D = await call({ action: "venuesGet", date: week && d ? monday(d) : d, days: week ? 7 : 1 });
+      if (!d && week && D.date !== monday(D.date)) D = await call({ action: "venuesGet", date: monday(D.date), days: 7 }); // first load: this week
+      day = d || D.date; draw(msg || D.message);
+    }
     catch (err) {
       root.innerHTML = `<div class="empty"><h2>${err.notAllowed ? "Just for residents and admins" : err.signedOut ? "Please log in" : "We couldn't load the venues"}</h2><p>${esc(err.message)}.</p>${err.signedOut ? `<p style="margin-top:12px"><a class="btn btn-primary" href="mine.html?next=admin">Log in</a></p>` : ""}</div>`;
     }
@@ -53,28 +62,34 @@
       return `<div class="vn-row"><div class="vn-name"><b>${esc(v.name)}</b>${v.shared ? `<span>can share</span>` : ""}</div>
         <div class="vn-track" data-venue="${esc(v.name)}">${hours.map(h => `<span class="vn-h${h % 2 ? " odd" : ""}"></span>`).join("")}${bars}${nowLine}</div></div>`;
     }).join("");
+    const grid = mode === "week" ? weekGrid(venues) : `<div class="vn-grid"><div class="vn-row vn-head"><div class="vn-name"></div><div class="vn-hours">${hours.map(h => `<span>${h % 2 ? "" : t12(p2(h) + ":00").replace(":00", "")}</span>`).join("")}</div></div>${rows}</div>`;
+    const ws = monday(day);
+    const label = mode === "week" ? `${fmt(ws, { month: "short", day: "numeric" })} – ${fmt(add(ws, 6), { month: "short", day: "numeric", year: "numeric" })}` : fmt(day, { weekday: "long", month: "long", day: "numeric" });
     const up = D.reservations.filter(r => r.status === "Reserved" && r.last >= D.today);
     const past = D.reservations.filter(r => r.status === "Reserved" && r.last < D.today).reverse();
     const off = D.reservations.filter(r => r.status !== "Reserved").reverse();
     const list = view === "up" ? up : view === "past" ? past : off;
     root.innerHTML = `${msg ? `<p class="st-msg" role="status">${esc(msg)}</p>` : ""}
       <div class="st-bar-top">
-        <div class="st-nav"><button type="button" class="st-arrow" data-move="-1" aria-label="Day before">‹</button><button type="button" class="btn btn-outline btn-sm" data-move="0">Today</button><button type="button" class="st-arrow" data-move="1" aria-label="Next day">›</button>
+        <div class="st-nav"><div class="seg vn-mode" role="group" aria-label="View"><button type="button" data-mode="day" aria-pressed="${mode === "day"}">Day</button><button type="button" data-mode="week" aria-pressed="${mode === "week"}">Week</button></div>
+          <button type="button" class="st-arrow" data-move="-1" aria-label="${mode === "week" ? "Week" : "Day"} before">‹</button><button type="button" class="btn btn-outline btn-sm" data-move="0">${mode === "week" ? "This week" : "Today"}</button><button type="button" class="st-arrow" data-move="1" aria-label="Next ${mode}">›</button>
           <label class="vn-date"><span class="visually-hidden">Go to date</span><input type="date" id="vnDate" value="${esc(day)}"></label>
-          <span class="st-range">${esc(fmt(day, { weekday: "long", month: "long", day: "numeric" }))}</span></div>
+          <span class="st-range">${esc(label)}</span></div>
         <div class="st-nav">${D.admin ? `<button type="button" class="btn btn-outline btn-sm" id="vnEdit">Edit venues</button>` : ""}<button type="button" class="btn btn-primary btn-sm" data-new="">+ Reserve a venue</button></div>
       </div>
-      <div class="vn-grid"><div class="vn-row vn-head"><div class="vn-name"></div><div class="vn-hours">${hours.map(h => `<span>${h % 2 ? "" : t12(p2(h) + ":00").replace(":00", "")}</span>`).join("")}</div></div>${rows}</div>
-      <p class="st-hint"><span class="vn-key reservation"></span> Reserved <span class="vn-key event"></span> Event from the form <span class="vn-key calendar"></span> On a calendar (a heads-up) <span class="vn-key pad"></span> Setup / cleanup. Tap an open time to reserve it.</p>
+      ${grid}
+      <p class="st-hint"><span class="vn-key reservation"></span> Reserved <span class="vn-key event"></span> Event from the form <span class="vn-key calendar"></span> On a calendar (a heads-up) ${mode === "day" ? `<span class="vn-key pad"></span> Setup / cleanup. Tap an open time to reserve it.` : "Tap an empty day to reserve it, or an item for details."}</p>
       <section class="st-lists">
         <div class="st-ltop"><div class="mtabs" role="tablist">${[["up", "Upcoming", up.length], ["past", "Past", past.length], ["off", "Cancelled", off.length]].map(([k, l, n]) => `<button type="button" role="tab" data-view="${k}" aria-selected="${view === k}">${l}<span class="n">${n}</span></button>`).join("")}</div></div>
         ${list.length ? `<div class="st-list">${list.slice(0, 150).map(r => `<button type="button" class="st-item${r.status === "Reserved" ? "" : " off"}" data-res="${esc(r.id)}">
             <span class="vn-ico" aria-hidden="true">📍</span>
             <span class="st-who"><span class="st-line"><b>${esc(r.what)}</b> <span>· ${esc(r.venues.join(", "))}</span></span>
-              <span class="st-sub">${esc(fmt(r.date, { weekday: "short", month: "short", day: "numeric" }))}, ${esc(range(r.start, r.end))}${r.repeats ? " · " + esc(r.repeats.toLowerCase()) + " until " + esc(fmt(r.until, { month: "short", day: "numeric" })) : ""}${r.setup ? " · +" + r.setup + " hr setup/cleanup" : ""}${r.host ? " · " + esc(r.host) : ""}</span></span></button>`).join("")}</div>`
+              <span class="st-sub">${esc(fmt(r.date, { weekday: "short", month: "short", day: "numeric" }))}, ${esc(range(r.start, r.end))}${r.repeats ? " · " + esc(r.repeats.replace(/^\w/, c => c.toLowerCase())) + " until " + esc(fmt(r.until, { month: "short", day: "numeric" })) : ""}${r.setup ? " · +" + r.setup + " hr setup/cleanup" : ""}${r.host ? " · " + esc(r.host) : ""}</span></span></button>`).join("")}</div>`
           : `<p class="st-empty">${view === "up" ? "No upcoming reservations." : view === "past" ? "No past reservations yet." : "Nothing cancelled."}</p>`}
       </section>`;
-    root.querySelectorAll("[data-move]").forEach(b => b.onclick = () => { const m = +b.dataset.move; go(m ? add(day, m) : D.today); });
+    root.querySelectorAll("[data-move]").forEach(b => b.onclick = () => { const m = +b.dataset.move; go(m ? add(day, m * (mode === "week" ? 7 : 1)) : D.today); });
+    root.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { if (b.dataset.mode === mode) return; mode = b.dataset.mode; try { localStorage.setItem("heirloom-venue-view", mode); } catch (e) { /* fine */ } go(day); });
+    root.querySelectorAll("[data-wk]").forEach(c => c.onclick = e => { if (e.target.closest("[data-busy]")) return; form(null, { venues: [c.dataset.venue], date: c.dataset.wk }); });
     root.querySelector("#vnDate").onchange = e => { if (e.target.value) go(e.target.value); };
     root.querySelectorAll("[data-new]").forEach(b => b.onclick = () => form(null));
     root.querySelectorAll(".vn-track").forEach(t => t.onclick = e => {
@@ -87,7 +102,21 @@
     root.querySelectorAll("[data-view]").forEach(b => b.onclick = () => { view = b.dataset.view; draw(); });
     const ed = root.querySelector("#vnEdit"); if (ed) ed.onclick = editVenues;
   }
-  function go(d) { root.querySelector(".vn-grid").style.opacity = .5; load(d); }
+  function go(d) { const g = root.querySelector(".vn-grid, .vn-week"); if (g) g.style.opacity = .5; load(d); }
+
+  // Week: venues down the side, Monday–Sunday across, a short line per booking
+  function weekGrid(venues) {
+    const ws = monday(day), days = []; for (let i = 0; i < 7; i++) days.push(add(ws, i));
+    const short = hm => t12(hm).replace(/(am|pm)$/, m => m[0]);
+    const busyIn = (v, d) => D.busy.filter(b => b.venue === v && b.date === d).sort((a, b) => a.start.localeCompare(b.start));
+    const total = venues.map(v => days.reduce((n, d) => n + busyIn(v.name, d).length, 0));
+    return `<div class="vn-week"><table><thead><tr><th class="vn-wv" scope="col"><span class="visually-hidden">Venue</span></th>${days.map(d => `<th scope="col" class="${d === D.today ? "today" : ""}"><span>${esc(fmt(d, { weekday: "short" }))}</span><b>${esc(fmt(d, { month: "numeric", day: "numeric" }))}</b></th>`).join("")}</tr></thead>
+      <tbody>${venues.map((v, vi) => `<tr class="${total[vi] ? "" : "quiet"}"><th scope="row" class="vn-wv"><b>${esc(v.name)}</b>${v.shared ? `<span>can share</span>` : ""}</th>${days.map(d => {
+        const items = busyIn(v.name, d);
+        return `<td class="${d === D.today ? "today" : ""}" data-wk="${d}" data-venue="${esc(v.name)}" aria-label="${esc(v.name + ", " + fmt(d, { weekday: "long", month: "long", day: "numeric" }) + (items.length ? ", " + items.length + " booked" : ", open"))}">${items.map(b =>
+          `<button type="button" class="vn-wi ${b.kind}" data-busy="${D.busy.indexOf(b)}" title="${esc(b.title + " · " + range(b.start, b.end))}"><i>${esc(short(b.start))}–${esc(short(b.end))}</i> ${esc(b.title)}</button>`).join("")}</td>`;
+      }).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
 
   /* ---------- Dialogs ---------- */
   function openDlg(html) {
@@ -109,6 +138,7 @@
         ${r.repeats ? `<dt>Repeats</dt><dd>${esc(r.repeats)} until ${esc(fmt(r.until, { month: "long", day: "numeric" }))}</dd>` : ""}
         ${r.setup ? `<dt>Setup</dt><dd>${r.setup} hr before and after</dd>` : ""}
         ${r.host ? `<dt>Host</dt><dd>${esc(r.host)}</dd>` : ""}${r.notes ? `<dt>Notes</dt><dd class="st-notes">${esc(r.notes)}</dd>` : ""}
+        <dt>Shows on</dt><dd>${esc((r.showOn || []).length ? r.showOn.map(x => x === "Public" ? "Public calendar" : "Residents' calendar").join(" & ") : "Venue schedule only")}</dd>
         ${r.status !== "Reserved" ? `<dt>Status</dt><dd>${esc(r.status)}</dd>` : ""}${r.bookedBy ? `<dt>Reserved by</dt><dd>${esc(r.bookedBy)}</dd>` : ""}</dl>
       <div class="dd-btns">${r.canEdit && r.status === "Reserved" ? `<button class="dd-link" id="vnCancel">Cancel reservation</button><button class="btn btn-forest btn-sm" id="vnEditR">Edit</button>` : `<span class="st-hint" style="margin-right:auto">${r.status === "Reserved" ? "Only the person who reserved it, or an admin, can change it." : ""}</span>`}<button class="btn btn-outline btn-sm" data-close>Close</button></div>`);
     const e = box.querySelector("#vnEditR"); if (e) e.onclick = () => form(r);
@@ -122,7 +152,9 @@
   }
   function form(r, pre) {
     const isNew = !r;
-    r = r || Object.assign({ venues: [], what: "", date: day, start: "18:00", end: "20:00", setup: 0, repeatKey: "none", until: "", host: D.me || "", notes: "" }, pre || {});
+    r = r || Object.assign({ venues: [], what: "", date: day, start: "18:00", end: "20:00", setup: 0, repeatKey: "none", weekdays: [], until: "", host: D.me || "", notes: "", showOn: [] }, pre || {});
+    const show = new Set(r.showOn || []);
+    const wd = new Set(r.weekdays && r.weekdays.length ? r.weekdays : [wdOf(r.date)]);
     const chosen = new Set(r.venues);
     const box = openDlg(`<h2>${isNew ? "Reserve a venue" : "Edit reservation"}</h2>
       <form id="vnForm" class="st-form" novalidate>
@@ -134,20 +166,29 @@
         <label class="dd-f vn-padf" ${r.setup ? "" : "hidden"}>Hours before and after<input type="number" name="setup" min="0.25" max="6" step="0.25" value="${esc(r.setup || 1)}"></label>
         <div class="dd-two"><label class="dd-f">Repeats<select name="repeats">${REPEATS.map(([k, l]) => `<option value="${k}"${k === r.repeatKey ? " selected" : ""}>${l}</option>`).join("")}</select></label>
           <label class="dd-f vn-until" ${r.repeatKey === "none" ? "hidden" : ""}>Until<input type="date" name="until" value="${esc(r.until)}"></label></div>
+        <div class="dd-f vn-days" ${r.repeatKey === "days" ? "" : "hidden"}><span>On</span><div class="vn-pick vn-wd">${WD.map((n, i) => `<label><input type="checkbox" value="${i}"${wd.has(i) ? " checked" : ""}><span>${n}</span></label>`).join("")}</div></div>
         <label class="dd-f">Host<input name="host" maxlength="80" value="${esc(r.host)}" placeholder="Who's in charge"></label>
-        <label class="dd-f">Notes <span class="opt">(optional)</span><textarea name="notes" maxlength="1000" placeholder="We'll need the folding tables.">${esc(r.notes)}</textarea></label>
+        <label class="dd-f"><span>Notes <span class="opt">(optional)</span></span><textarea name="notes" maxlength="1000" placeholder="We'll need the folding tables.">${esc(r.notes)}</textarea></label>
+        <div class="dd-f"><span>Also show it on</span>
+          <div class="vn-show"><label class="dd-chk"><input type="checkbox" name="showRes"${show.has("Residents") ? " checked" : ""}> Residents' calendar</label>
+          <label class="dd-chk"><input type="checkbox" name="showPub"${show.has("Public") ? " checked" : ""}> Public calendar (the website)</label></div>
+          <span class="st-hint" style="margin:0;font-weight:400">Usually leave these off: the venue is held either way. For something people should see on a calendar, use <a href="submit.html" style="color:var(--forest);font-weight:600">Add an event</a> instead; it holds the venue too.</span></div>
       </form>
       <div class="vn-clash" hidden></div>
       <div class="dd-btns"><button class="btn btn-outline btn-sm" id="vnBack">${isNew ? "Cancel" : "Back"}</button><button class="btn btn-forest btn-sm" id="vnGo">${isNew ? "Reserve" : "Save"}</button></div>`);
     const f = box.querySelector("#vnForm"), val = n => f.elements[n].value;
     f.elements.pad.onchange = () => box.querySelector(".vn-padf").hidden = !f.elements.pad.checked;
-    f.elements.repeats.onchange = () => box.querySelector(".vn-until").hidden = val("repeats") === "none";
-    box.querySelectorAll(".vn-pick input").forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); });
+    f.elements.repeats.onchange = () => { box.querySelector(".vn-until").hidden = val("repeats") === "none"; box.querySelector(".vn-days").hidden = val("repeats") !== "days"; };
+    box.querySelectorAll(".vn-wd input").forEach(c => c.onchange = () => { c.checked ? wd.add(+c.value) : wd.delete(+c.value); });
+    box.querySelectorAll(".vn-pick:not(.vn-wd) input").forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); });
     box.querySelector("#vnBack").onclick = () => isNew ? dlg.close() : details(r);
     const save = async (extra) => {
       const b = box.querySelector("#vnGo");
       const body = Object.assign({ action: "venueSave", id: isNew ? "" : r.id, venues: [...chosen], what: val("what"), date: val("date"), start: val("start"), end: val("end"),
-        setup: f.elements.pad.checked ? Number(val("setup")) || 1 : 0, repeats: val("repeats"), until: val("until"), host: val("host"), notes: val("notes") }, extra || {});
+        setup: f.elements.pad.checked ? Number(val("setup")) || 1 : 0, repeats: val("repeats"), weekdays: [...wd], until: val("until"), host: val("host"), notes: val("notes"),
+        showOn: [f.elements.showRes.checked && "Residents", f.elements.showPub.checked && "Public"].filter(Boolean) }, extra || {});
+      if (body.repeats === "days" && !body.weekdays.length) return errMsg(box, new Error("Pick the days of the week"));
+      if (body.repeats !== "none" && !body.until) return errMsg(box, new Error("Pick when it stops repeating"));
       if (!body.what.trim()) { f.elements.what.focus(); return errMsg(box, new Error("Say what it's for")); }
       if (!body.venues.length) return errMsg(box, new Error("Pick at least one venue"));
       b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
@@ -209,17 +250,19 @@
     }
     if (b.action === "venueSave") {
       if (b.venues.includes("Event Barn (Autoshop)") && b.start < "21:00" && b.end > "17:00" && !b.force) return Promise.reject(Object.assign(new Error("Event Barn (Autoshop) is already reserved then"), { clash: true, blocks: [{ venue: "Event Barn (Autoshop)", when: "Today, 5pm–9pm", title: "Play Night" }], headsUp: [], canForce: true }));
-      const o = { venues: b.venues, what: b.what, date: b.date, start: b.start, end: b.end, setup: b.setup, repeatKey: b.repeats, repeats: b.repeats === "none" ? "" : REPEATS.find(x => x[0] === b.repeats)[1], until: b.until, host: b.host, notes: b.notes, status: "Reserved", canEdit: true };
+      const o = { venues: b.venues, what: b.what, date: b.date, start: b.start, end: b.end, setup: b.setup, repeatKey: b.repeats, weekdays: b.repeats === "days" ? b.weekdays.sort() : [],
+        repeats: b.repeats === "none" ? "" : b.repeats === "days" ? "Weekly on " + b.weekdays.sort().map(i => WD[i]).join(", ") : REPEATS.find(x => x[0] === b.repeats)[1], until: b.until, host: b.host, notes: b.notes, status: "Reserved", canEdit: true, showOn: b.showOn };
       if (b.id) Object.assign(demoD.res.find(x => x.id === b.id), o); else demoD.res.push(Object.assign({ id: "n" + Date.now() }, o));
     }
     if (b.action === "venueCancel") demoD.res.find(x => x.id === b.id).status = "Cancelled";
     if (b.action === "venueListSave") demoD.venues = b.venues.filter(v => v.name).map(v => Object.assign({}, v, { aliases: String(v.aliases || "").split(/\s*,\s*/).filter(Boolean) }));
     const d = b.date || today;
-    const busy = demoD.res.filter(r => r.status === "Reserved" && (r.date === d || (r.repeatKey === "weekly" && r.date <= d && (r.until || d) >= d && (parse(d) - parse(r.date)) / DAY % 7 === 0)))
-      .flatMap(r => r.venues.map(v => ({ kind: "reservation", id: r.id, venue: v, date: d, start: r.start, end: r.end, padStart: p2(Math.max(0, Math.floor((mins(r.start) - r.setup * 60) / 60))) + ":" + p2((mins(r.start) - r.setup * 60) % 60), padEnd: p2(Math.floor((mins(r.end) + r.setup * 60) / 60)) + ":" + p2((mins(r.end) + r.setup * 60) % 60), title: r.what, host: r.host })))
-      .concat(d === today ? demoD.extra.map(x => Object.assign({ date: d, padStart: x.start, padEnd: x.end }, x)) : []);
+    const span = Number(b.days) || 1, inRange = x => x >= d && x <= add(d, span - 1);
+    const busy = [].concat(...Array.from({ length: span }, (_, i) => add(d, i)).map(dd => demoD.res.filter(r => r.status === "Reserved" && (r.date === dd || (r.repeatKey === "weekly" && r.date <= dd && (r.until || dd) >= dd && (parse(dd) - parse(r.date)) / DAY % 7 === 0) || (r.repeatKey === "days" && r.date <= dd && (r.until || dd) >= dd && r.weekdays.includes(wdOf(dd)))))
+      .flatMap(r => r.venues.map(v => ({ kind: "reservation", id: r.id, venue: v, date: dd, start: r.start, end: r.end, padStart: p2(Math.max(0, Math.floor((mins(r.start) - r.setup * 60) / 60))) + ":" + p2((mins(r.start) - r.setup * 60) % 60), padEnd: p2(Math.floor((mins(r.end) + r.setup * 60) / 60)) + ":" + p2((mins(r.end) + r.setup * 60) % 60), title: r.what, host: r.host })))
+      .map(o => o)).concat(inRange(today) ? demoD.extra.map(x => Object.assign({ date: today, padStart: x.start, padEnd: x.end }, x)) : []));
     return JSON.parse(JSON.stringify({ ok: true, admin: true, me: "Lindsey Huffman", today, date: d, days: 1, venues: demoD.venues, busy,
-      reservations: demoD.res.map(r => Object.assign({ last: r.until || r.date }, r)), message: { venueSave: b.id ? "Saved. The residents' calendar is updated." : "Reserved. It's on the residents' calendar.", venueCancel: "Cancelled. It's off the residents' calendar.", venueListSave: "Saved. The event form uses the new list right away." }[b.action] || "" }));
+      reservations: demoD.res.map(r => Object.assign({ last: r.until || r.date }, r)), message: { venueSave: (b.id ? "Saved. " : "Reserved. ") + ((b.showOn || []).length ? "It's on the " + b.showOn.map(x => x === "Public" ? "public" : "residents'").join(" and ") + " calendar" + (b.showOn.length > 1 ? "s." : ".") : "It's on the venue schedule only."), venueCancel: "Cancelled. It's off the residents' calendar.", venueListSave: "Saved. The event form uses the new list right away." }[b.action] || "" }));
   }
 
   window.HLVenues = { mount };
