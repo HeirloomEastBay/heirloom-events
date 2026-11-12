@@ -533,7 +533,10 @@
   let lastH = 0;
   function resize() {
     if (!EMBED || window.parent === window) return;
-    requestAnimationFrame(() => {
+    // On the next frame, or soon anyway (frames pause in background tabs)
+    let done = false;
+    const later = f => { const go = () => { if (!done) { done = true; f(); } }; requestAnimationFrame(go); setTimeout(go, 120); };
+    later(() => {
       const h = contentHeight();
       if (h !== lastH) { lastH = h; window.parent.postMessage({ heirloomHeight: h }, "*"); }
     });

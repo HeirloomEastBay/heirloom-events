@@ -319,3 +319,9 @@ The page's "Add to your calendar" button follows whatever the Settings tab says,
 - **Email limits:** Google allows 100 emails/day on a regular account and 1,500 on Workspace. Each pending request sends one email per approver, and each RSVP sends two (guest + host) plus a reminder. If heirloomeastbay.com is on Workspace you won't come close; on a regular account, a big event could. Turning off host emails on the Settings tab halves it.
 - **Spam:** the form has a hidden spam trap and limits each email address to 10 submissions a day. Untrusted posts never go live without an approver.
 - **Who owns what:** Brit owns both calendars and has shared them with community@ (make changes + manage sharing). If that sharing is ever removed, publishing stops.
+
+
+### Squarespace embeds: no inner scroll on the first visit
+The Heirloom Squarespace template uses Ajax loading: clicking a menu link swaps the page in without a real reload, and Squarespace doesn't run scripts inside Code blocks on those visits. So the calendar/volunteer frame stayed at 600px (inner scroll) until a refresh. Fix either way:
+1. **No code:** Design → Site Styles → turn off **Enable Ajax Loading**.
+2. **Keep Ajax:** paste `squarespace-code-injection.js` (wrapped in `<script>…</script>`) into Settings → Advanced → Code Injection → **Footer**. It sizes every Heirloom embed on every page, however the page was reached. The scripts in the Code blocks can stay; they do no harm.
