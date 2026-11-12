@@ -33,15 +33,33 @@
     return r;
   }
 
+  // The last list we got, so the page shows right away next time (per signed-in person)
+  const CACHE = "heirloom-stays-v1";
+  function cached() { try { const c = JSON.parse(localStorage.getItem(CACHE) || "null"); return c && c.token === token() ? c.D : null; } catch (e) { return null; } }
+  function keep(d) { try { localStorage.setItem(CACHE, JSON.stringify({ token: token(), D: d })); } catch (e) { /* fine */ } }
+  const busy = () => dlg && dlg.open;
+
   async function mount(el, opts) {
     root = el; opts = opts || {};
-    root.innerHTML = `<p class="st-load">Loading the guest rooms…</p>`;
+    const c = DEMO ? null : cached();
+    if (c) { D = c; start = start || add(D.today, -2); draw(); }
+    else root.innerHTML = `<p class="st-load">Loading the guest rooms…</p>`;
     try {
-      D = await call({ action: "staysGet", refresh: !!opts.refresh });
+      // 1) What's saved in the Guest stays tab (quick)
+      const fresh = await call({ action: "staysGet" });
+      if (root !== el) return;
+      D = fresh; keep(D);
       if (window.HLNav) HLNav.setRoles({ email: D.email, admin: !!D.admin, resident: true });
       start = start || add(D.today, -2);
-      draw();
+      if (!busy()) draw();
+      // 2) Then check the residents' calendar for upcoming stays added or changed there
+      call({ action: "staysSync", refresh: !!opts.refresh }).then(r => {
+        if (!r.changed || !r.stays || root !== el) return;
+        D = r; keep(D);
+        if (!busy() && root.isConnected) draw();
+      }).catch(() => { /* the saved list is fine */ });
     } catch (err) {
+      if (c) return; // keep showing the saved list
       root.innerHTML = err.signedOut ? `<div class="empty"><h2>Please log in</h2><p>We'll email you a code, then bring you back here.</p><p style="margin-top:12px"><a class="btn btn-primary" href="mine.html?next=stays">Log in</a></p></div>`
         : `<div class="empty"><h2>${err.notAllowed ? "Just for residents" : "We couldn't load the guest rooms"}</h2><p>${esc(err.message)}.</p>${err.notAllowed ? "" : `<p style="margin-top:12px"><button class="btn btn-primary" id="stRetry">Try again</button></p>`}</div>`;
       const r = root.querySelector("#stRetry"); if (r) r.onclick = () => mount(root, opts);
@@ -141,7 +159,7 @@
         <div class="dd-btns"><button class="btn btn-outline btn-sm" id="stNo">Keep it</button><button class="btn btn-primary btn-sm" id="stYes">Cancel the stay</button></div>`);
       b2.querySelector("#stNo").onclick = () => details(s);
       b2.querySelector("#stYes").onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-        try { D = await call({ action: "stayCancel", id: s.id }); dlg.close(); draw(D.message); } catch (err) { b.disabled = false; b.textContent = "Try again"; errMsg(b2, err); } };
+        try { D = await call({ action: "stayCancel", id: s.id }); keep(D); dlg.close(); draw(D.message); } catch (err) { b.disabled = false; b.textContent = "Try again"; errMsg(b2, err); } };
     };
   }
   function errMsg(box, err) { let el = box.querySelector(".dd-err"); if (!el) { el = document.createElement("p"); el.className = "dd-err"; box.querySelector(".dd-btns").before(el); } el.textContent = err.message + "."; }
@@ -201,7 +219,7 @@
       if (!body.rooms.length) return errMsg(box, new Error("Pick at least one room"));
       if (!blk && !body.guest.trim()) { f.elements.guest.focus(); return errMsg(box, new Error("Add the guest's name")); }
       b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
-      try { D = await call(body); dlg.close(); if (body.checkin < start || body.checkin >= add(start, SPAN())) start = add(body.checkin, -2); draw(D.message); }
+      try { D = await call(body); keep(D); dlg.close(); if (body.checkin < start || body.checkin >= add(start, SPAN())) start = add(body.checkin, -2); draw(D.message); }
       catch (err) { b.disabled = false; b.textContent = isNew ? "Book it" : "Save"; errMsg(box, err); }
     };
   }
@@ -227,6 +245,7 @@
       demoD.stays.sort((x, y) => x.checkin.localeCompare(y.checkin));
       return out(b.id ? "Saved. The residents' calendar is updated." : "Booked. It's on the residents' calendar.");
     }
+    if (b.action === "staysSync") return { ok: true, changed: 0 };
     if (b.action === "stayCancel") { demoD.stays.find(x => x.id === b.id).status = "Cancelled"; return out("Cancelled. It's off the residents' calendar."); }
     return out();
   }
