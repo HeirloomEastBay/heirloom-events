@@ -810,7 +810,8 @@
     [5, 6].forEach(i => hideField(sets[i]));            // Which calendar? · About you
     hideField($("#discordStep")); hideField($("#volBox"));
     hideField($("#repeat").closest(".field")); hideField($("#untilField"));
-    $("#r-form").closest(".mode").hidden = true;        // built-in RSVPs need an event from the form
+    // Built-in RSVPs work for public events added in Google Calendar too (sign-up emails go to you)
+    if (ADMIN.cal === "residents") $("#r-form").closest(".mode").hidden = true;
     $("#description").removeAttribute("required"); $("#description").maxLength = 8000;
     const dl = form.querySelector('label[for="description"]'); if (dl) dl.querySelectorAll(".req").forEach(x => x.remove());
     if (e.recurring) {
