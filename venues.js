@@ -35,8 +35,9 @@
   async function load(d, msg) {
     const week = mode === "week";
     try {
-      D = await call({ action: "venuesGet", date: week && d ? monday(d) : d, days: week ? 7 : 1 });
-      if (!d && week && D.date !== monday(D.date)) D = await call({ action: "venuesGet", date: monday(D.date), days: 7 }); // first load: this week
+      // Week view opens on this week's Monday (worked out here, so it's one trip to the server, not two)
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date());
+      D = await call({ action: "venuesGet", date: week ? monday(d || today) : d, days: week ? 7 : 1 });
       day = d || D.date; draw(msg || D.message);
     }
     catch (err) {
