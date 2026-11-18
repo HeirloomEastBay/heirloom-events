@@ -161,6 +161,8 @@
         ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${data.sundays.find(s => !s.main).date}">See which</a>` : ""}</span>`
         : `<span>✓ Every one of the next ${n} Sundays has a main dish. Thank you!</span>`}</div>
 
+      ${songHtml()}
+
       <section aria-labelledby="hN">
         <div class="sec-h"><div><h2 id="hN">Notes</h2><p>From Pastor Brit and the Heirloom team. Search by word, theme or scripture.</p></div>
           ${data.canPost ? `<button class="btn btn-forest btn-sm" id="write">Write a note</button>` : ""}</div>
@@ -171,6 +173,8 @@
         </div>` : ""}
         <div id="noteList"></div>
       </section>
+
+      ${eventsHtml()}
 
       <section aria-labelledby="hS">
         <div class="sec-h"><div><h2 id="hS">Supper Church</h2><p>Sundays at 5:30pm, setup at 5:00. The main dish is the one we need most; sides and desserts are a bonus. Sign up as far ahead as you like.</p></div></div>
@@ -199,6 +203,118 @@
     });
     app.querySelectorAll("[data-open]").forEach(a => a.onclick = () => { const el = document.getElementById("note-" + a.dataset.open); if (!el) { nf.q = nf.theme = nf.book = ""; drawNotes(); } const t = document.getElementById("note-" + a.dataset.open); if (t) { if (t.closest("details.older")) t.closest("details.older").open = true; if (t.tagName === "DETAILS") t.open = true; } });
     if ($("#write")) $("#write").onclick = () => noteDlg();
+    if ($("#songEdit")) $("#songEdit").onclick = () => songDlg(data.song);
+    if ($("#songNew")) $("#songNew").onclick = () => songDlg(null);
+    if ($("#evNew")) $("#evNew").onclick = () => eventDlg();
+  }
+
+  /* ---------- Song of the month ---------- */
+  const monthName = m => { const [y, mo] = String(m || "").split("-").map(Number); return y ? new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" }) : ""; };
+  const thisMonth = () => today().slice(0, 7);
+  const nextMonth = m => { const [y, mo] = m.split("-").map(Number); return mo === 12 ? (y + 1) + "-01" : y + "-" + String(mo + 1).padStart(2, "0"); };
+  function songHtml() {
+    const s = data.song;
+    if (!s) return data.admin ? `<section class="song" aria-labelledby="hSong"><div class="sec-h"><div><h2 id="hSong">Song of the month</h2><p>The song we're learning together at Supper Church. Nothing posted yet.</p></div>
+      <button class="btn btn-forest btn-sm" id="songNew">Add the song of the month</button></div></section>` : "";
+    const lyrics = s.lyricsOk && s.lyrics ? `<details class="lyrics"><summary>Lyrics</summary><div class="ly">${esc(s.lyrics)}</div></details>`
+      : s.lyricsLink ? `<p><a class="btn btn-outline btn-sm" href="${esc(s.lyricsLink)}" target="_blank" rel="noopener">Lyrics ↗</a></p>` : "";
+    return `<section class="song" aria-labelledby="hSong">
+      <div class="sec-h"><div><span class="kick">Song of the month · ${esc(monthName(s.month))}</span><h2 id="hSong">${esc(s.title)}</h2>${s.writers ? `<p>${esc(s.writers)}</p>` : ""}</div>
+        ${data.admin ? `<div class="sbtns"><button class="btn btn-outline btn-sm" id="songEdit">Edit</button><button class="btn btn-forest btn-sm" id="songNew">New song</button></div>` : ""}</div>
+      ${s.youtube ? `<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/${esc(s.youtube)}" title="${esc(s.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
+      ${s.note ? `<p class="snote">${esc(s.note)}</p>` : ""}
+      ${lyrics}
+      ${s.copyright ? `<p class="cr">${esc(s.copyright)}</p>` : ""}
+    </section>`;
+  }
+  function songDlg(s) {
+    const songs = data.songs || [];
+    const fill = x => {
+      x = x || { month: songs.some(o => o.month === thisMonth()) ? nextMonth(thisMonth()) : thisMonth() };
+      dlgIn.querySelector("#sgMonth").value = x.month || ""; ["title", "writers", "copyright", "note"].forEach(k => { dlgIn.querySelector("#sg_" + k).value = x[k] || ""; });
+      dlgIn.querySelector("#sg_youtube").value = x.youtubeUrl || ""; dlgIn.querySelector("#sg_lyricsLink").value = x.lyricsLink || "";
+      dlgIn.querySelector("#sg_lyrics").value = x.lyricsDraft || x.lyrics || ""; dlgIn.querySelector("#sgOk").checked = !!x.lyricsOk; dlgIn.querySelector("#sgDel").hidden = !x.id;
+      cur = x;
+    };
+    let cur = null;
+    openDlg(`<h2>Song of the month</h2>
+      ${songs.length ? `<label class="f">Which song<select id="sgPick"><option value="">＋ A new song</option>${songs.map(o => `<option value="${esc(o.id)}"${s && s.id === o.id ? " selected" : ""}>${esc(monthName(o.month))}: ${esc(o.title)}</option>`).join("")}</select></label>` : ""}
+      <div class="two"><label class="f">Month<input type="month" id="sgMonth" required></label><label class="f">Title<input id="sg_title" maxlength="120" placeholder="Be Thou My Vision"></label></div>
+      <label class="f">Writers <span class="opt">(optional)</span><input id="sg_writers" maxlength="200" placeholder="Words and music by…"></label>
+      <label class="f">YouTube link <span class="opt">(it plays right on the page)</span><input id="sg_youtube" inputmode="url" placeholder="https://www.youtube.com/watch?v=…"></label>
+      <label class="f">A note <span class="opt">(optional)</span><textarea id="sg_note" rows="2" maxlength="600" placeholder="We'll sing it every Sunday this month. Here's a practice video."></textarea></label>
+      <label class="f">Copyright line <span class="opt">(shown under the song)</span><input id="sg_copyright" maxlength="200" placeholder="© 2014 Example Music · CCLI license #…"></label>
+      <label class="f">Lyrics link <span class="opt">(the publisher, SongSelect or a lyric video)</span><input id="sg_lyricsLink" inputmode="url" placeholder="https://…"></label>
+      <label class="f">Lyrics <span class="opt">(only shown when the box below is ticked)</span><textarea id="sg_lyrics" rows="5" maxlength="6000"></textarea></label>
+      <label class="chk"><input type="checkbox" id="sgOk"><span><b>Public domain, or we have permission</b> to share these lyrics. A CCLI church license covers lyrics on a screen or in a bulletin, not on a website, so most newer songs need the link above instead.</span></label>
+      <p class="err" id="sgErr" hidden></p>
+      <div class="btns"><button class="quiet del" id="sgDel" hidden>Remove this song</button><span style="flex:1"></span><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="sgGo">Save</button></div>`);
+    fill(s);
+    const pick = dlgIn.querySelector("#sgPick"); if (pick) pick.onchange = () => fill(songs.find(o => o.id === pick.value) || null);
+    dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
+    dlgIn.querySelector("#sgDel").onclick = async e => { if (!cur || !cur.id) return; e.currentTarget.disabled = true;
+      try { data = await call({ action: "churchSongRemove", id: cur.id }); dlg.close(); render(); flash("Song removed."); } catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+    dlgIn.querySelector("#sgGo").onclick = async e => {
+      const b = e.currentTarget, v = k => dlgIn.querySelector(k).value.trim(), err = dlgIn.querySelector("#sgErr");
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
+      try {
+        data = await call({ action: "churchSong", id: cur && cur.id || undefined, month: v("#sgMonth"), title: v("#sg_title"), writers: v("#sg_writers"), copyright: v("#sg_copyright"), youtube: v("#sg_youtube"),
+          lyricsLink: v("#sg_lyricsLink"), lyrics: dlgIn.querySelector("#sg_lyrics").value, lyricsOk: dlgIn.querySelector("#sgOk").checked, note: v("#sg_note") });
+        dlg.close(); render(); flash("Saved the song of the month.");
+      } catch (x) { err.textContent = (x.message || "Something went wrong") + "."; err.hidden = false; b.disabled = false; b.textContent = "Save"; }
+    };
+  }
+
+  /* ---------- Church events ---------- */
+  const t12 = hm => { if (!hm) return ""; const [h, m] = hm.split(":").map(Number); return ((h % 12) || 12) + (m ? ":" + String(m).padStart(2, "0") : "") + (h < 12 ? "am" : "pm"); };
+  const REPEATS = [["none", "Doesn't repeat"], ["weekly", "Every week"], ["biweekly", "Every other week"], ["monthlyNth", "Monthly (same weekday)"], ["monthlyDate", "Monthly (same date)"]];
+  function eventsHtml() {
+    const ev = data.events || [];
+    if (!ev.length && !data.admin) return "";
+    return `<section aria-labelledby="hE"><div class="sec-h"><div><h2 id="hE">Church events</h2><p>What's coming up. Public ones are on the Heirloom calendar too.</p></div>
+        ${data.admin ? `<button class="btn btn-forest btn-sm" id="evNew">Add a church event</button>` : ""}</div>
+      ${ev.length ? `<ul class="cev">${ev.map(e => `<li>
+          <span class="cd"><small>${esc(fmt(e.next, { month: "short" }))}</small><b>${esc(fmt(e.next, { day: "numeric" }))}</b></span>
+          <span class="ci"><b>${esc(e.title)}</b><span>${esc([fmt(e.next, { weekday: "long" }), e.allDay ? "All day" : t12(e.start) + (e.end ? "–" + t12(e.end) : ""), e.location].filter(Boolean).join(" · "))}</span>
+            ${e.repeats ? `<span class="rep">${esc(e.repeats)}${e.until ? " until " + esc(fmt(e.until, { month: "short", day: "numeric" })) : ""}</span>` : ""}
+            ${e.public ? "" : `<span class="pill kind">Church family only</span>`}
+            ${e.description ? `<details><summary>Details</summary><p>${esc(e.description)}</p>${e.link ? `<p><a href="${esc(e.link)}" target="_blank" rel="noopener">More info ↗</a></p>` : ""}</details>` : ""}</span></li>`).join("")}</ul>`
+        : `<p class="empty-s">No church events coming up yet.</p>`}
+    </section>`;
+  }
+  function eventDlg() {
+    openDlg(`<h2>Add a church event</h2>
+      <label class="f">What<input id="ev_title" maxlength="90" placeholder="Advent candle-making night"></label>
+      <div class="two"><label class="f">Date<input type="date" id="ev_date" min="${today()}"></label><label class="f">Repeats<select id="ev_repeat">${REPEATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label></div>
+      <label class="chk"><input type="checkbox" id="ev_allDay"><span>All day</span></label>
+      <div class="two ev-times"><label class="f">Starts<input type="time" id="ev_start" value="17:30"></label><label class="f">Ends <span class="opt">(optional)</span><input type="time" id="ev_end" value="19:00"></label></div>
+      <label class="f ev-until" hidden>Until<input type="date" id="ev_until"></label>
+      <label class="f">Where<input id="ev_loc" list="evLocs" maxlength="120" value="Farmhouse"><datalist id="evLocs">${(data.locations || []).map(l => `<option value="${esc(l)}">`).join("")}</datalist></label>
+      <label class="f">Description<textarea id="ev_desc" rows="4" maxlength="1300" placeholder="What to expect, what to bring, who it's for…"></textarea></label>
+      <div class="two"><label class="f">Scripture <span class="opt">(optional)</span><input id="ev_scr" maxlength="120" placeholder="Luke 2:1-20"></label><label class="f">Theme <span class="opt">(optional)</span><input id="ev_theme" maxlength="80" placeholder="Advent"></label></div>
+      <label class="f">Link <span class="opt">(optional)</span><input id="ev_link" inputmode="url" placeholder="https://…"></label>
+      <label class="chk"><input type="checkbox" id="ev_pub" checked><span><b>Put it on the public Heirloom calendar</b>. Untick to keep it on the church page and the residents' calendar only.</span></label>
+      <label class="chk ev-disc"><input type="checkbox" id="ev_disc" checked><span><b>Post it to #church-events</b> on Discord${data.eventsDiscord ? "" : `<br><small class="opt">That channel isn't connected yet. It'll post once it is (add it on the Discord channels tab with Event type "Church").</small>`}</span></label>
+      <p class="err" id="evErr" hidden></p>
+      <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="evGo">Add the event</button></div>`);
+    const q = k => dlgIn.querySelector(k);
+    const sync = () => { q(".ev-times").hidden = q("#ev_allDay").checked; q(".ev-until").hidden = q("#ev_repeat").value === "none"; q(".ev-disc").hidden = !q("#ev_pub").checked; };
+    ["#ev_allDay", "#ev_repeat", "#ev_pub"].forEach(k => q(k).onchange = sync); sync();
+    q("[data-x]").onclick = () => dlg.close();
+    q("#evGo").onclick = async e => {
+      const b = e.currentTarget, v = k => q(k).value.trim(), err = q("#evErr"), pub = q("#ev_pub").checked;
+      let link = v("#ev_link"); if (link && !/^https?:\/\//i.test(link)) link = "https://" + link;
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span> Adding…`; err.hidden = true;
+      try {
+        data = await call({ action: "churchEvent", title: v("#ev_title"), date: v("#ev_date"), allDay: q("#ev_allDay").checked, startTime: v("#ev_start"), endTime: v("#ev_end"),
+          repeat: q("#ev_repeat").value, until: v("#ev_until"), location: v("#ev_loc"), description: v("#ev_desc"), scripture: v("#ev_scr"), theme: v("#ev_theme"), link: link,
+          public: pub, discord: pub && q("#ev_disc").checked });
+        dlg.close(); render();
+        const live = data.posted && data.posted.status === "published";
+        flash(live ? (pub ? "Added. It's on the public calendar" + (q("#ev_disc") && q("#ev_disc").checked && data.eventsDiscord ? " and will post to #church-events shortly." : ".") : "Added to the church page and the residents' calendar.")
+          : "Saved. It's waiting for review" + (data.posted && data.posted.held ? " because of a word in the title." : "."));
+      } catch (x) { err.textContent = (x.message || "Something went wrong") + "."; err.hidden = false; b.disabled = false; b.textContent = "Add the event"; }
+    };
   }
 
   /* ---------- "I'm bringing…" ---------- */
@@ -323,9 +439,15 @@
             note: "<p>We're reading <strong>Luke 14</strong> together: the story of the great banquet, and who gets invited.</p><h3>For Sunday</h3><ul><li>Dress warm, we're on the lawn if it's dry</li><li>Kids are welcome at the table</li></ul><blockquote>Go out to the roads and country lanes and compel them to come in, so that my house will be full.</blockquote><p>Here's the <a href=\"https://example.com\">Doxology</a> if you'd like to learn the tune.</p>", edited: false },
           { id: "N-2", posted: "2026-11-08 17:00", by: "Brit P.", sunday: "", title: "Thank you for last week", note: "What a full table. Thank you to everyone who cooked and cleaned up!", edited: false, format: "", themes: ["Gratitude"], scripture: ["Psalm 23"] },
           { id: "N-3", posted: "2026-11-01 17:00", by: "Brit P.", sunday: "", title: "Rest is not a reward", format: "html", themes: ["Rest", "Hospitality"], scripture: ["Matthew 11:28-30", "Psalm 127:2"], note: "<p>A few thoughts on sabbath as we head into a busy season on the farm.</p>", edited: false }],
+        song: { id: "SG-1", month: today().slice(0, 7), title: "Be Thou My Vision", writers: "Irish hymn, 8th century · translated by Mary Byrne (1905)", copyright: "Public domain", youtube: "", youtubeUrl: "",
+          lyricsLink: "", lyricsOk: true, lyrics: "Be Thou my vision, O Lord of my heart;\nNaught be all else to me, save that Thou art.", note: "We'll sing it every Sunday this month." },
+        songs: [], events: [{ id: "EV-1", title: "Advent candle-making night", next: suns[1], date: suns[1], until: "", repeats: "", start: "18:30", end: "20:00", allDay: false, location: "Farmhouse", description: "Bring a jar. We'll make Advent candles together.", link: "", public: true },
+          { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
+        eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
         sundays: suns.map((day, i) => ({ date: day, main: i === 0 ? { id: "D-1", kind: "Main", what: "Veggie lasagna", name: "Riss K.", mine: false } : i === 2 ? { id: "D-4", kind: "Main", what: "", name: "Ana D.", mine: true } : null,
           bringing: i === 0 ? [{ id: "D-2", kind: "Side", what: "Green salad", name: "Lisa S.", mine: false }, { id: "D-3", kind: "Dessert", what: "Apple crisp", name: "Ana D.", mine: true }] : [] })) };
     }
+    demoState.events.sort((a, c) => a.next.localeCompare(c.next));
     const S = demoState, all = () => S.sundays.flatMap(s => [s.main].concat(s.bringing).filter(Boolean));
     if (b.action === "churchBring") {
       const s = S.sundays.find(x => x.date === b.sunday);
@@ -337,6 +459,21 @@
       if (b.id) Object.assign(S.notes.find(n => n.id === b.id), f, { edited: true });
       else S.notes.unshift(Object.assign({ id: "N-" + Math.random().toString(36).slice(2, 7), posted: today() + " 12:00", by: "Ana D.", edited: false }, f)); }
     if (b.action === "churchNoteRemove") S.notes = S.notes.filter(n => n.id !== b.id);
+    if (!S.songs.length && S.song) S.songs = [Object.assign({ lyricsDraft: S.song.lyrics }, S.song)];
+    if (b.action === "churchSong") {
+      if (!b.title) return Promise.reject(new Error("Add the song's title"));
+      const yt = (b.youtube.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/) || [])[1] || "";
+      const f = { month: b.month, title: b.title, writers: b.writers, copyright: b.copyright, youtube: yt, youtubeUrl: b.youtube, lyricsLink: b.lyricsLink, lyricsOk: !!b.lyricsOk, lyrics: b.lyricsOk ? b.lyrics : "", lyricsDraft: b.lyrics, note: b.note };
+      if (b.id) Object.assign(S.songs.find(x => x.id === b.id), f); else S.songs.unshift(Object.assign({ id: "SG-" + Math.random().toString(36).slice(2, 6) }, f));
+    }
+    if (b.action === "churchSongRemove") S.songs = S.songs.filter(x => x.id !== b.id);
+    if (b.action === "churchSong" || b.action === "churchSongRemove") { S.songs.sort((a, c) => a.month < c.month ? 1 : -1); S.song = S.songs.find(x => x.month <= today().slice(0, 7)) || null; }
+    if (b.action === "churchEvent") {
+      if (!b.title) return Promise.reject(new Error("Please add an event name"));
+      if (!b.date) return Promise.reject(new Error("Please pick a date"));
+      S.events.push({ id: "EV-" + Math.random().toString(36).slice(2, 6), title: b.title, next: b.date, date: b.date, until: b.until, repeats: { weekly: "Weekly", biweekly: "Every other week" }[b.repeat] || "", start: b.startTime, end: b.endTime, allDay: b.allDay, location: b.location, description: b.description, link: b.link, public: b.public });
+      S.events.sort((a, c) => a.next.localeCompare(c.next)); S.posted = { ok: true, status: "published" };
+    }
     return Promise.resolve(JSON.parse(JSON.stringify(S)));
   }
 })();

@@ -131,6 +131,8 @@
       description: "BYOB, we'll provide the goats. Come hang out in the goat pen as the sun goes down, meet the herd and bring a friend.",
       cost: "Free", recurring: "Every Thursday", location: "Goat pen"
     });
+    add({ title: "Advent candle-making night", start: at(nextDow(3), 18), end: at(nextDow(3), 20), types: ["Church"],
+      description: "Bring a jar. We'll make Advent candles together and read Luke 2.", cost: "Free", location: "Farmhouse" });
     add({ title: "Moonlight Hike", start: at(nextDow(2), 18), end: at(nextDow(2), 20),
       description: "A slow walk up the hill behind the farmhouse under the full moon. Wear sturdy shoes and bring a headlamp just in case.",
       cost: "Free", location: "Meet at the parking area" });

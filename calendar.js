@@ -57,10 +57,12 @@
   const byId = {};
   // source: "all" | "heirloom" | "partners" (every community partner) | "p:<slug>" (one partner)
   const isPartner = e => (e.source || "heirloom") !== "heirloom";
+  const isChurch = e => (e.types || []).indexOf("Church") !== -1;
   const shownEvents = () => source === "all" ? events
     : source === "heirloom" ? events.filter(e => !isPartner(e))
     : source === "partners" ? events.filter(isPartner)
     : source === "volunteer" ? events.filter(e => e.volunteer)
+    : source === "church" ? events.filter(isChurch)
     : events.filter(e => e.source === source.slice(2));
 
   /* ---------- Load ---------- */
@@ -126,13 +128,15 @@
   function renderSourceTabs() {
     const live = partners.concat([COMMUNITY]).filter(p => events.some(e => e.source === p.slug && +(e.end || e.start) >= +now));
     const vols = events.some(e => e.volunteer && +(e.end || e.start) >= +now);
-    $("#sourceWrap").hidden = !live.length && !vols;
-    if (!live.length && !vols) { $("#partnerBar").hidden = true; source = "all"; return; }
+    const church = events.some(e => isChurch(e) && +(e.end || e.start) >= +now);
+    $("#sourceWrap").hidden = !live.length && !vols && !church;
+    if (!live.length && !vols && !church) { $("#partnerBar").hidden = true; source = "all"; return; }
+    if (source === "church" && !church) source = "all";
     if (source.startsWith("p:") && !live.some(p => "p:" + p.slug === source)) source = "partners";
     if ((source === "partners" && !live.length) || (source === "volunteer" && !vols)) source = "all";
     const top = source.startsWith("p:") ? "partners" : source;
     const seg = $("#sourceSeg");
-    seg.innerHTML = [["all", "All"], ["heirloom", "Heirloom"], live.length ? ["partners", "Community partners"] : null, vols ? ["volunteer", "Volunteer"] : null].filter(Boolean)
+    seg.innerHTML = [["all", "All"], ["heirloom", "Heirloom"], church ? ["church", "Church"] : null, live.length ? ["partners", "Community partners"] : null, vols ? ["volunteer", "Volunteer"] : null].filter(Boolean)
       .map(([v, l]) => `<button type="button" data-source="${v}" aria-pressed="${v === top}">${l}</button>`).join("");
     seg.querySelectorAll("button").forEach(b => b.onclick = () => { source = b.dataset.source; selectedDay = null; listLimit = PAGE; render(); });
 

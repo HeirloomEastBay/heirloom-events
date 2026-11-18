@@ -467,3 +467,10 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - After logging in, people go straight to Home (no flash of My events). Logged-in people: the logo goes to Home, and the calendar's "Log in" button becomes "My home".
 - Home parts are saved on the server for 5 minutes per person. Any change made through the app or an email link clears them all, so Home is never stale. Edits typed straight into the Sheet can take up to 5 minutes to show on Home.
 - Phones: long words and links wrap inside cards instead of running off the right edge (rules at the end of styles.css; Home's grids use minmax(0, 1fr); church theme pills wrap).
+
+## Church round 1 (Nov 18, 2026)
+
+- **Church events from the church tab** (admins): "Add a church event" with date, time, repeats, place, description, optional scripture and theme, and a link. "Put it on the public Heirloom calendar" and "Post it to #church-events" are ticked by default. Unticked, the event goes on the residents' calendar and the church page only. These save as events typed "Church", the same as the Submit form, which now always offers "Church" as a kind of event.
+- **Discord:** #church-events posts once a Discord channels row has Event type "Church", Active TRUE and its webhook.
+- **Church filter** on the public calendar (shows when there are church events coming up).
+- **Song of the month** (tab "Church songs", added by setup): title, writers, YouTube (plays on the page), a note, a copyright line and a lyrics link. Lyrics only show when "Public domain, or we have permission" is ticked, because a CCLI license doesn't cover lyrics on websites. The church family never receives lyrics that aren't ticked. Next month's song can be posted early; it shows when its month starts.
