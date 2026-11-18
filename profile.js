@@ -39,7 +39,7 @@
   }
 
   function render(r) {
-    if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident, church: !!r.church });
+    if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident, church: !!r.church, sabbath: r.sabbath || "" });
     try { localStorage.setItem("heirloom-me", JSON.stringify({ email: r.email, name: (r.first + " " + r.last).trim(), phone: r.phone })); } catch (e) { /* fine */ }
     const s = r.stats;
     const hours = s && s.hours ? (s.hours === 1 ? "1" : String(s.hours)) : "0";
@@ -52,11 +52,12 @@
       r.role === "Volunteer" && ["Trainings: " + (r.trainings.length ? r.trainings.join(", ") : "none yet"), r.trainings.length > 0],
       r.role === "Resident" && ["Volunteer: trained for everything" + (power ? ", including power tools & woodshop" : " except power tools & woodshop"), true],
       [r.church ? "Part of the church family" : "Not signed up for church family updates", !!r.church],
+      r.sabbath && [r.sabbath === "Approved" ? "🌿 Sabbath 365: approved" : /^Not /.test(r.sabbath) ? "" : "Sabbath 365 application: " + r.sabbath.toLowerCase(), r.sabbath === "Approved"],
       ["Your events go up " + (r.trusted || r.approver || r.admin ? "right away" : "after a quick review"), true],
       r.approver && ["You approve other people's events", true],
       r.admin && ["You can use the Admin page", true]
-    ].filter(Boolean);
-    const hi = $("#hi"); if (hi && (r.greet || r.first)) hi.textContent = "Hi, " + (r.greet || r.first) + "!";
+    ].filter(x => x && x[0]);
+    const hi = $("#hi"); if (hi && (r.greet || r.first)) hi.innerHTML = "Hi, " + esc(r.greet || r.first) + "!" + (r.sabbath === "Approved" ? ` <span style="display:inline-block;vertical-align:middle;font-family:var(--f-label);font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;background:#e7efe0;color:#1c3024;border:1.5px solid #a9bf9c">🌿 Sabbath 365</span>` : "");
     if (window.HLProfile && r.done) HLProfile.remember(r);
     app.innerHTML = `
       ${r.powerPending ? `<section class="card" style="border:2px solid var(--wheat)">
@@ -79,7 +80,7 @@
         <h2>Your access</h2>
         <ul class="access">${access.map(([t, on]) => `<li class="${on ? "" : "no"}">${esc(t)}</li>`).join("")}</ul>
         ${r.powerAccepted ? `<p class="lock">Power tools safety agreement accepted ${esc(String(r.powerAccepted).split(" · ")[0])}.</p>` : ""}
-        <p style="display:flex;flex-wrap:wrap;gap:8px">${r.volunteer ? `<a class="btn btn-forest btn-sm" href="portal.html">Open the volunteer portal</a>` : ""}${r.church ? `<a class="btn btn-forest btn-sm" href="church.html">Open the church family page</a>` : ""}</p>
+        <p style="display:flex;flex-wrap:wrap;gap:8px">${r.volunteer ? `<a class="btn btn-forest btn-sm" href="portal.html">Open the volunteer portal</a>` : ""}${r.church ? `<a class="btn btn-forest btn-sm" href="church.html">Open the church family page</a>` : ""}<a class="btn btn-${r.sabbath === "Approved" ? "forest" : "outline"} btn-sm" href="sabbath.html">${r.sabbath === "Approved" ? "Request Sabbath 365 dates" : r.sabbath && !/^Not /.test(r.sabbath) ? "Your Sabbath 365 application" : "Apply for a Sabbath 365 retreat"}</a></p>
       </section>
       <p style="text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn btn-forest btn-sm" data-install hidden>Add to Home Screen</button><button type="button" class="btn btn-outline btn-sm" id="out">Sign out</button></p>`;
     if (window.HLInstall) HLInstall.refresh();

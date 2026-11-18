@@ -98,7 +98,7 @@
       }
       // Remember name, email and phone so the Submit form can fill them in
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
-      if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident, church: !!r.church });
+      if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident, church: !!r.church, sabbath: r.sabbath || "" });
       // Came from another page to log in: go back there
       const next = new URLSearchParams(location.search).get("next");
       if (next === "profile" || next === "portal" || next === "stays" || (next === "admin" && r.admin)) { location.replace(next + ".html"); return; }

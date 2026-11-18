@@ -18,6 +18,7 @@
   const t12 = hm => { if (!hm) return ""; const [h, m] = hm.split(":").map(Number); return ((h % 12) || 12) + (m ? ":" + p2(m) : "") + (h < 12 ? "am" : "pm"); };
   const nightsTxt = s => { const n = diff(s.checkin, s.checkout); return n <= 0 ? "Day visit" : n + " night" + (n === 1 ? "" : "s"); };
   const live = s => /^(Booked|Blocked)$/.test(s.status);
+  const leaf = s => s.badge || s.sabbath ? "🌿 " : ""; // Sabbath 365 stay, or a guest with the Sabbath 365 badge
   const roomsTxt = rooms => (rooms.length === 1 ? "Room " : "Rooms ") + rooms.join(rooms.length === 2 ? " & " : ", ");
   const nightsOf = s => { const n = diff(s.checkin, s.checkout); if (n <= 0) return [s.checkin]; const o = []; for (let i = 0; i < n; i++) o.push(add(s.checkin, i)); return o; };
 
@@ -76,7 +77,7 @@
       const s = staysIn(room, today)[0], leaving = D.stays.filter(x => live(x) && x.rooms.includes(room) && x.checkout === today && diff(x.checkin, x.checkout) > 0)[0];
       const next = !s && D.stays.filter(x => live(x) && x.rooms.includes(room) && x.checkin > today).sort((a, b) => a.checkin.localeCompare(b.checkin))[0];
       if (s) return `<button type="button" class="st-room full${s.status === "Blocked" ? " blocked" : ""}" data-stay="${esc(s.id)}">
-          <span class="st-rn">Room ${esc(room)}</span><b>${esc(s.status === "Blocked" ? "Blocked" : s.guest)}</b>
+          <span class="st-rn">Room ${esc(room)}</span><b>${esc(s.status === "Blocked" ? "Blocked" : leaf(s) + s.guest)}</b>
           <span>${s.purpose ? esc(s.purpose) + " · " : ""}${s.checkout === today ? "leaves today" : "until " + esc(short(s.checkout))}</span></button>`;
       return `<button type="button" class="st-room open" data-new="${esc(room)}"><span class="st-rn">Room ${esc(room)}</span><b>Open tonight</b>
           <span>${leaving ? esc(leaving.guest) + " leaves today" : next ? "Next: " + esc(next.guest || "Blocked") + ", " + esc(short(next.checkin)) : "Nothing booked ahead"}</span></button>`;
@@ -94,7 +95,7 @@
         if (b <= a) return "";
         return `<button type="button" class="st-bar${s.status === "Blocked" ? " blocked" : ""}${s.canEdit ? " own" : ""}${cutL ? " cutl" : ""}${cutR ? " cutr" : ""}" data-stay="${esc(s.id)}"
           style="left:${a * W}%;width:${(b - a) * W}%" title="${esc((s.status === "Blocked" ? "Blocked" : s.guest) + (s.purpose ? " (" + s.purpose + ")" : "") + " · " + short(s.checkin) + " → " + short(s.checkout))}">
-          ${esc(s.status === "Blocked" ? "Blocked" + (s.purpose ? " · " + s.purpose : "") : s.guest + (s.purpose ? " (" + s.purpose + ")" : ""))}</button>`;
+          ${esc(s.status === "Blocked" ? "Blocked" + (s.purpose ? " · " + s.purpose : "") : leaf(s) + s.guest + (s.purpose ? " (" + s.purpose + ")" : ""))}</button>`;
       }).join("");
       const cells = days.map(d => `<button type="button" class="st-c${d === today ? " today" : ""}" data-new="${esc(room)}" data-day="${d}" aria-label="Add a stay in Room ${esc(room)} on ${esc(short(d))}"></button>`).join("");
       return `<div class="st-row"><div class="st-rl">Room ${esc(room)}</div><div class="st-track"><div class="st-cells" style="grid-template-columns:repeat(${span},1fr)">${cells}</div>${bars}</div></div>`;
@@ -102,10 +103,16 @@
     // Lists
     const up = D.stays.filter(s => live(s) && s.checkout >= today);
     const past = D.stays.filter(s => s.checkout < today && live(s)).reverse();
-    const off = D.stays.filter(s => !live(s)).reverse();
+    const off = D.stays.filter(s => !live(s) && s.status !== "Requested").reverse();
+    const reqs = D.stays.filter(s => s.status === "Requested");
+    const sab = D.sabbath;
     const list = (view === "up" ? up : view === "past" ? past : off).filter(s => !q || [s.guest, s.purpose, s.host, s.notes, roomsTxt(s.rooms)].join(" ").toLowerCase().includes(q.toLowerCase()));
     root.innerHTML = `
       ${msg ? `<p class="st-msg" role="status">${esc(msg)}</p>` : ""}
+      ${sab ? `<div class="st-sab" role="status"><span class="st-sabn">🌿 <b>${sab.nights}</b> of ${sab.goal}</span><span>Sabbath 365 nights given in ${sab.year}</span><span class="st-meter" aria-hidden="true"><i style="width:${Math.min(100, sab.nights / sab.goal * 100)}%"></i></span></div>` : ""}
+      ${reqs.length ? `<section class="st-reqs" aria-label="Sabbath 365 requests"><h3>Sabbath 365 requests · waiting for you</h3>${reqs.map(s => `<div class="st-req">
+          <div><b>🌿 ${esc(s.guest)}</b><span>${esc(short(s.checkin))} → ${esc(short(s.checkout))} · ${esc(nightsTxt(s))}${s.guests ? " · " + s.guests + " " + (s.guests == 1 ? "person" : "people") : ""}</span>${s.notes ? `<span class="st-rnote">${esc(s.notes)}</span>` : ""}</div>
+          <div class="st-reqb"><button type="button" class="dd-link" data-decline="${esc(s.id)}">Decline</button><button type="button" class="btn btn-forest btn-sm" data-confirm="${esc(s.id)}">Confirm…</button></div></div>`).join("")}</section>` : ""}
       <section class="st-tonight" aria-label="Tonight"><h3>Tonight · ${esc(fmt(today, { weekday: "long", month: "long", day: "numeric" }))}</h3><div class="st-rooms">${tonight}</div></section>
       <section class="st-tl">
         <div class="st-bar-top">
@@ -121,7 +128,7 @@
           <input type="search" id="stQ" placeholder="Search guests, notes, rooms" value="${esc(q)}" aria-label="Search stays"></div>
         ${list.length ? `<div class="st-list">${list.slice(0, 150).map(s => `<button type="button" class="st-item${live(s) ? "" : " off"}" data-stay="${esc(s.id)}">
             <span class="st-chips">${s.rooms.map(r => `<span>${esc(r)}</span>`).join("")}</span>
-            <span class="st-who"><span class="st-line"><b>${esc(s.status === "Blocked" ? "Blocked" : s.guest)}</b>${s.purpose ? ` <span>(${esc(s.purpose)})</span>` : ""}</span>
+            <span class="st-who"><span class="st-line"><b>${esc(s.status === "Blocked" ? "Blocked" : leaf(s) + s.guest)}</b>${s.purpose ? ` <span>(${esc(s.purpose)})</span>` : ""}</span>
               <span class="st-sub">${esc(short(s.checkin))} → ${esc(short(s.checkout))} · ${esc(nightsTxt(s))}${s.guests ? " · " + s.guests + " " + (s.guests == 1 ? "person" : "people") : ""}${s.host ? " · host: " + esc(s.host) : ""}${!live(s) ? " · " + esc(s.status) : ""}</span></span>
           </button>`).join("")}</div>${list.length > 150 ? `<p class="st-hint">Showing 150. Search to find older stays.</p>` : ""}`
           : `<p class="st-empty">${q ? "No stays match that." : view === "up" ? "No upcoming stays." : view === "past" ? "No past stays yet." : "Nothing cancelled."}</p>`}
@@ -130,6 +137,8 @@
     root.querySelectorAll("[data-new]").forEach(b => b.onclick = () => form(null, b.dataset.new, b.dataset.day));
     root.querySelectorAll("[data-stay]").forEach(b => b.onclick = () => details(D.stays.find(s => s.id === b.dataset.stay)));
     root.querySelectorAll("[data-view]").forEach(b => b.onclick = () => { view = b.dataset.view; draw(); });
+    root.querySelectorAll("[data-confirm]").forEach(b => b.onclick = () => form(D.stays.find(s => s.id === b.dataset.confirm)));
+    root.querySelectorAll("[data-decline]").forEach(b => b.onclick = () => decline(D.stays.find(s => s.id === b.dataset.decline)));
     const qi = root.querySelector("#stQ"); qi.oninput = () => { q = qi.value; const pos = qi.selectionStart; draw(); const n = root.querySelector("#stQ"); n.focus(); n.setSelectionRange(pos, pos); };
   }
 
@@ -145,6 +154,7 @@
       <dl class="st-dl">
         <dt>Check-in</dt><dd>${esc(fmt(s.checkin, { weekday: "long", month: "long", day: "numeric" }))}${s.arriving ? ", arriving ~" + esc(t12(s.arriving)) : ""}</dd>
         <dt>Check-out</dt><dd>${esc(fmt(s.checkout, { weekday: "long", month: "long", day: "numeric" }))}${s.leaving ? ", leaving ~" + esc(t12(s.leaving)) : ""}</dd>
+        ${s.sabbath || s.badge ? `<dt>Sabbath 365</dt><dd>${s.sabbath ? "🌿 A Sabbath 365 stay (counts toward the year)" : ""}${s.badge ? (s.sabbath ? "<br>" : "") + "🌿 " + esc(s.guest.split(" ")[0]) + " has the Sabbath 365 badge" : ""}</dd>` : ""}
         <dt>Length</dt><dd>${esc(nightsTxt(s))}${s.guests ? " · " + s.guests + " " + (s.guests == 1 ? "person" : "people") : ""}</dd>
         ${s.host ? `<dt>Host</dt><dd>${esc(s.host)}</dd>` : ""}
         ${s.email || s.phone ? `<dt>Contact</dt><dd>${s.email ? `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>` : ""}${s.email && s.phone ? " · " : ""}${s.phone ? `<a href="tel:${esc(s.phone.replace(/[^\d+]/g, ""))}">${esc(s.phone)}</a>` : ""}</dd>` : ""}
@@ -164,11 +174,21 @@
   }
   function errMsg(box, err) { let el = box.querySelector(".dd-err"); if (!el) { el = document.createElement("p"); el.className = "dd-err"; box.querySelector(".dd-btns").before(el); } el.textContent = err.message + "."; }
 
+  function decline(s) {
+    const box = openDlg(`<h2>Decline ${esc(s.guest.split(" ")[0])}'s dates?</h2><p>${esc(short(s.checkin))} → ${esc(short(s.checkout))}. We'll email ${esc(s.guest.split(" ")[0])} that those dates won't work, with a link to pick others.</p>
+      <label class="dd-f">A note for them <span class="opt">(optional)</span><textarea id="stWhy" maxlength="1000" placeholder="We have a work week then. Could you come the week after?"></textarea></label>
+      <div class="dd-btns"><button class="btn btn-outline btn-sm" data-close>Keep it</button><button class="btn btn-primary btn-sm" id="stYes">Decline</button></div>`);
+    box.querySelector("#stYes").onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try { D = await call({ action: "stayCancel", id: s.id, reason: box.querySelector("#stWhy").value }); keep(D); dlg.close(); draw(D.message); } catch (err) { b.disabled = false; b.textContent = "Try again"; errMsg(box, err); } };
+  }
   function form(s, room, day) {
-    const isNew = !s;
+    const isNew = !s, confirming = !!(s && s.status === "Requested");
     s = s || { rooms: room ? [room] : [], guest: "", purpose: "", checkin: day || D.today, checkout: add(day || D.today, 1), arriving: "", leaving: "", guests: "", email: "", phone: "", host: D.me || "", notes: "", status: "Booked" };
-    const box = openDlg(`<h2>${isNew ? "Add a stay" : "Edit stay"}</h2>
+    const box = openDlg(`<h2>${confirming ? "Confirm " + esc(s.guest.split(" ")[0]) + "'s Sabbath 365 stay" : isNew ? "Add a stay" : "Edit stay"}</h2>
+      ${confirming ? `<p class="st-hint" style="margin:-4px 0 4px">Pick a room (you can adjust the dates). Confirming puts it on the residents' calendar.</p>` : ""}
       <form id="stForm" class="st-form" novalidate>
+        ${D.admin && (D.people || []).length && !confirming ? `<label class="dd-f">Someone in People? <span class="opt">(optional: fills in their name, email and phone, and links the stay to their profile)</span>
+          <input name="who" list="stPeople" placeholder="Start typing a name" autocomplete="off"><datalist id="stPeople">${D.people.map(p => `<option value="${esc(p.name)}">${esc(p.email)}${p.sabbath === "Approved" ? " · 🌿 Sabbath 365" : ""}</option>`).join("")}</datalist></label>` : ""}
         ${D.admin ? `<div class="st-kind" role="radiogroup"><label><input type="radio" name="kind" value="guest"${s.status !== "Blocked" ? " checked" : ""}> A guest</label><label><input type="radio" name="kind" value="block"${s.status === "Blocked" ? " checked" : ""}> Block the room (no guests)</label></div>` : ""}
         <div class="dd-two"><label class="dd-f">Check-in<input type="date" name="checkin" value="${esc(s.checkin)}" required></label>
           <label class="dd-f">Check-out<input type="date" name="checkout" value="${esc(s.checkout)}" required></label></div>
@@ -187,10 +207,11 @@
             <label class="dd-f">Guest phone <span class="opt">(optional)</span><input type="tel" name="phone" maxlength="40" value="${esc(s.phone)}"></label></div>
           <label class="dd-chk st-notify" hidden><input type="checkbox" name="notifyGuest"${isNew ? " checked" : ""}> Email them a confirmation with the dates and arrival info</label>
         </div>
+        <label class="dd-chk g-only"><input type="checkbox" name="sabbath"${s.sabbath ? " checked" : ""}> 🌿 This is a Sabbath 365 stay <span class="opt">(counts toward the ${esc(String((D.sabbath || {}).goal || 365))} nights)</span></label>
         <label class="dd-f">Notes <span class="opt">(optional)</span><textarea name="notes" maxlength="1000" placeholder="Allergic to cats. Bringing a dog.">${esc(s.notes)}</textarea></label>
         <p class="st-hint">Guest email and phone are only shown to admins and whoever booked the stay.</p>
       </form>
-      <div class="dd-btns"><button class="btn btn-outline btn-sm" id="stBack">${isNew ? "Cancel" : "Back"}</button><button class="btn btn-forest btn-sm" id="stGo">${isNew ? "Book it" : "Save"}</button></div>`);
+      <div class="dd-btns"><button class="btn btn-outline btn-sm" id="stBack">${isNew ? "Cancel" : "Back"}</button><button class="btn btn-forest btn-sm" id="stGo">${confirming ? "Confirm the stay" : isNew ? "Book it" : "Save"}</button></div>`);
     const f = box.querySelector("#stForm"), val = n => f.elements[n] ? f.elements[n].value : "";
     const kind = () => { const k = f.querySelector('[name="kind"]:checked'); return k ? k.value : "guest"; };
     const chosen = new Set(s.rooms);
@@ -209,18 +230,24 @@
     };
     f.addEventListener("change", e => { if (e.target.name === "checkin" && val("checkout") < val("checkin")) f.elements.checkout.value = add(val("checkin"), 1); paint(); });
     f.elements.email.addEventListener("input", paint);
+    if (f.elements.who) f.elements.who.addEventListener("change", () => {
+      const p = D.people.find(x => x.name.toLowerCase() === f.elements.who.value.trim().toLowerCase()); if (!p) return;
+      f.elements.guest.value = p.name; f.elements.email.value = p.email; if (p.phone && !f.elements.phone.value) f.elements.phone.value = p.phone;
+      if (p.sabbath === "Approved") f.elements.sabbath.checked = true;
+      paint();
+    });
     paint();
-    box.querySelector("#stBack").onclick = () => isNew ? dlg.close() : details(s);
+    box.querySelector("#stBack").onclick = () => isNew || confirming ? dlg.close() : details(s);
     box.querySelector("#stGo").onclick = async ev => {
       const b = ev.currentTarget, blk = kind() === "block";
       const body = { action: "staySave", id: isNew ? "" : s.id, rooms: [...chosen], blocked: blk, guest: val("guest"), purpose: blk ? val("reason") : val("purpose"),
         checkin: val("checkin"), checkout: val("checkout"), arriving: val("arriving"), leaving: val("leaving"), guests: val("guests"), host: val("host"),
-        email: val("email"), phone: val("phone"), notes: val("notes"), notifyGuest: !!(f.elements.notifyGuest && f.elements.notifyGuest.checked && !box.querySelector(".st-notify").hidden) };
+        email: val("email"), phone: val("phone"), notes: val("notes"), sabbath: !!(f.elements.sabbath && f.elements.sabbath.checked && !blk), notifyGuest: !!(f.elements.notifyGuest && f.elements.notifyGuest.checked && !box.querySelector(".st-notify").hidden) };
       if (!body.rooms.length) return errMsg(box, new Error("Pick at least one room"));
       if (!blk && !body.guest.trim()) { f.elements.guest.focus(); return errMsg(box, new Error("Add the guest's name")); }
       b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
       try { D = await call(body); keep(D); dlg.close(); if (body.checkin < start || body.checkin >= add(start, SPAN())) start = add(body.checkin, -2); draw(D.message); }
-      catch (err) { b.disabled = false; b.textContent = isNew ? "Book it" : "Save"; errMsg(box, err); }
+      catch (err) { b.disabled = false; b.textContent = confirming ? "Confirm the stay" : isNew ? "Book it" : "Save"; errMsg(box, err); }
     };
   }
 
@@ -231,8 +258,9 @@
     const t = ymd(new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())));
     if (!demoD) {
       const mk = (id, rooms, guest, purpose, a, n, extra) => Object.assign({ id, rooms, guest, purpose, checkin: add(t, a), checkout: add(t, a + n), arriving: "", leaving: "", guests: "", email: "", phone: "", host: "", notes: "", status: "Booked", source: "Google Calendar", canEdit: true, bookedBy: "staff@heirloomeastbay.com" }, extra || {});
-      demoD = { ok: true, email: "you@example.com", admin: true, me: "Lindsey Huffman", rooms: ["1", "2", "3", "4"], today: t, checkinTime: "3pm", checkoutTime: "11am", inclCheckout: true, stays: [
-        mk("a", ["1", "2", "3"], "Cansler Family", "", -100, 10), mk("b", ["1", "2", "3", "4"], "Concord Board Retreat", "", -80, 2), mk("c", ["1"], "Sarah", "Sabbath 365", -5, 4),
+      demoD = { ok: true, sabbath: { year: Number(t.slice(0, 4)), nights: 47, goal: 365, waiting: 1 }, people: [{ name: "Jo Rivera", email: "jo@example.com", phone: "510-555-0101", sabbath: "Approved" }, { name: "Kim Lee", email: "kim@example.com", phone: "", sabbath: "" }],
+        email: "you@example.com", admin: true, me: "Lindsey Huffman", rooms: ["1", "2", "3", "4"], today: t, checkinTime: "3pm", checkoutTime: "11am", inclCheckout: true, stays: [
+        mk("a", ["1", "2", "3"], "Cansler Family", "", -100, 10), mk("b", ["1", "2", "3", "4"], "Concord Board Retreat", "", -80, 2), mk("c", ["1"], "Sarah", "Sabbath 365", -5, 4, { sabbath: true, badge: true }), mk("r", [], "Jo Rivera", "Sabbath 365", 12, 7, { status: "Requested", sabbath: true, badge: true, guests: 2, email: "jo@example.com", notes: "Me and my spouse" }),
         mk("d", ["1"], "Chris", "Norcal", 1, 4, { arriving: "16:00", guests: 1, host: "Brit" }), mk("e", ["3"], "Rachel Kuhn", "", -1, 3), mk("f", ["2", "3"], "Kim Lee", "Lindsey's sister", 6, 3, { guests: 3, email: "kim@example.com", source: "Website" }),
         mk("g", ["4"], "", "Painting", 10, 2, { status: "Blocked" }), mk("h", ["1"], "Briana Clarke", "", 18, 20) ] };
     }
@@ -241,11 +269,13 @@
       const busy = demoD.stays.find(x => x.id !== b.id && live(x) && x.rooms.some(r => b.rooms.includes(r)) && nightsOf(x).some(n => nightsOf({ checkin: b.checkin, checkout: b.checkout }).includes(n)));
       if (busy) throw new Error("Room taken then (" + busy.guest + ")");
       const o = { rooms: b.rooms.sort(), guest: b.blocked ? "" : b.guest, purpose: b.purpose, checkin: b.checkin, checkout: b.checkout, arriving: b.arriving, leaving: b.leaving, guests: b.guests, host: b.host, email: b.email, phone: b.phone, notes: b.notes, status: b.blocked ? "Blocked" : "Booked" };
+      o.sabbath = !!b.sabbath; if (b.id && demoD.stays.find(x => x.id === b.id).status === "Requested") { o.status = "Booked"; if (o.sabbath) demoD.sabbath.nights += nightsOf(o).length; }
       if (b.id) Object.assign(demoD.stays.find(x => x.id === b.id), o); else demoD.stays.push(Object.assign({ id: "n" + Date.now(), canEdit: true, source: "Website", bookedBy: "you@example.com" }, o));
       demoD.stays.sort((x, y) => x.checkin.localeCompare(y.checkin));
       return out(b.id ? "Saved. The residents' calendar is updated." : "Booked. It's on the residents' calendar.");
     }
     if (b.action === "staysSync") return { ok: true, changed: 0 };
+    if (b.action === "stayCancel" && demoD.stays.find(x => x.id === b.id).status === "Requested") { demoD.stays.find(x => x.id === b.id).status = "Declined"; return out("Declined. We emailed them."); }
     if (b.action === "stayCancel") { demoD.stays.find(x => x.id === b.id).status = "Cancelled"; return out("Cancelled. It's off the residents' calendar."); }
     return out();
   }

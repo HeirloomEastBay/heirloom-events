@@ -405,3 +405,16 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
   the public calendar: the post is changed to say so. Checked every 10 minutes and right after any edit.
 - Posts made before this version can't be edited. To redo one: delete it in Discord, delete its row on the Discord log
   tab, and the next hourly run posts it again.
+
+### Sabbath 365 (Nov 18)
+
+- `sabbath.html` / `sabbath.js`: the application (no account needed), then each applicant's progress, then for approved
+  people the 🌿 badge and a form to request dates (up to 21 nights; fully booked nights are blocked).
+- Answers go on the new **Sabbath 365 applications** tab. Emails go to "Sabbath 365 applications go to" (staff@).
+- On People, the Sabbath 365 add-on has the steps (Applied → Contacted → Interview scheduled → Background check sent →
+  Approved), interview date / done, the shared one-time background check, notes, and the application answers.
+  Approving needs the interview done and the background check Cleared, and emails them a link to request dates.
+- Date requests wait on the **Guest rooms** page (admins confirm with a room, or decline with a note). Everyone who sees
+  Guest rooms sees "X of 365 Sabbath 365 nights given in <year>". Stays count if ticked "Sabbath 365 stay" or if
+  "Sabbath" is in the purpose (how older stays were written).
+- Admins can pick someone from People when adding a stay; stays tied to an approved person show the 🌿 badge.

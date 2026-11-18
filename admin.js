@@ -558,7 +558,7 @@
   const pstate = { q: "", filter: "", news: false };
   const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"], ["Failed", "Failed"]];
   const NOT_VOL = "N/A (not currently a volunteer)";
-  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["member", "Community members"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["church", "Church family"], ["partner", "Community partners"],
+  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["member", "Community members"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["church", "Church family"], ["sabbathNew", "Sabbath 365 applicants to follow up"], ["sabbath", "Sabbath 365 approved"], ["partner", "Community partners"],
     ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Post without review"], ["removed", "Removed people"]];
   const POWER = t => /power tool|woodshop|machin/i.test(t || "");
   const nameOf = p => ((p.preferred || p.first || "") + " " + (p.last || "")).trim() || p.email;
@@ -653,6 +653,8 @@
       if (f === "Resident" || f === "Volunteer") { if (p.role !== f) return false; }
       else if (f === "New") { if (!(p.role === "Volunteer" && p.status === "New")) return false; }
       else if (f === "member") { if (p.role === "Resident") return false; }
+      else if (f === "sabbath") { if (p.sabbath !== "Approved") return false; }
+      else if (f === "sabbathNew") { if (!p.sabbath || /^(Approved|Not )/.test(p.sabbath)) return false; }
       else if (f && f !== "removed" && !p[f]) return false;
       if (pstate.news && !p.news) return false;
       return !pstate.q || [p.first, p.last, p.email, p.phone].concat(p.others || []).join(" ").toLowerCase().includes(pstate.q.toLowerCase());
@@ -684,7 +686,7 @@
     $("#pcsv").onclick = () => {
       const cols = [["First name", "first"], ["Last name", "last"], ["Preferred name", "preferred"], ["Email", "email"], ["Phone", "phone"], ["Resident or community member", p => p.role === "Resident" ? "Resident" : "Community member"],
         ["Volunteer stage", p => p.role === "Resident" ? "Resident" : p.status], ["Background check", "bg"],
-        ["Trainings", p => p.trainings.join(", ")], ["Church family", p => !!p.church], ["Partner of", "partner"], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Posts without review", "trusted"],
+        ["Trainings", p => p.trainings.join(", ")], ["Church family", p => !!p.church], ["Sabbath 365", "sabbath"], ["Partner of", "partner"], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Posts without review", "trusted"],
         ["Chore slots", "slots"], ["Hours helped", "hours"], ["Last helped", "lastHelped"], ["Events posted", "events"]];
       const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
       const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(p => cols.map(c => cell(typeof c[1] === "function" ? c[1](p) : p[c[1]])).join(","))).join("\r\n");
@@ -700,6 +702,8 @@
     if (p.role === "Volunteer") out.push(`<span class="status${p.status === "New" ? " new" : ""}">${p.status === "Active volunteer" ? "Volunteer" : "Volunteer · " + esc(p.status)}</span>`);
     if (p.partner) out.push(`<span class="status src">Partner · ${esc(p.partner)}</span>`);
     if (p.church && p.role !== "Resident") out.push(`<span class="status">Church family</span>`);
+    if (p.sabbath === "Approved") out.push(`<span class="status sab">🌿 Sabbath 365</span>`);
+    else if (p.sabbath && !/^Not /.test(p.sabbath)) out.push(`<span class="status new">Sabbath 365 · ${esc(p.sabbath)}</span>`);
     return out.join("");
   }
 
@@ -814,6 +818,16 @@
             </div>
           </div>
           <label class="chk"><input type="checkbox" data-k="church"${p.church || res ? " checked" : ""}${res ? " disabled" : ""}> Church family <span class="hint">(sees Supper Church sign-ups and Pastor Brit's notes; people can also turn this on themselves)</span></label>
+          <label class="chk"><input type="checkbox" data-k="issab"${p.sabbath ? " checked" : ""}> 🌿 Sabbath 365 <span class="hint">(free retreat nights in the guest rooms; applying turns this on)</span></label>
+          <div class="sbox subbox" ${p.sabbath ? "" : "hidden"}>
+            <label class="lbl">Step<select data-k="sabStage">${(R.sabStages || []).map(x => `<option${x === (p.sabbath || "Applied") ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+            <div class="two"><label class="lbl">Interview date <span class="opt">(optional)</span><input type="date" data-k="sabDate" value="${esc((/\d{4}-\d{2}-\d{2}/.exec(p.sabInterview || "") || [""])[0])}"></label>
+              <label class="chk" style="align-self:end;min-height:44px"><input type="checkbox" data-k="sabDone"${/^done/i.test(p.sabInterview || "") ? " checked" : ""}> Interview done</label></div>
+            <div class="sbg">${res ? `<p class="hint" style="margin:0">Background check: not needed for residents.</p>` : `<label class="lbl">Background check <span class="opt">(one time, shared with volunteering)</span><select data-k="sbg">${BG.map(([v, l]) => `<option value="${v}"${v === (p.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select></label>`}</div>
+            <label class="lbl">Notes <span class="opt">(only admins see these)</span><textarea data-k="sabNote" maxlength="2000" style="min-height:64px">${esc(p.sabNote || "")}</textarea></label>
+            <p class="hint" style="margin:0">Approving needs the interview done and a cleared background check. When you approve, they get an email with a link to request dates.</p>
+            ${(p.sabStays || []).length ? `<p class="hint" style="margin:0">Stays: ${p.sabStays.map(x => esc(x.checkin + " → " + x.checkout) + " (" + esc(x.status === "Requested" ? "waiting" : x.status.toLowerCase()) + ")").join(" · ")}</p>` : ""}
+          </div>
           <label class="chk"><input type="checkbox" data-k="ispartner"${p.partner ? " checked" : ""}> Community partner <span class="hint">(posts events without review, can reserve any venue)</span></label>
           <div class="pbox subbox" ${p.partner ? "" : "hidden"}>
             <label class="lbl">Which partner?<select data-k="partner"><option value="">Choose…</option>${(R.partners || []).concat(p.partner && !(R.partners || []).includes(p.partner) ? [p.partner] : []).map(n => `<option${n === p.partner ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="__new">＋ Add a new partner…</option></select></label>
@@ -847,7 +861,11 @@
         ${!R.signups.length && !R.coverage.length && !R.posted.length ? `<p class="hint" style="margin:0"><i>Nothing yet.</i></p>` : ""}
       </section>
 
-      ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section class="pcard">
+      ${p.sabApp ? `<section class="pcard wide"><h3>🌿 Sabbath 365 application <span class="hint" style="font-weight:400">· ${esc(String(p.sabApp.submitted).slice(0, 10))}${p.sabApp.count > 1 ? " (applied " + p.sabApp.count + " times)" : ""}</span></h3>
+          ${[["Why they'd like to stay", p.sabApp.why], ["How they heard", p.sabApp.heard], ["Nights", p.sabApp.nights], ["Staying with them", p.sabApp.who], ["Preferred dates", p.sabApp.dates], ["Pastor or minister", p.sabApp.pastor],
+            ["Nonprofit or community leader", p.sabApp.leader], ["Marginalized groups", p.sabApp.marginalized], ["Anything else", p.sabApp.more], ["Phone", p.sabApp.phone]].filter(x => x[1]).map(([k, v]) => `<p><span class="lbl">${esc(k)}</span><span class="cm">${esc(v)}</span></p>`).join("")}
+          <p class="hint privacy" style="margin:0">🔒 Only admins see these answers.</p></section>` : ""}
+${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section class="pcard">
         <h3>From their profile</h3>
         ${p.birthday ? `<p><span class="lbl">Birthday</span>${esc(dateLong(p.birthday))}</p>` : ""}
         ${p.dietary ? `<p><span class="lbl">Dietary restrictions</span>${esc(p.dietary)}</p>` : ""}
@@ -896,6 +914,8 @@
       f.querySelector(".vbox").hidden = !on; f.querySelector(".vfields").hidden = !on; f.querySelector(".na-note").hidden = true;
     });
     q("bg").addEventListener("change", () => { f.querySelector(".bgnote").hidden = q("bg").value !== "Failed" && !q("bgNote").value; });
+    q("issab").addEventListener("change", () => { f.querySelector(".sbox").hidden = !q("issab").checked; });
+    if (q("sbg") && q("bg")) { q("sbg").addEventListener("change", () => { q("bg").value = q("sbg").value; q("bg").dispatchEvent(new Event("change")); }); q("bg").addEventListener("change", () => { q("sbg").value = q("bg").value; }); }
     q("ispartner").addEventListener("change", () => { f.querySelector(".pbox").hidden = !q("ispartner").checked; if (!q("ispartner").checked) q("partner").value = ""; });
     q("partner").addEventListener("change", () => {
       if (q("partner").value !== "__new") return;
@@ -930,9 +950,10 @@
       const resident = q("resident").checked, st = q("stage").value;
       const body = { action: "adminPersonSave", email: p.email, first: q("first").value, last: q("last").value, preferred: q("preferred").value, pronouns: q("pronouns").value, phone: q("phone").value, address: q("address").value, city: q("city").value, state: q("state").value, zip: q("zip").value,
         emergency: q("emergency").value, emergencyPhone: q("emergencyPhone").value, news: q("news").checked, notes: q("notes").value, others: q("others").value,
-        role: resident ? "Resident" : st === NOT_VOL || !q("isvol").checked ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("bg").value, bgNote: q("bgNote").value,
+        role: resident ? "Resident" : st === NOT_VOL || !q("isvol").checked ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("isvol").checked || !q("sbg") ? q("bg").value : q("sbg").value, bgNote: q("bgNote").value,
         trainings: [...f.querySelectorAll(resident ? '[data-k="trnR"]:checked' : '[data-k="trn"]:checked')].map(c => c.value),
         church: resident || q("church").checked, partner: q("ispartner").checked ? q("partner").value : "",
+        sabbath: q("issab").checked ? q("sabStage").value : "", sabInterview: q("sabDone").checked ? "Done " + (q("sabDate").value || new Date().toISOString().slice(0, 10)) : q("sabDate").value, sabNote: q("sabNote").value,
         trusted: resident ? undefined : q("trusted").checked, approver: q("approver").checked, admin };
       save.disabled = true; save.innerHTML = `<span class="spinner"></span> Saving…`;
       try {
@@ -1036,6 +1057,8 @@
         base({ email: session.email, first: "You", role: "Resident", status: "Resident", admin: true, approver: true, trusted: true, hours: 31.5, shifts: 30, lastHelped: d(-2), lastText: "Nov 8", slots: 1, events: 6, firstHelped: d(-200), firstText: "Apr 24" }),
         base({ email: "ana@example.com", first: "Ana", last: "Diaz", phone: "510-555-0142", role: "Volunteer", status: "Active volunteer", bg: "Cleared", trainings: ["Animal feeding"], news: true, hours: 12, shifts: 11, lastHelped: d(-6), lastText: "Nov 4", slots: 1,
           interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", emergency: "Luis Diaz (husband) 510-555-0199", firstHelped: d(-80), firstText: "Aug 22" }),
+        base({ email: "jo@example.com", first: "Jo", last: "Rivera", role: "", status: "", sabbath: "Interview scheduled", bg: "Sent", sabInterview: "2026-12-02", sabNote: "Lovely first call.",
+          sabApp: { submitted: "2026-11-15 10:02", why: "Ten years of youth ministry and I'm running on empty. I'd love a week of quiet with the animals and the hills.", heard: "A Friend", nights: "7", who: "Just me", dates: "January, any week", pastor: "Yes", leader: "I lead a youth nonprofit in Oakland", marginalized: "Yes", more: "", phone: "510-555-0101", count: 1 }, sabStays: [] }),
         base({ email: "marcus@example.com", first: "Marcus", last: "Lee", role: "Volunteer", status: "Contacted", interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", notes: "Coming to the Dec workday" }),
         base({ email: "priya@example.com", first: "Priya", last: "Shah", role: "Volunteer", status: "New", news: true, interests: "I'm not sure", heard: "Social Media", submitted: d(-1) }),
         base({ email: "nik@heirloomeastbay.com", first: "Nik", last: "R", role: "Resident", status: "Resident", trusted: true, events: 3, hours: 4, shifts: 4, lastHelped: d(-9), lastText: "Nov 1" }),
@@ -1049,7 +1072,7 @@
       const p = find(e);
       P.slots.forEach(s => { const v = find(s.volunteer); s.who = s.volunteer ? (v ? v.first : s.volunteer) : ""; });
       P.people.forEach(x => x.slots = P.slots.filter(s => s.volunteer === x.email).length);
-      return JSON.parse(JSON.stringify({ ok: true, me: session.email, person: p, slots: P.slots, statuses: P.statuses, trainings: P.trainings,
+      return JSON.parse(JSON.stringify({ ok: true, me: session.email, person: p, slots: P.slots, statuses: P.statuses, trainings: P.trainings, sabStages: ["Applied", "Contacted", "Interview scheduled", "Background check sent", "Approved", "Not approved", "Not right now"],
         signups: e === "ana@example.com" ? [{ title: "Fence workday", when: "Nov 22", status: "Going", past: false }, { title: "Fall cleanup", when: "Oct 18", status: "Going", past: true }] : [],
         coverage: e === "ana@example.com" ? [{ chore: "AM animal chores", when: "Nov 3", status: "Covered", asked: true, other: "Nik", past: true }] : [],
         posted: p.events ? [{ title: "Knit & Sip on the Porch", when: "Nov 20", status: "Pending" }] : [] }));
