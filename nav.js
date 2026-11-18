@@ -12,7 +12,7 @@
     const signed = !!(session && session.token);
     const r = signed && roles && roles.email === session.email ? roles : {};
     const links = signed
-      ? [["mine.html?mine=1", "My events", "Events"], (r.volunteer || r.admin) && ["portal.html", "Volunteer portal", "Volunteer"], (r.church || r.resident) && ["church.html", "Church family", "Church"], r.sabbath && !/^Not /.test(r.sabbath) && ["sabbath.html", "Sabbath 365", "Sabbath"], r.admin ? ["admin.html", "Admin panel", "Admin"] : r.resident && ["admin.html", "Resident panel", "Panel"], ["profile.html", "Profile"]].filter(Boolean)
+      ? [["mine.html?mine=1", "My events", "Events"], (r.volunteer || r.admin) && ["portal.html", "Volunteer portal", "Volunteer"], (r.church || r.resident) && ["church.html", "Church family", "Church"], r.sabbath && !/^Not /.test(r.sabbath) && ["sabbath.html", "Sabbath 365", "Sabbath"], r.residency && !r.resident && !/^Not /.test(r.residency) && ["residency.html", "Living at Heirloom", "Residency"], r.admin ? ["admin.html", "Admin panel", "Admin"] : r.resident && ["admin.html", "Resident panel", "Panel"], ["profile.html", "Profile"]].filter(Boolean)
       : [["mine.html", "Log in"]];
     nav.innerHTML = links.map(([href, label, short]) => {
       const on = here === href.split("?")[0];

@@ -558,7 +558,7 @@
   const pstate = { q: "", filter: "", news: false };
   const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"], ["Failed", "Failed"]];
   const NOT_VOL = "N/A (not currently a volunteer)";
-  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["member", "Community members"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["church", "Church family"], ["sabbathNew", "Sabbath 365 applicants to follow up"], ["sabbath", "Sabbath 365 approved"], ["partner", "Community partners"],
+  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["member", "Community members"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["church", "Church family"], ["residency", "Applying to live here"], ["sabbathNew", "Sabbath 365 applicants to follow up"], ["sabbath", "Sabbath 365 approved"], ["partner", "Community partners"],
     ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Post without review"], ["removed", "Removed people"]];
   const POWER = t => /power tool|woodshop|machin/i.test(t || "");
   const nameOf = p => ((p.preferred || p.first || "") + " " + (p.last || "")).trim() || p.email;
@@ -654,6 +654,7 @@
       else if (f === "New") { if (!(p.role === "Volunteer" && p.status === "New")) return false; }
       else if (f === "member") { if (p.role === "Resident") return false; }
       else if (f === "sabbath") { if (p.sabbath !== "Approved") return false; }
+      else if (f === "residency") { if (!p.residency || p.role === "Resident" || /^Not /.test(p.residency)) return false; }
       else if (f === "sabbathNew") { if (!p.sabbath || /^(Approved|Not )/.test(p.sabbath)) return false; }
       else if (f && f !== "removed" && !p[f]) return false;
       if (pstate.news && !p.news) return false;
@@ -686,7 +687,7 @@
     $("#pcsv").onclick = () => {
       const cols = [["First name", "first"], ["Last name", "last"], ["Preferred name", "preferred"], ["Email", "email"], ["Phone", "phone"], ["Resident or community member", p => p.role === "Resident" ? "Resident" : "Community member"],
         ["Volunteer stage", p => p.role === "Resident" ? "Resident" : p.status], ["Background check", "bg"],
-        ["Trainings", p => p.trainings.join(", ")], ["Church family", p => !!p.church], ["Sabbath 365", "sabbath"], ["Partner of", "partner"], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Posts without review", "trusted"],
+        ["Trainings", p => p.trainings.join(", ")], ["Church family", p => !!p.church], ["Sabbath 365", "sabbath"], ["Residency", "residency"], ["Partner of", "partner"], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Posts without review", "trusted"],
         ["Chore slots", "slots"], ["Hours helped", "hours"], ["Last helped", "lastHelped"], ["Events posted", "events"]];
       const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
       const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(p => cols.map(c => cell(typeof c[1] === "function" ? c[1](p) : p[c[1]])).join(","))).join("\r\n");
@@ -702,6 +703,7 @@
     if (p.role === "Volunteer") out.push(`<span class="status${p.status === "New" ? " new" : ""}">${p.status === "Active volunteer" ? "Volunteer" : "Volunteer · " + esc(p.status)}</span>`);
     if (p.partner) out.push(`<span class="status src">Partner · ${esc(p.partner)}</span>`);
     if (p.church && p.role !== "Resident") out.push(`<span class="status">Church family</span>`);
+    if (p.residency && p.role !== "Resident" && !/^Not /.test(p.residency)) out.push(`<span class="status new">Residency · ${esc(p.residency)}</span>`);
     if (p.sabbath === "Approved") out.push(`<span class="status sab">🌿 Sabbath 365</span>`);
     else if (p.sabbath && !/^Not /.test(p.sabbath)) out.push(`<span class="status new">Sabbath 365 · ${esc(p.sabbath)}</span>`);
     return out.join("");
@@ -828,6 +830,19 @@
             <p class="hint" style="margin:0">Approving needs the interview done and a cleared background check. When you approve, they get an email with a link to request dates.</p>
             ${(p.sabStays || []).length ? `<p class="hint" style="margin:0">Stays: ${p.sabStays.map(x => esc(x.checkin + " → " + x.checkout) + " (" + esc(x.status === "Requested" ? "waiting" : x.status.toLowerCase()) + ")").join(" · ")}</p>` : ""}
           </div>
+          <label class="chk"><input type="checkbox" data-k="isres"${p.residency || p.space ? " checked" : ""}> 🏡 Residency <span class="hint">(applying to live here, or where a resident lives; the interest form turns this on)</span></label>
+          <div class="rsbox subbox" ${p.residency || p.space ? "" : "hidden"}>
+            <label class="lbl">Step<select data-k="resStage"><option value="">—</option>${(R.resStages || []).map(x => `<option${x === p.residency ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+            <p class="hint rs-share" style="margin:-4px 0 0">${/Interview with residents|feedback week|Approved/.test(p.residency || "") ? "👀 Shared with residents (without employment, rent and medical answers)." : "Only Brit and the admins can see the application at this step."}</p>
+            <label class="lbl rs-fb" ${p.residency === "Resident feedback week" ? "" : "hidden"}>Feedback until<input type="date" data-k="feedbackUntil" value="${esc(p.feedbackUntil || "")}"></label>
+            <span class="lbl">Checklist</span>
+            <div class="trn">${(R.resChecklist || []).map(t => `<label><input type="checkbox" data-k="rck" value="${esc(t)}"${(p.resChecklist || []).includes(t) || (t === "Background check" && p.bg === "Cleared") ? " checked" : ""}>${esc(t)}</label>`).join("")}</div>
+            <div class="two"><label class="lbl">Move-in date<input type="date" data-k="moveIn" value="${esc(p.moveIn || "")}"></label>
+              <label class="lbl">Living space<input data-k="space" list="spaces" maxlength="80" value="${esc(p.space || "")}" placeholder="Main house room 2"><datalist id="spaces">${(R.spaces || []).map(x => `<option value="${esc(x)}">`).join("")}</datalist></label></div>
+            <label class="chk rs-block" ${/guest room/i.test(p.space || "") ? "" : "hidden"}><input type="checkbox" data-k="occupies"${p.occupies ? " checked" : ""}> <span><b>Occupied</b>: they live in this guest room, so it's off the guest booking list until this is unticked</span></label>
+            <label class="lbl">Notes <span class="opt">(only admins see these)</span><textarea data-k="resNote" maxlength="3000" style="min-height:64px">${esc(p.resNote || "")}</textarea></label>
+            <p class="hint" style="margin:0">When Brit says yes: set the move-in date and living space, then switch on <b>Resident</b> above.</p>
+          </div>
           <label class="chk"><input type="checkbox" data-k="ispartner"${p.partner ? " checked" : ""}> Community partner <span class="hint">(posts events without review, can reserve any venue)</span></label>
           <div class="pbox subbox" ${p.partner ? "" : "hidden"}>
             <label class="lbl">Which partner?<select data-k="partner"><option value="">Choose…</option>${(R.partners || []).concat(p.partner && !(R.partners || []).includes(p.partner) ? [p.partner] : []).map(n => `<option${n === p.partner ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="__new">＋ Add a new partner…</option></select></label>
@@ -865,7 +880,12 @@
           ${[["Why they'd like to stay", p.sabApp.why], ["How they heard", p.sabApp.heard], ["Nights", p.sabApp.nights], ["Staying with them", p.sabApp.who], ["Preferred dates", p.sabApp.dates], ["Pastor or minister", p.sabApp.pastor],
             ["Nonprofit or community leader", p.sabApp.leader], ["Marginalized groups", p.sabApp.marginalized], ["Anything else", p.sabApp.more], ["Phone", p.sabApp.phone]].filter(x => x[1]).map(([k, v]) => `<p><span class="lbl">${esc(k)}</span><span class="cm">${esc(v)}</span></p>`).join("")}
           <p class="hint privacy" style="margin:0">🔒 Only admins see these answers.</p></section>` : ""}
-${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section class="pcard">
+${(p.feedback || []).length ? `<section class="pcard wide"><h3>Resident feedback <span class="hint" style="font-weight:400">· ${p.feedback.length} · only admins see this</span></h3>
+          ${p.feedback.map(x => `<p><span class="lbl">${esc(x.from)} · ${esc(String(x.when).slice(0, 10))}${x.leaning ? ` · <b>${esc(x.leaning)}</b>` : ""}</span><span class="cm">${esc(x.comment || "")}</span></p>`).join("")}</section>` : ""}
+        ${p.resApp ? `<section class="pcard wide"><h3>🏡 Resident interest form <span class="hint" style="font-weight:400">· ${esc(String(p.resApp["Submitted"] || "").slice(0, 10))}${p.resApp.count > 1 ? " (sent " + p.resApp.count + " times)" : ""}</span></h3>
+          ${Object.keys(p.resApp).filter(k => !/^(ID|Submitted|Email|count|Certified|Background check consent|Signed on)$/.test(k) && p.resApp[k]).map(k => `<p><span class="lbl">${esc(k)}</span><span class="cm">${esc(p.resApp[k])}</span></p>`).join("")}
+          <p class="hint privacy" style="margin:0">Signed ${esc(p.resApp["Signed on"] || "")} · certified true · agreed to the background check and child safety courses.</p></section>` : ""}
+        ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section class="pcard">
         <h3>From their profile</h3>
         ${p.birthday ? `<p><span class="lbl">Birthday</span>${esc(dateLong(p.birthday))}</p>` : ""}
         ${p.dietary ? `<p><span class="lbl">Dietary restrictions</span>${esc(p.dietary)}</p>` : ""}
@@ -915,6 +935,11 @@ ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section clas
     });
     q("bg").addEventListener("change", () => { f.querySelector(".bgnote").hidden = q("bg").value !== "Failed" && !q("bgNote").value; });
     q("issab").addEventListener("change", () => { f.querySelector(".sbox").hidden = !q("issab").checked; });
+    q("isres").addEventListener("change", () => { f.querySelector(".rsbox").hidden = !q("isres").checked; });
+    q("resStage").addEventListener("change", () => { const v = q("resStage").value; f.querySelector(".rs-fb").hidden = v !== "Resident feedback week";
+      f.querySelector(".rs-share").textContent = /Interview with residents|feedback week|Approved/.test(v) ? "👀 Shared with residents (without employment, rent and medical answers)." : "Only Brit and the admins can see the application at this step.";
+      if (v === "Resident feedback week" && !q("feedbackUntil").value) { const d = new Date(Date.now() + 7 * 86400000); q("feedbackUntil").value = d.toISOString().slice(0, 10); flash("Saving opens a one-week feedback window and emails the residents."); } });
+    q("space").addEventListener("input", () => { f.querySelector(".rs-block").hidden = !/guest room/i.test(q("space").value); });
     if (q("sbg") && q("bg")) { q("sbg").addEventListener("change", () => { q("bg").value = q("sbg").value; q("bg").dispatchEvent(new Event("change")); }); q("bg").addEventListener("change", () => { q("sbg").value = q("bg").value; }); }
     q("ispartner").addEventListener("change", () => { f.querySelector(".pbox").hidden = !q("ispartner").checked; if (!q("ispartner").checked) q("partner").value = ""; });
     q("partner").addEventListener("change", () => {
@@ -953,6 +978,8 @@ ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section clas
         role: resident ? "Resident" : st === NOT_VOL || !q("isvol").checked ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("isvol").checked || !q("sbg") ? q("bg").value : q("sbg").value, bgNote: q("bgNote").value,
         trainings: [...f.querySelectorAll(resident ? '[data-k="trnR"]:checked' : '[data-k="trn"]:checked')].map(c => c.value),
         church: resident || q("church").checked, partner: q("ispartner").checked ? q("partner").value : "",
+        residency: q("isres").checked ? q("resStage").value : "", resChecklist: [...f.querySelectorAll('[data-k="rck"]:checked')].map(c => c.value), resNote: q("resNote").value,
+        feedbackUntil: q("feedbackUntil").value, moveIn: q("moveIn").value, space: q("space").value, occupies: /guest room/i.test(q("space").value) ? q("occupies").checked : undefined,
         sabbath: q("issab").checked ? q("sabStage").value : "", sabInterview: q("sabDone").checked ? "Done " + (q("sabDate").value || new Date().toISOString().slice(0, 10)) : q("sabDate").value, sabNote: q("sabNote").value,
         trusted: resident ? undefined : q("trusted").checked, approver: q("approver").checked, admin };
       save.disabled = true; save.innerHTML = `<span class="spinner"></span> Saving…`;
@@ -1073,6 +1100,7 @@ ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section clas
       P.slots.forEach(s => { const v = find(s.volunteer); s.who = s.volunteer ? (v ? v.first : s.volunteer) : ""; });
       P.people.forEach(x => x.slots = P.slots.filter(s => s.volunteer === x.email).length);
       return JSON.parse(JSON.stringify({ ok: true, me: session.email, person: p, slots: P.slots, statuses: P.statuses, trainings: P.trainings, sabStages: ["Applied", "Contacted", "Interview scheduled", "Background check sent", "Approved", "Not approved", "Not right now"],
+        resStages: ["Applied", "Brit reviewing", "One-on-one with Brit", "Interview with residents", "Resident feedback week", "Approved (moving in)", "Waitlist", "Not right now", "Not approved"], resChecklist: ["Visited as a guest", "Background check", "Ministry Safe class", "Liability release & policies signed", "Photo ID copy", "Income confirmed", "Lease signed"], spaces: ["Main house room 1", "Main house room 2", "Main house room 3", "Guest room 4", "Loft", "Alcove"],
         signups: e === "ana@example.com" ? [{ title: "Fence workday", when: "Nov 22", status: "Going", past: false }, { title: "Fall cleanup", when: "Oct 18", status: "Going", past: true }] : [],
         coverage: e === "ana@example.com" ? [{ chore: "AM animal chores", when: "Nov 3", status: "Covered", asked: true, other: "Nik", past: true }] : [],
         posted: p.events ? [{ title: "Knit & Sip on the Porch", when: "Nov 20", status: "Pending" }] : [] }));

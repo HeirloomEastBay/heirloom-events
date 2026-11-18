@@ -418,3 +418,27 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
   Guest rooms sees "X of 365 Sabbath 365 nights given in <year>". Stays count if ticked "Sabbath 365 stay" or if
   "Sabbath" is in the purpose (how older stays were written).
 - Admins can pick someone from People when adding a stay; stays tied to an approved person show the 🌿 badge.
+
+### Living at Heirloom: residency (Nov 18b)
+
+- `residency.html` / `residency.js`: the 2026 Resident Interest Form & FAQ as a page (no account needed). Answers go on
+  the **Resident applications** tab; only "Resident applications go to" (staff@, Brit) is emailed. Applicants can sign
+  in to see where they are in the process.
+- On People, the 🏡 Residency add-on has Brit's steps (Applied → Brit reviewing → One-on-one with Brit → Interview with
+  residents → Resident feedback week → Approved (moving in), or Waitlist / Not right now / Not approved), a checklist
+  (guest visit, background check, Ministry Safe, policies signed, ID, income, lease), move-in date, living space, lease and trial end.
+- From "Interview with residents" on, residents see the application on residency.html (without employment, rent plan,
+  phone, medical and children answers). Moving someone to "Resident feedback week" opens a 7-day window and emails the
+  residents; their feedback goes on the **Resident feedback** tab and shows only to admins, on the person's profile.
+- Switching an approved applicant to Resident starts a 3-month trial (from move-in). staff@ gets a reminder 2 weeks before it ends.
+- A resident living in a guest room: tick "Block that guest room" and it's blocked on Guest rooms for the trial.
+  Blocking any room on Guest rooms also has quick 1 / 3 / 6 / 12-month buttons.
+- Living spaces are the Settings line "Living spaces (for residents)".
+
+## Residency changes (Nov 18, 2026, round 2)
+
+- **Public form link:** `residency.html?apply` always opens the about section and the interest form, even for someone signed in. Point the website's "apply" button here.
+- **Emailed copy:** applicants get a full copy of their answers, plus an "Edit my form" link (signed, no account needed). Edits update the same row (column "Updated"), Brit gets a short note, and the applicant gets a fresh copy. The link stops working once the step is "Approved (moving in)" or "Not approved".
+- **No 3-month trial:** switching someone to Resident no longer sets a lease, trial end date or reminder.
+- **Occupied guest rooms:** Settings → "Occupied guest rooms (room: who lives there)", e.g. `4: Lisa Sharpe`. An occupied room can't be booked on any date until it's unticked. Admins change it on the Guest rooms page (tap the room's card, or "A resident lives in a guest room?") or with the Occupied tick on a resident's People profile when their living space is a guest room.
+- **Living spaces:** Main house rooms 1-3, Guest room 4, Loft, Alcove. Set-up adds Loft and Alcove and puts Lisa in Guest room 4.

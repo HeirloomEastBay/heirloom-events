@@ -67,6 +67,9 @@
     }
   }
 
+  // Guest rooms a resident lives in: blocked with no end date (room → who lives there)
+  const occ = r => (D.occupied || {})[r];
+  const isOcc = r => occ(r) !== undefined;
   function staysIn(room, day) { return D.stays.filter(s => live(s) && s.rooms.includes(room) && nightsOf(s).includes(day)); }
 
   function draw(msg) {
@@ -74,6 +77,8 @@
     const days = []; for (let i = 0; i < span; i++) days.push(add(start, i));
     // Tonight
     const tonight = D.rooms.map(room => {
+      if (isOcc(room)) return `<${D.admin ? `button type="button" data-occ="${esc(room)}"` : "div"} class="st-room full blocked occ"><span class="st-rn">Room ${esc(room)}</span><b>Occupied</b>
+          <span>${occ(room) ? esc(occ(room)) + " lives here" : "A resident lives here"}${D.admin ? " · tap to change" : ""}</span></${D.admin ? "button" : "div"}>`;
       const s = staysIn(room, today)[0], leaving = D.stays.filter(x => live(x) && x.rooms.includes(room) && x.checkout === today && diff(x.checkin, x.checkout) > 0)[0];
       const next = !s && D.stays.filter(x => live(x) && x.rooms.includes(room) && x.checkin > today).sort((a, b) => a.checkin.localeCompare(b.checkin))[0];
       if (s) return `<button type="button" class="st-room full${s.status === "Blocked" ? " blocked" : ""}" data-stay="${esc(s.id)}">
@@ -87,6 +92,7 @@
     const head = days.map(d => { const dt = parse(d), wk = dt.getUTCDay(); return `<div class="st-d${d === today ? " today" : ""}${wk === 0 || wk === 6 ? " wknd" : ""}">
       <span>${fmt(d, { weekday: "narrow" })}</span><b>${dt.getUTCDate()}</b>${dt.getUTCDate() === 1 || d === start ? `<i>${fmt(d, { month: "short" })}</i>` : ""}</div>`; }).join("");
     const rows = D.rooms.map(room => {
+      if (isOcc(room)) return `<div class="st-row"><div class="st-rl">Room ${esc(room)}</div><div class="st-track"><div class="st-occbar">Occupied${occ(room) ? " · " + esc(occ(room)) + " lives here" : ""}</div></div></div>`;
       const bars = D.stays.filter(s => live(s) && s.rooms.includes(room) && s.checkout >= start && s.checkin < end).map(s => {
         const n = Math.max(0, diff(s.checkin, s.checkout));
         let a = diff(start, s.checkin) + (n ? .5 : .1), b = n ? a + n : a + .8;
@@ -121,7 +127,7 @@
           <button type="button" class="btn btn-primary btn-sm" data-new="">+ Add a stay</button>
         </div>
         <div class="st-grid"><div class="st-row st-headrow"><div class="st-rl"></div><div class="st-days" style="grid-template-columns:repeat(${span},1fr)">${head}</div></div>${rows}</div>
-        <p class="st-hint">Tap an empty day to add a stay there, or a name to see the stay. Check-in ${esc(D.checkinTime)} · check-out ${esc(D.checkoutTime)}.</p>
+        <p class="st-hint">Tap an empty day to add a stay there, or a name to see the stay. Check-in ${esc(D.checkinTime)} · check-out ${esc(D.checkoutTime)}.${D.admin ? ` <button type="button" class="dd-link" id="stOcc">A resident lives in a guest room?</button>` : ""}</p>
       </section>
       <section class="st-lists">
         <div class="st-ltop"><div class="mtabs" role="tablist">${[["up", "Upcoming", up.length], ["past", "Past stays", past.length], ["off", "Cancelled", off.length]].map(([k, l, n]) => `<button type="button" role="tab" data-view="${k}" aria-selected="${view === k}">${l}<span class="n">${n}</span></button>`).join("")}</div>
@@ -133,6 +139,8 @@
           </button>`).join("")}</div>${list.length > 150 ? `<p class="st-hint">Showing 150. Search to find older stays.</p>` : ""}`
           : `<p class="st-empty">${q ? "No stays match that." : view === "up" ? "No upcoming stays." : view === "past" ? "No past stays yet." : "Nothing cancelled."}</p>`}
       </section>`;
+    root.querySelectorAll("[data-occ]").forEach(b => b.onclick = () => occupy(b.dataset.occ));
+    const oc = root.querySelector("#stOcc"); if (oc) oc.onclick = () => occupy("");
     root.querySelectorAll("[data-move]").forEach(b => b.onclick = () => { const m = +b.dataset.move; start = m ? add(start, m * Math.round(SPAN() / 2)) : add(D.today, -2); draw(); });
     root.querySelectorAll("[data-new]").forEach(b => b.onclick = () => form(null, b.dataset.new, b.dataset.day));
     root.querySelectorAll("[data-stay]").forEach(b => b.onclick = () => details(D.stays.find(s => s.id === b.dataset.stay)));
@@ -197,6 +205,7 @@
           <label class="dd-f">Guest name<input name="guest" maxlength="80" value="${esc(s.guest)}" placeholder="Sarah Jones, or The Cansler family"></label>
           <label class="dd-f">Who they are / why <span class="opt">(optional, shows in parentheses)</span><input name="purpose" maxlength="80" value="${esc(s.purpose)}" placeholder="Sabbath 365, Lindsey's sister"></label>
         </div>
+        <p class="b-only st-hint" style="margin:0">For a room a resident lives in, use <b>Occupied</b> on the room's card instead. It has no end date.</p>
         <label class="dd-f b-only">Reason <span class="opt">(optional)</span><input name="reason" maxlength="80" value="${esc(s.status === "Blocked" ? s.purpose : "")}" placeholder="Painting, deep clean"></label>
         <div class="g-only">
           <div class="dd-two"><label class="dd-f">Arriving around <span class="opt">(optional)</span><input type="time" name="arriving" value="${esc(s.arriving)}"></label>
@@ -219,13 +228,14 @@
       const ci = val("checkin"), co = val("checkout") || ci;
       const nights = ci ? nightsOf({ checkin: ci, checkout: co < ci ? ci : co }) : [];
       box.querySelector("#stPick").innerHTML = D.rooms.map(r => {
-        const taken = D.stays.find(x => x.id !== s.id && live(x) && x.rooms.includes(r) && nightsOf(x).some(n => nights.includes(n)));
+        const lived = isOcc(r) && !(s.id && s.rooms.includes(r));
+        const taken = lived || D.stays.find(x => x.id !== s.id && live(x) && x.rooms.includes(r) && nightsOf(x).some(n => nights.includes(n)));
         if (taken && chosen.has(r)) chosen.delete(r);
-        return `<label class="${taken ? "taken" : ""}"><input type="checkbox" value="${esc(r)}"${chosen.has(r) ? " checked" : ""}${taken ? " disabled" : ""}><b>Room ${esc(r)}</b><span>${taken ? "Taken: " + esc(taken.status === "Blocked" ? "blocked" : taken.guest) : "Open"}</span></label>`;
+        return `<label class="${taken ? "taken" : ""}"><input type="checkbox" value="${esc(r)}"${chosen.has(r) ? " checked" : ""}${taken ? " disabled" : ""}><b>Room ${esc(r)}</b><span>${lived ? "Occupied" + (occ(r) ? ": " + esc(occ(r)) : "") : taken ? "Taken: " + esc(taken.status === "Blocked" ? "blocked" : taken.guest) : "Open"}</span></label>`;
       }).join("");
       box.querySelectorAll("#stPick input").forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); });
       const blk = kind() === "block";
-      box.querySelectorAll(".g-only").forEach(x => x.hidden = blk); box.querySelector(".b-only").hidden = !blk;
+      box.querySelectorAll(".g-only").forEach(x => x.hidden = blk); box.querySelectorAll(".b-only").forEach(x => x.hidden = !blk);
       box.querySelector(".st-notify").hidden = blk || !/\S+@\S+\.\S+/.test(val("email"));
     };
     f.addEventListener("change", e => { if (e.target.name === "checkin" && val("checkout") < val("checkin")) f.elements.checkout.value = add(val("checkin"), 1); paint(); });
@@ -251,6 +261,29 @@
     };
   }
 
+  /* ---------- Occupied (admins): a resident lives in a guest room ---------- */
+  function occupy(room) {
+    const box = openDlg(`<h2>${room ? "Room " + esc(room) : "A resident lives in a guest room"}</h2>
+      <p class="st-hint" style="margin:-4px 0 4px">An occupied room comes off the guest booking list with no end date, until someone unticks it here.</p>
+      <form id="ocForm" class="st-form" novalidate>
+        ${room ? "" : `<label class="dd-f">Which room<select name="room">${D.rooms.map(r => `<option value="${esc(r)}"${isOcc(r) ? " selected" : ""}>Room ${esc(r)}${isOcc(r) ? " (occupied)" : ""}</option>`).join("")}</select></label>`}
+        <label class="dd-chk"><input type="checkbox" name="on"> <b>Occupied</b>: a resident lives here</label>
+        <label class="dd-f">Who lives there <span class="opt">(optional, everyone on this page sees it)</span><input name="who" maxlength="60" placeholder="Lisa Sharpe"></label>
+      </form>
+      <div class="dd-btns"><button class="btn btn-outline btn-sm" data-close>Cancel</button><button class="btn btn-forest btn-sm" id="ocGo">Save</button></div>`);
+    const f = box.querySelector("#ocForm"), cur = () => room || f.elements.room.value;
+    const fill = () => { f.elements.on.checked = isOcc(cur()); f.elements.who.value = occ(cur()) || ""; };
+    if (f.elements.room) f.elements.room.onchange = fill;
+    fill();
+    box.querySelector("#ocGo").onclick = async ev => {
+      const b = ev.currentTarget, on = f.elements.on.checked, r = cur();
+      if (on && !isOcc(r) && D.stays.some(x => live(x) && x.rooms.includes(r) && x.checkout > D.today) && !confirm("Room " + r + " has stays booked ahead. Mark it occupied anyway? (Those stays stay put. Move them to another room if needed.)")) return;
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
+      try { D = await call({ action: "stayOccupy", room: r, occupied: on, who: f.elements.who.value.trim() }); keep(D); dlg.close(); draw(D.message); }
+      catch (err) { b.disabled = false; b.textContent = "Save"; errMsg(box, err); }
+    };
+  }
+
   /* ---------- Preview mode ---------- */
   let demoD = null;
   async function demo(b) {
@@ -259,7 +292,7 @@
     if (!demoD) {
       const mk = (id, rooms, guest, purpose, a, n, extra) => Object.assign({ id, rooms, guest, purpose, checkin: add(t, a), checkout: add(t, a + n), arriving: "", leaving: "", guests: "", email: "", phone: "", host: "", notes: "", status: "Booked", source: "Google Calendar", canEdit: true, bookedBy: "staff@heirloomeastbay.com" }, extra || {});
       demoD = { ok: true, sabbath: { year: Number(t.slice(0, 4)), nights: 47, goal: 365, waiting: 1 }, people: [{ name: "Jo Rivera", email: "jo@example.com", phone: "510-555-0101", sabbath: "Approved" }, { name: "Kim Lee", email: "kim@example.com", phone: "", sabbath: "" }],
-        email: "you@example.com", admin: true, me: "Lindsey Huffman", rooms: ["1", "2", "3", "4"], today: t, checkinTime: "3pm", checkoutTime: "11am", inclCheckout: true, stays: [
+        email: "you@example.com", admin: true, me: "Lindsey Huffman", rooms: ["1", "2", "3", "4"], occupied: { "4": "Lisa Sharpe" }, today: t, checkinTime: "3pm", checkoutTime: "11am", inclCheckout: true, stays: [
         mk("a", ["1", "2", "3"], "Cansler Family", "", -100, 10), mk("b", ["1", "2", "3", "4"], "Concord Board Retreat", "", -80, 2), mk("c", ["1"], "Sarah", "Sabbath 365", -5, 4, { sabbath: true, badge: true }), mk("r", [], "Jo Rivera", "Sabbath 365", 12, 7, { status: "Requested", sabbath: true, badge: true, guests: 2, email: "jo@example.com", notes: "Me and my spouse" }),
         mk("d", ["1"], "Chris", "Norcal", 1, 4, { arriving: "16:00", guests: 1, host: "Brit" }), mk("e", ["3"], "Rachel Kuhn", "", -1, 3), mk("f", ["2", "3"], "Kim Lee", "Lindsey's sister", 6, 3, { guests: 3, email: "kim@example.com", source: "Website" }),
         mk("g", ["4"], "", "Painting", 10, 2, { status: "Blocked" }), mk("h", ["1"], "Briana Clarke", "", 18, 20) ] };
@@ -275,6 +308,7 @@
       return out(b.id ? "Saved. The residents' calendar is updated." : "Booked. It's on the residents' calendar.");
     }
     if (b.action === "staysSync") return { ok: true, changed: 0 };
+    if (b.action === "stayOccupy") { if (b.occupied) demoD.occupied[b.room] = b.who; else delete demoD.occupied[b.room]; return out(b.occupied ? "Room " + b.room + " is occupied. It's off the booking list until you untick it." : "Room " + b.room + " is open for guests again."); }
     if (b.action === "stayCancel" && demoD.stays.find(x => x.id === b.id).status === "Requested") { demoD.stays.find(x => x.id === b.id).status = "Declined"; return out("Declined. We emailed them."); }
     if (b.action === "stayCancel") { demoD.stays.find(x => x.id === b.id).status = "Cancelled"; return out("Cancelled. It's off the residents' calendar."); }
     return out();
