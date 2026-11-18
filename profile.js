@@ -57,7 +57,7 @@
       r.approver && ["You approve other people's events", true],
       r.admin && ["You can use the Admin page", true]
     ].filter(x => x && x[0]);
-    const hi = $("#hi"); if (hi && (r.greet || r.first)) hi.innerHTML = "Hi, " + esc(r.greet || r.first) + "!" + (r.sabbath === "Approved" ? ` <span style="display:inline-block;vertical-align:middle;font-family:var(--f-label);font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;background:#e7efe0;color:#1c3024;border:1.5px solid #a9bf9c">🌿 Sabbath 365</span>` : "");
+    const hi = $("#hi"); if (hi && (r.greet || r.first)) hi.innerHTML = "Hi, " + esc(r.greet || r.first) + "!" + (r.sabbath === "Approved" ? ` <span style="display:inline-block;vertical-align:middle;font-family:var(--f-label);font-size:13px;font-weight:700;padding:5px 12px;border-radius:999px;background:var(--tint-sage);color:var(--forest-deep);border:1.5px solid #a9bf9c">🌿 Sabbath 365</span>` : "");
     if (window.HLProfile && r.done) HLProfile.remember(r);
     app.innerHTML = `
       ${r.powerPending ? `<section class="card" style="border:2px solid var(--wheat)">

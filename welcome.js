@@ -13,7 +13,7 @@
   .hp-form { display: grid; gap: 12px; }
   .hp-form h3 { font-family: var(--f-title, Georgia, serif); font-size: 18px; color: var(--forest); margin: 10px 0 0; }
   .hp-form label.f { display: grid; gap: 4px; font-weight: 600; font-size: 15px; }
-  .hp-form label.f input, .hp-form label.f textarea { width: 100%; min-height: 48px; padding: 10px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
+  .hp-form label.f input, .hp-form label.f textarea { width: 100%; min-height: 48px; padding: 10px 13px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
   .hp-form label.f textarea { min-height: 84px; resize: vertical; }
   .hp-form label.f input:focus, .hp-form label.f textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
   .hp-form label.f input:disabled { background: var(--cream); color: var(--ink-soft); }
@@ -25,7 +25,7 @@
   .hp-form .chk input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--forest); flex: none; }
   .hp-form .chk small { display: block; color: var(--ink-soft); font-size: 13.5px; margin-top: 2px; }
   .hp-form .picks { display: flex; flex-wrap: wrap; gap: 8px; }
-  .hp-form .picks label { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 6px 13px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-size: 14.5px; cursor: pointer; }
+  .hp-form .picks label { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 6px 13px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 14.5px; cursor: pointer; }
   .hp-form .picks input { accent-color: var(--forest); }
   .hp-form .picks label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
   .hp-form .lock { font-size: 13.5px; color: var(--muted); margin: 0; }
@@ -36,7 +36,7 @@
   .hp-dlg p { margin: 0; color: var(--ink-soft); }
   .hp-dlg .bar { position: sticky; bottom: 0; background: var(--paper, #fbf8f1); border-top: 1px solid var(--line); padding: 12px 20px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
   .hp-dlg .bar .err { margin-right: auto; color: var(--barn-dark, #8e2f27); font-weight: 600; font-size: 14px; }
-  .hp-agree { background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14.5px; line-height: 1.5; max-height: 44vh; overflow: auto; }
+  .hp-agree { background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 14.5px; line-height: 1.5; max-height: 44vh; overflow: auto; }
   .hp-agree p { margin: 0 0 10px; color: var(--ink); } .hp-agree p:last-child { margin: 0; }`;
   function addCss() { if (document.getElementById("hp-css")) return; const s = document.createElement("style"); s.id = "hp-css"; s.textContent = css; document.head.appendChild(s); }
 
@@ -80,6 +80,8 @@
         <small>You'll see the Supper Church sign-ups (who's bringing what on Sundays) and notes from Pastor Brit. You don't need to be an official member, and you can turn this off any time.</small></span></label>`}
       <label class="f"><span>Anything else you'd like us to know? <span class="opt">(optional)</span></span><textarea data-p="about" maxlength="2000">${esc(r.about || "")}</textarea></label>
       <label class="chk"><input type="checkbox" data-p="news"${r.news ? " checked" : ""}><span>Send me Heirloom news &amp; updates</span></label>
+      <h3>Appearance</h3>
+      <div class="picks" role="radiogroup" aria-label="Appearance">${[["light", "☀️ Light"], ["dark", "🌙 Dark"], ["auto", "📱 Match my phone"]].map(([k, l]) => `<label><input type="radio" name="hp-theme" data-p="theme" value="${k}"${(r.theme || (window.HLTheme ? HLTheme.get() : "light")) === k ? " checked" : ""}>${l}</label>`).join("")}</div>
       <p class="lock">🔒 Your phone, address, emergency contact, birth year, pronouns, dietary needs and allergies are private. Only you and the Heirloom admin team can see them. (People cooking for Supper Church see a count like "2 vegetarian, 1 nut allergy", with no names.${resident ? " Your birthday's month and day show on the residents' calendar unless you turn that off above." : ""})</p>
     </div>`;
   }
@@ -92,6 +94,7 @@
     if (c("church") !== undefined) b.church = c("church");
     if (c("birthdayShow") !== undefined) b.birthdayShow = c("birthdayShow");
     if (c("volunteer")) b.volunteer = true;
+    const th = root.querySelector('[data-p="theme"]:checked'); if (th) b.theme = th.value;
     return b;
   }
   function check(root) {
@@ -136,6 +139,7 @@
     };
   }
   function remember(r) {
+    if (r.theme && window.HLTheme && HLTheme.get() !== r.theme) HLTheme.set(r.theme); // follows them to this device
     try {
       localStorage.setItem("heirloom-welcomed", r.email);
       localStorage.setItem("heirloom-me", JSON.stringify({ email: r.email, name: ((r.preferred || r.first) + " " + r.last).trim(), first: r.greet || r.preferred || r.first, phone: r.phone }));
@@ -193,6 +197,8 @@
     };
   }
 
+  // Picking Light / Dark shows it right away (it's saved with the rest of the profile)
+  document.addEventListener("change", e => { if (e.target && e.target.name === "hp-theme" && window.HLTheme) HLTheme.set(e.target.value); });
   window.HLProfile = { fields: r => { addCss(); return fields(r); }, collect, check, powerDialog, maybeWelcome, remember };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => maybeWelcome()); else maybeWelcome();
 })();

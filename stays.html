@@ -17,9 +17,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118d">
+<script src="theme.js?v=20261118e"></script>
+<link rel="stylesheet" href="styles.css?v=20261118e">
 <style>
-  .intro { background: var(--forest); color: #fff; padding-block: 40px 36px; }
+  .intro { background: var(--forest-fill); color: #fff; padding-block: 40px 36px; }
   .intro .kicker { color: var(--sage); }
   .intro h1 { font-size: clamp(34px, 5vw, 50px); margin: 8px 0 10px; }
   .intro p { margin: 0; max-width: 34em; color: #e1e8dc; font-size: 17px; }
@@ -30,14 +31,14 @@
   .signin h2 { font-size: 26px; }
   .signin p { margin: 0; color: var(--ink-soft); }
   .signin label { font-weight: 600; font-size: 15px; }
-  .signin input { width: 100%; min-height: 50px; padding: 11px 14px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font-size: 17px; }
+  .signin input { width: 100%; min-height: 50px; padding: 11px 14px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; font-size: 17px; }
   .signin input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
   .signin input.code { font-family: var(--f-title); font-size: 30px; letter-spacing: .3em; text-align: center; }
   .signin .btn { width: 100%; min-height: 52px; font-size: 16px; }
   .signin .small { font-size: 14px; color: var(--muted); }
   .link-btn { background: none; border: 0; padding: 0; color: var(--forest); font-weight: 600; text-decoration: underline; cursor: pointer; font: inherit; font-size: 14px; }
   .msg { margin: 0; border-radius: 10px; padding: 11px 13px; font-size: 14.5px; font-weight: 600; }
-  .msg.err { background: #f7e1dd; color: var(--barn-dark); }
+  .msg.err { background: var(--tint-red); color: var(--barn-dark); }
   .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
 
   /* List */
@@ -57,8 +58,8 @@
   .mine .when { color: var(--ink-soft); font-size: 14.5px; margin: 0 0 8px; }
   .mine .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
   .status { font-family: var(--f-label); font-weight: 700; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: var(--sage-soft); color: var(--forest-deep); }
-  .status.pending { background: #f3e5c4; color: #6b4a12; }
-  .status.off { background: #ebe5d8; color: var(--ink-soft); }
+  .status.pending { background: var(--tint-wheat); color: var(--wheat-ink); }
+  .status.off { background: var(--tint-gray); color: var(--ink-soft); }
   .mine .acts { display: flex; flex-wrap: wrap; gap: 8px; }
   @media (max-width: 520px) {
     .mine { grid-template-columns: 76px minmax(0, 1fr); gap: 12px; }
@@ -75,7 +76,7 @@
   .card h2 { font-size: 22px; color: var(--forest); }
   .card p { margin: 0; color: var(--ink-soft); }
   .card label.f { display: grid; gap: 4px; font-weight: 600; font-size: 15px; }
-  .card label.f input { width: 100%; min-height: 48px; padding: 10px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
+  .card label.f input { width: 100%; min-height: 48px; padding: 10px 13px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
   .card label.f input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
   .card label.f input:disabled { background: var(--cream); color: var(--ink-soft); }
   .opt { font-weight: 400; color: var(--muted); }
@@ -86,7 +87,7 @@
   .lock { font-size: 13.5px; color: var(--muted) !important; }
   .saverow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .saverow .note { font-size: 14px; color: var(--forest); font-weight: 600; }
-  .impact { background: var(--forest); color: #fff; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+  .impact { background: var(--forest-fill); color: #fff; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
   .impact b { display: block; font-family: var(--f-display); font-size: 32px; font-weight: 600; color: var(--wheat); line-height: 1.1; }
   .impact span { font-size: 13.5px; color: #e1e8dc; }
   .access { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -126,12 +127,12 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118d"></script>
-<script src="common.js?v=20261118d"></script>
-<script src="nav.js?v=20261118d"></script>
-<script src="install.js?v=20261118d"></script>
-<script src="welcome.js?v=20261118d"></script>
-<script src="stays.js?v=20261118d"></script>
+<script src="config.js?v=20261118e"></script>
+<script src="common.js?v=20261118e"></script>
+<script src="nav.js?v=20261118e"></script>
+<script src="install.js?v=20261118e"></script>
+<script src="welcome.js?v=20261118e"></script>
+<script src="stays.js?v=20261118e"></script>
 <script>HLStays.mount(document.getElementById("app"));</script>
 </body>
 </html>

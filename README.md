@@ -453,3 +453,9 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Bottom tab bar on phones**, by role. Admins: Admin · Home · Calendar · Guest rooms · More. Residents: Home · Calendar · Guest rooms · Church · More. Volunteers: Home · Calendar · Shifts · (Church) · More. Others: Home · Calendar · My events · (Church) · More.
 - **Alert emails per admin:** "Email me about…" on the Alerts card (saved in the People column "Alert emails"). staff@ gets everything except chore-chart and venue emails by default; other admins get none until they tick some. If no admin wants a kind, it goes to the old Settings address. Approvers who aren't admins still get event-request emails.
 - **Venues:** "Every week on…" shows the days of the week to pick (e.g. Mon, Wed, Fri 3–5pm).
+
+## Dark mode (Nov 18, 2026)
+
+- **Profile → Appearance:** Light, Dark or Match my phone. It's also in the first-login welcome popup. The choice shows right away, is kept on the device, and is saved on People (column "Theme"), so it follows the person to their other devices once they log in there.
+- Everyone starts on Light. The Squarespace embed always stays light.
+- How it works: `theme.js` (loaded in every page's `<head>`) sets `data-theme="dark"` on `<html>`, and the end of `styles.css` swaps the color variables. Light colors in pages are now variables (`--surface`, `--tint-*`, `--*-fill`), so new screens should use those instead of `#fff`.

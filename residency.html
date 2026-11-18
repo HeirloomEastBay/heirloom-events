@@ -15,9 +15,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118d">
+<script src="theme.js?v=20261118e"></script>
+<link rel="stylesheet" href="styles.css?v=20261118e">
 <style>
-  .intro { background: var(--forest); color: #fff; padding-block: 36px 26px; }
+  .intro { background: var(--forest-fill); color: #fff; padding-block: 36px 26px; }
   .intro .kicker { color: var(--sage); }
   .intro h1 { font-size: clamp(32px, 5vw, 46px); margin: 8px 0 8px; }
   .intro p { margin: 0; max-width: 44em; color: #e1e8dc; font-size: 16.5px; }
@@ -27,25 +28,25 @@
   .card h2 { font-size: clamp(22px, 4vw, 28px); color: var(--forest); margin: 0 0 8px; }
   .card > p { color: var(--ink-soft); margin: 0 0 12px; line-height: 1.55; }
   .msg { margin: 0; padding: 12px 16px; border-radius: 12px; font-weight: 600; }
-  .msg.err { background: #f7e1dd; color: var(--barn-dark); } .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
+  .msg.err { background: var(--tint-red); color: var(--barn-dark); } .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
   .count { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px; background: var(--sage-soft); color: var(--forest-deep); font-weight: 600; }
   .count b { font-family: var(--f-title); font-size: 30px; line-height: 1; }
-  .meter { flex: 1; height: 10px; border-radius: 99px; background: #fff; overflow: hidden; min-width: 80px; } .meter i { display: block; height: 100%; background: var(--forest); border-radius: 99px; }
-  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: #e7efe0; color: var(--forest-deep); font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .03em; border: 1.5px solid var(--sage); }
+  .meter { flex: 1; height: 10px; border-radius: 99px; background: var(--surface); overflow: hidden; min-width: 80px; } .meter i { display: block; height: 100%; background: var(--forest-fill); border-radius: 99px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: var(--tint-sage); color: var(--forest-deep); font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .03em; border: 1.5px solid var(--sage); }
   .steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
   .steps li { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; color: var(--ink-soft); }
-  .steps li i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 13px; background: #fff; }
-  .steps li.done i { background: var(--forest); border-color: var(--forest); color: #fff; } .steps li.now i { border-color: var(--wheat); background: #fdf3dc; }
+  .steps li i { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 13px; background: var(--surface); }
+  .steps li.done i { background: var(--forest-fill); border-color: var(--forest); color: #fff; } .steps li.now i { border-color: var(--wheat); background: var(--tint-wheat); }
   .steps li b { color: var(--ink); display: block; }
   form.f { display: grid; gap: 16px; }
   .f label.q { display: grid; gap: 6px; font-weight: 600; font-size: 15.5px; }
   .f .opt { font-weight: 400; color: var(--muted); } .f .req { color: var(--barn); }
-  .f input[type="text"], .f input[type="email"], .f input[type="tel"], .f input[type="date"], .f input[type="number"], .f textarea, .f select { width: 100%; min-height: 48px; padding: 10px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
+  .f input[type="text"], .f input[type="email"], .f input[type="tel"], .f input[type="date"], .f input[type="number"], .f textarea, .f select { width: 100%; min-height: 48px; padding: 10px 13px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
   .f textarea { min-height: 96px; resize: vertical; }
   .f input:focus, .f textarea:focus, .f select:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
   .f fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; } .f legend { font-weight: 600; font-size: 15.5px; margin-bottom: 6px; padding: 0; }
   .f .choices { display: flex; flex-wrap: wrap; gap: 8px; }
-  .f .choices label { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 15px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-weight: 600; cursor: pointer; }
+  .f .choices label { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 15px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 600; cursor: pointer; }
   .f .choices input { accent-color: var(--forest); } .f .choices label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
   .f .other { max-width: 360px; }
   .f .chk { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 15.5px; line-height: 1.45; }
@@ -53,15 +54,15 @@
   .f .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } @media (max-width: 520px) { .f .two { grid-template-columns: 1fr; } }
   .f .hp { position: absolute; left: -9999px; }
   .f .note { margin: 0; font-size: 14px; color: var(--muted); }
-  .f .warn { margin: 0; padding: 10px 14px; border-radius: 10px; background: #f7e1dd; color: var(--barn-dark); font-weight: 600; font-size: 14.5px; } .f .warn:empty { display: none; }
+  .f .warn { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--tint-red); color: var(--barn-dark); font-weight: 600; font-size: 14.5px; } .f .warn:empty { display: none; }
   .mine { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  .mine li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; background: #fff; border: 1.5px solid var(--line); }
+  .mine li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1.5px solid var(--line); }
   .mine li b { font-size: 16px; } .mine li span { color: var(--ink-soft); font-size: 14.5px; }
   .pill { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
-  .pill.wait { background: #f6e7c3; color: #5a3d0c; } .pill.ok { background: var(--forest); color: #fff; } .pill.off { background: #ece7dc; color: var(--muted); }
+  .pill.wait { background: var(--tint-wheat); color: var(--wheat-ink); } .pill.ok { background: var(--forest-fill); color: #fff; } .pill.off { background: var(--tint-gray); color: var(--muted); }
   .quiet { appearance: none; background: none; border: 0; padding: 4px 2px; font: inherit; font-size: 14px; font-weight: 600; color: var(--barn-dark); text-decoration: underline; cursor: pointer; }
   .faq { display: grid; gap: 8px; }
-  .faq details { background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .faq details { background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 16px; }
   .faq summary { cursor: pointer; font-weight: 700; color: var(--forest-deep); font-size: 16px; }
   .faq .in { margin-top: 10px; color: var(--ink-soft); line-height: 1.6; display: grid; gap: 10px; } .faq .in p, .faq .in ul { margin: 0; } .faq .in ul { padding-left: 20px; }
   .faq blockquote { margin: 0; padding: 4px 0 4px 14px; border-left: 4px solid var(--wheat); font-style: italic; }
@@ -69,12 +70,12 @@
   .part:first-of-type { border-top: 0; padding-top: 0; }
   .f .lead { margin: -6px 0 0; color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; }
   .apps { display: grid; gap: 14px; }
-  .appc { background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; }
-  .appc.open { border-color: var(--wheat); background: #fffaf0; }
+  .appc { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; }
+  .appc.open { border-color: var(--wheat); background: var(--surface); }
   .appc h3 { margin: 0; font-size: 20px; color: var(--forest-deep); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
   .appc dl { margin: 0; display: grid; gap: 10px; } .appc dt { font-weight: 700; color: var(--ink); font-size: 14px; } .appc dd { margin: 2px 0 0; color: var(--ink-soft); white-space: pre-wrap; line-height: 1.5; }
   .lean { display: flex; flex-wrap: wrap; gap: 8px; }
-  .lean label { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 15px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-weight: 600; cursor: pointer; }
+  .lean label { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 15px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 600; cursor: pointer; }
   .lean input { accent-color: var(--forest); } .lean label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
 </style>
 </head>
@@ -107,11 +108,11 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118d"></script>
-<script src="common.js?v=20261118d"></script>
-<script src="nav.js?v=20261118d"></script>
-<script src="install.js?v=20261118d"></script>
-<script src="welcome.js?v=20261118d"></script>
-<script src="residency.js?v=20261118d"></script>
+<script src="config.js?v=20261118e"></script>
+<script src="common.js?v=20261118e"></script>
+<script src="nav.js?v=20261118e"></script>
+<script src="install.js?v=20261118e"></script>
+<script src="welcome.js?v=20261118e"></script>
+<script src="residency.js?v=20261118e"></script>
 </body>
 </html>

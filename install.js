@@ -24,7 +24,7 @@
   .hl-inst b { font-size: 16.5px; } .hl-inst p { margin: 0; font-size: 14.5px; color: #dfe6da; line-height: 1.45; grid-column: 2; }
   .hl-inst .row { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
   .hl-inst button { appearance: none; border: 0; border-radius: 999px; min-height: 42px; padding: 8px 18px; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
-  .hl-inst .yes { background: var(--wheat, #d8b56f); color: #1c3024; } .hl-inst .no { background: rgba(255,255,255,.14); color: #fff; }
+  .hl-inst .yes { background: var(--wheat, #d8b56f); color: var(--forest-deep); } .hl-inst .no { background: rgba(255,255,255,.14); color: #fff; }
   .hl-inst .ico { display: inline-block; width: 18px; height: 18px; vertical-align: -4px; }`;
   const share = `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
 

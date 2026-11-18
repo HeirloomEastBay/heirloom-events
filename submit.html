@@ -16,9 +16,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118d">
+<script src="theme.js?v=20261118e"></script>
+<link rel="stylesheet" href="styles.css?v=20261118e">
 <style>
-  .intro { background: var(--forest); color: #fff; padding: 44px 0 40px; position: relative; overflow: hidden; }
+  .intro { background: var(--forest-fill); color: #fff; padding: 44px 0 40px; position: relative; overflow: hidden; }
   .intro .kicker { color: var(--sage); }
   .intro h1 { font-size: clamp(36px, 5.6vw, 56px); margin: 8px 0 12px; }
   .intro p { margin: 0; max-width: 36em; color: #e1e8dc; font-size: 17px; }
@@ -40,7 +41,7 @@
   .req { color: var(--barn); }
   .hint { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
   input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=date], input[type=time], select, textarea {
-    width: 100%; min-height: 48px; padding: 11px 14px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; transition: border-color .15s, box-shadow .15s;
+    width: 100%; min-height: 48px; padding: 11px 14px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; transition: border-color .15s, box-shadow .15s;
   }
   textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
@@ -54,7 +55,7 @@
 
   .opt { font-weight: 400; color: var(--muted); }
   .type-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .type-chips label { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; cursor: pointer; font-weight: 600; font-size: 14.5px; }
+  .type-chips label { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; font-weight: 600; font-size: 14.5px; }
   .type-chips input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
   .type-chips label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); color: var(--forest-deep); }
   .type-chips label:has(input:checked)::before { content: "✓"; margin-right: 6px; font-weight: 700; }
@@ -68,11 +69,11 @@
   .photo-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
   .mode { position: relative; }
   .mode input { position: absolute; opacity: 0; inset: 0; }
-  .mode label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; min-height: 92px; padding: 12px 8px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; font-weight: 600; font-size: 14px; line-height: 1.2; }
+  .mode label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; min-height: 92px; padding: 12px 8px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; font-weight: 600; font-size: 14px; line-height: 1.2; }
   .mode label svg { width: 24px; height: 24px; color: var(--forest); }
   .mode input:checked + label { border-color: var(--forest); background: var(--sage-soft); box-shadow: inset 0 0 0 1px var(--forest); }
   .mode input:focus-visible + label { outline: 3px solid var(--wheat); outline-offset: 2px; }
-  .drop { border: 2px dashed var(--line); border-radius: 12px; padding: 22px; text-align: center; background: #fff; cursor: pointer; display: block; }
+  .drop { border: 2px dashed var(--line); border-radius: 12px; padding: 22px; text-align: center; background: var(--surface); cursor: pointer; display: block; }
   .drop:hover { border-color: var(--forest); }
   .drop strong { color: var(--forest); }
   .upload-preview { display: none; position: relative; border-radius: 12px; overflow: hidden; }
@@ -87,7 +88,7 @@
   .g-item img { width: 100%; height: 100%; object-fit: cover; }
   .g-item span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 6px; background: linear-gradient(transparent, rgba(0,0,0,.65)); color: #fff; font-size: 12.5px; font-weight: 600; }
   .g-item input:checked + label { outline: 4px solid var(--barn); outline-offset: -4px; }
-  .g-item input:checked + label::after { content: "✓"; position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--barn); color: #fff; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .g-item input:checked + label::after { content: "✓"; position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--barn-fill); color: #fff; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
   .g-item input:focus-visible + label { outline: 3px solid var(--wheat); outline-offset: -3px; }
   [data-panel] { display: none; }
   [data-panel].on { display: block; }
@@ -96,11 +97,11 @@
   .cal-choice { display: grid; gap: 10px; }
   .cal-opt { position: relative; }
   .cal-opt input { position: absolute; top: 18px; left: 16px; width: 22px; height: 22px; accent-color: var(--forest); }
-  .cal-opt label { display: block; padding: 14px 16px 14px 50px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; }
+  .cal-opt label { display: block; padding: 14px 16px 14px 50px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
   .cal-opt input:checked + label { border-color: var(--forest); background: var(--sage-soft); }
   .cal-opt strong { display: block; font-size: 16px; }
   .cal-opt small { color: var(--ink-soft); font-size: 14px; }
-  .private-note { display: flex; gap: 10px; align-items: flex-start; background: #f3e5c4; color: #5a3f10; border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-bottom: 16px; }
+  .private-note { display: flex; gap: 10px; align-items: flex-start; background: var(--tint-wheat); color: var(--wheat-ink); border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-bottom: 16px; }
   .private-note svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
 
   /* Preview column */
@@ -115,22 +116,22 @@
 
   .submit-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
   .submit-row .btn { width: 100%; min-height: 54px; font-size: 16px; }
-  .form-error { display: none; background: #f7e1dd; color: var(--barn-dark); border-radius: 10px; padding: 12px 14px; font-weight: 600; font-size: 14.5px; }
+  .form-error { display: none; background: var(--tint-red); color: var(--barn-dark); border-radius: 10px; padding: 12px 14px; font-weight: 600; font-size: 14.5px; }
   .form-error.on { display: block; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* "More details" editor */
-  .rte { border: 1.5px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+  .rte { border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
   .rte:focus-within { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
-  .room-note { margin: 10px 0 0; padding: 12px 14px; border-radius: 12px; background: #f6e7c3; border: 1.5px solid var(--wheat); color: #4a3510; font-size: 15px; line-height: 1.45; }
+  .room-note { margin: 10px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--tint-wheat); border: 1.5px solid var(--wheat); color: var(--wheat-ink); font-size: 15px; line-height: 1.45; }
   .room-note a { color: var(--forest); font-weight: 700; }
-  .rte-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: #faf8f3; }
+  .rte-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--surface); }
   .rte-bar button { display: inline-flex; align-items: center; gap: 5px; min-width: 38px; min-height: 36px; padding: 4px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; cursor: pointer; }
   .rte-bar button:hover, .rte-bar button[aria-pressed="true"] { background: var(--sage-soft); }
   .rte-bar svg { width: 18px; height: 18px; }
-  .rte-link { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); background: #faf8f3; }
+  .rte-link { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); background: var(--surface); }
   .rte-link input { flex: 1 1 200px; min-height: 40px !important; }
   .rte-area { min-height: 140px; max-height: 520px; overflow-y: auto; padding: 12px 14px; outline: none; font-size: 16px; line-height: 1.55; }
   .rte-area:empty::before { content: attr(data-placeholder); color: #a9a293; }
@@ -155,16 +156,16 @@
   /* Editing */
   .keep-photo { margin-bottom: 12px; position: relative; }
   .keep-photo input { position: absolute; opacity: 0; }
-  .keep-photo label { display: flex; align-items: center; gap: 14px; padding: 10px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; }
+  .keep-photo label { display: flex; align-items: center; gap: 14px; padding: 10px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
   .keep-photo img { width: 96px; height: 64px; object-fit: cover; border-radius: 8px; flex: none; }
   .keep-photo input:checked + label { border-color: var(--forest); background: var(--sage-soft); box-shadow: inset 0 0 0 1px var(--forest); }
   .keep-photo input:focus-visible + label { outline: 3px solid var(--wheat); outline-offset: 2px; }
-  .vol-box { margin-top: 6px; padding: 14px 16px; border: 1.5px dashed var(--line); border-radius: 14px; background: #fff; }
+  .vol-box { margin-top: 6px; padding: 14px 16px; border: 1.5px dashed var(--line); border-radius: 14px; background: var(--surface); }
   .vol-box:has(#volunteer:checked) { border-style: solid; border-color: var(--forest); background: var(--sage-soft); }
   .vol-box > .toggle { align-items: flex-start; }
   .vol-box > .toggle input { margin-top: 2px; }
   #volFields { margin-top: 14px; }
-  #volFields select { width: 100%; min-height: 46px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 15.5px; }
+  #volFields select { width: 100%; min-height: 46px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); font: inherit; font-size: 15.5px; }
   .multi-row { margin: 14px 0 4px; align-items: flex-start; }
   .multi-row input { margin-top: 2px; }
   .multi-panel { margin-top: 10px; display: grid; gap: 12px; }
@@ -179,11 +180,11 @@
   .multi-gallery button img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
   .multi-gallery button span { display: block; font-size: 13px; padding: 4px 6px; color: var(--ink-soft); }
   .multi-gallery button[aria-pressed="true"] { border-color: var(--forest); box-shadow: 0 0 0 2px var(--forest); }
-  .multi-gallery button .n { position: absolute; left: 6px; top: 6px; background: var(--forest); color: #fff; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
-  .edit-note { background: #f3e5c4; color: #5a3f10; border-radius: 10px; padding: 12px 14px; font-size: 14.5px; margin: 0 0 18px; }
+  .multi-gallery button .n { position: absolute; left: 6px; top: 6px; background: var(--forest-fill); color: #fff; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+  .edit-note { background: var(--tint-wheat); color: var(--wheat-ink); border-radius: 10px; padding: 12px 14px; font-size: 14.5px; margin: 0 0 18px; }
   .cancel-area { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 14px; text-align: center; }
   .link-btn { background: none; border: 0; padding: 6px; color: var(--barn); font-weight: 600; text-decoration: underline; cursor: pointer; font-size: 15px; }
-  .cancel-confirm { background: #f7e1dd; border-radius: 12px; padding: 14px; text-align: left; }
+  .cancel-confirm { background: var(--tint-red); border-radius: 12px; padding: 14px; text-align: left; }
   .cancel-confirm p { margin: 0 0 10px; color: var(--barn-dark); font-size: 15px; }
   .cancel-btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .loading-card { max-width: 620px; margin: 40px auto 0; background: var(--paper); border-radius: 20px; box-shadow: var(--shadow); padding: 36px 28px; text-align: center; color: var(--ink-soft); }
@@ -550,11 +551,11 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118d"></script>
-<script src="common.js?v=20261118d"></script>
-<script src="nav.js?v=20261118d"></script>
-<script src="install.js?v=20261118d"></script>
-<script src="flyer.js?v=20261118d"></script>
-<script src="submit.js?v=20261118d"></script>
+<script src="config.js?v=20261118e"></script>
+<script src="common.js?v=20261118e"></script>
+<script src="nav.js?v=20261118e"></script>
+<script src="install.js?v=20261118e"></script>
+<script src="flyer.js?v=20261118e"></script>
+<script src="submit.js?v=20261118e"></script>
 </body>
 </html>
