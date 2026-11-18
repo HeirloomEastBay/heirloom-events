@@ -101,7 +101,7 @@
     // Links like church.html#listen or #note-… land on that part once it's drawn
     // From Admin → Church: open the form they picked
     if (MANAGE && data.isAdmin && DO) {
-      const acts = { audio: () => audioDlg(), note: () => noteDlg(), event: () => eventDlg(), song: () => songDlg(data.song), book: () => bookDlg(),
+      const acts = { weekly: () => { const t = document.getElementById("weekly"); if (t) t.scrollIntoView({ block: "start" }); }, audio: () => audioDlg(), note: () => noteDlg(), event: () => eventDlg(), song: () => songDlg(data.song), book: () => bookDlg(),
         sunday: () => { const t = document.getElementById("hS"); if (t) t.scrollIntoView({ block: "start" }); flash("Tap “Change this Sunday” on the Sunday you want."); } };
       if (acts[DO]) setTimeout(acts[DO], 60);
     }
@@ -140,9 +140,9 @@
       openDlg(`<h2>Remove this note?</h2><p>"${esc(n.title || "A note for the church family")}" comes off this page. If it was posted to Discord, it stays there.</p>
         <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
       dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
-      $("#go").onclick = async e => { e.currentTarget.disabled = true;
+      $("#go").onclick = async e => { const b = e.currentTarget, x = dlgIn.querySelector("[data-x]"); b.disabled = true; if (x) x.disabled = true; b.innerHTML = `<span class="spinner"></span> Removing…`;
         try { data = await call({ action: "churchNoteRemove", id: n.id }); dlg.close(); render(); flash("Note removed."); }
-        catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+        catch (err) { b.disabled = false; if (x) x.disabled = false; b.textContent = "Try again"; let m = dlgIn.querySelector(".err"); if (!m) { m = document.createElement("p"); m.className = "err"; b.parentNode.before(m); } m.textContent = (err.message || "Something went wrong") + "."; } };
     });
   }
   function sunHtml(s, i) {
@@ -182,6 +182,7 @@
     const themes = uniq(data.notes.flatMap(x => x.themes || [])), books = uniq(data.notes.flatMap(x => (x.scripture || []).map(bookOf)));
     app.innerHTML = `${MANAGE && data.isAdmin ? `<div class="manage-bar" role="status"><span>✏️ <b>Editing the church page.</b> The buttons to add and change things are on.</span><a class="btn btn-outline btn-sm" href="church.html">Done</a></div>`
         : MANAGE ? "" : ""}
+      ${weeklyHtml()}
       <div class="need-bar${need ? "" : " done"}" role="status">${need
         ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${usual.find(s => !s.main).date}">See which</a>` : ""}</span>`
         : `<span>✓ Every one of the next ${n} Sundays has a main dish. Thank you!</span>`}</div>
@@ -238,6 +239,7 @@
     if ($("#evNew")) $("#evNew").onclick = () => eventDlg();
     app.querySelectorAll("[data-day]").forEach(b => b.onclick = () => dayDlg(data.sundays[+b.dataset.day]));
     wireListen();
+    wireWeekly();
     if ($("#bkNew")) $("#bkNew").onclick = () => bookDlg();
     app.querySelectorAll("[data-bkedit]").forEach(b => b.onclick = () => bookDlg(data.books.find(x => x.id === b.dataset.bkedit)));
     app.querySelectorAll("[data-bkdel]").forEach(b => b.onclick = () => {
@@ -245,9 +247,57 @@
       openDlg(`<h2>Remove this book?</h2><p>"${esc(bk.title)}" comes off the church page and the public book list. (To show it as finished instead, edit it and add the date you finished.)</p>
         <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
       dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
-      $("#go").onclick = async e => { e.currentTarget.disabled = true;
-        try { data = await call({ action: "churchBookRemove", id: bk.id }); dlg.close(); render(); flash("Book removed."); } catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+      $("#go").onclick = async e => { const b = e.currentTarget, x = dlgIn.querySelector("[data-x]"); b.disabled = true; if (x) x.disabled = true; b.innerHTML = `<span class="spinner"></span> Removing…`;
+        try { data = await call({ action: "churchBookRemove", id: bk.id }); dlg.close(); render(); flash("Book removed."); }
+        catch (err) { b.disabled = false; if (x) x.disabled = false; b.textContent = "Try again"; let m = dlgIn.querySelector(".err"); if (!m) { m = document.createElement("p"); m.className = "err"; b.parentNode.before(m); } m.textContent = (err.message || "Something went wrong") + "."; } };
     });
+  }
+
+  /* ---------- The Monday email (editing mode) ---------- */
+  const at12 = s => { const [d, t] = String(s).split(" "); if (!t) return ""; const [h, m] = t.split(":").map(Number);
+    return fmt(d, { weekday: "long", month: "short", day: "numeric" }) + " at " + ((h % 12) || 12) + (m ? ":" + String(m).padStart(2, "0") : "") + (h < 12 ? "am" : "pm"); };
+  function weeklyHtml() {
+    const w = data.weekly; if (!MANAGE || !data.isAdmin || !w) return "";
+    const plural = (n, a) => n + " " + (n === 1 ? a : a === "person" ? "people" : a + "s");
+    const when = w.status === "Hold" ? "<b>On hold.</b> It won't go out until you pick something below."
+      : `Goes out <b>${esc(at12(w.sendAt))}</b> to ${plural(w.count, "person")} in the church family, and a summary to #church-fam.`;
+    const has = w.empty ? `<span class="wk-empty">Nothing new for this week yet. It only sends once there's a note or a recording.</span>` : `So far: ${[w.notes && plural(w.notes, "note"), w.recordings && plural(w.recordings, "recording")].filter(Boolean).join(", ")}, plus Supper Church, church events and the song of the month.`;
+    return `<section class="weekly" id="weekly" aria-labelledby="hW"><div class="sec-h"><div><h2 id="hW">📬 This week's email</h2><p>Week of ${esc(fmt(w.week, { month: "long", day: "numeric" }))}</p></div></div>
+      <p class="wk-when">${when}</p><p class="wk-has">${has}</p>
+      <div class="wk-btns"><button class="btn btn-outline btn-sm" id="wkPrev">Preview</button><button class="btn btn-forest btn-sm" id="wkNow"${w.empty ? " disabled" : ""}>Send now</button>
+        <button class="btn btn-outline btn-sm" id="wkLater">Send later…</button>${w.status === "Auto" ? `<button class="quiet" id="wkHold">Hold</button>` : `<button class="quiet" id="wkAuto">Back to Monday morning</button>`}<button class="quiet del" id="wkSkip">Skip this week</button></div>
+      ${w.last ? `<p class="wk-last">Last sent: week of ${esc(fmt(w.last.week, { month: "short", day: "numeric" }))}, to ${w.last.to} ${w.last.to === 1 ? "person" : "people"}.</p>` : ""}
+    </section>`;
+  }
+  function wireWeekly() {
+    if (!$("#weekly")) return;
+    const act = async (op, extra, msg, b) => { if (b) { b.disabled = true; b.innerHTML = `<span class="spinner"></span>`; }
+      try { data = await call(Object.assign({ action: "churchWeekly", op }, extra || {})); render(); flash(msg); }
+      catch (err) { render(); flash((err.message || "Something went wrong") + ".", true); } };
+    $("#wkNow").onclick = e => { openDlg(`<h2>Send it now?</h2><p>This week's email goes to ${data.weekly.count} people now${data.discord ? ", with a summary on #church-fam" : ""}. It won't go out again Monday.</p>
+        <div class="btns"><button class="btn btn-outline btn-sm" data-x>Not yet</button><button class="btn btn-primary btn-sm" id="go">Send it</button></div>`);
+      dlgIn.querySelector("[data-x]").onclick = () => dlg.close(); $("#go").onclick = ev => { dlg.close(); act("now", null, "Sent! It's on its way to the church family."); }; };
+    $("#wkSkip").onclick = () => act("skip", null, "Skipped. Next week's email is up next.");
+    if ($("#wkHold")) $("#wkHold").onclick = () => act("hold", null, "On hold. It won't send until you pick a time or send it.");
+    if ($("#wkAuto")) $("#wkAuto").onclick = () => act("auto", null, "Back to Monday morning.");
+    $("#wkLater").onclick = () => {
+      const w = data.weekly.week, end = addDaysYmd(w, 6), def = (data.weekly.sendAt || w + " 07:00").replace(" ", "T");
+      openDlg(`<h2>Send later</h2><p>Pick a day and time this week (by ${esc(fmt(end, { weekday: "long", month: "short", day: "numeric" }))}).</p>
+        <label class="f">When<input type="datetime-local" id="wkAt" min="${w}T00:00" max="${end}T23:59" value="${esc(def < today() + "T" ? today() + "T18:00" : def)}"></label>
+        <p class="err" id="wkErr" hidden></p><div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="go">Save</button></div>`);
+      dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
+      $("#go").onclick = async e => { const v = $("#wkAt").value; e.currentTarget.disabled = true;
+        try { data = await call({ action: "churchWeekly", op: "later", at: v }); dlg.close(); render(); flash("It'll go out " + at12(v.replace("T", " ")) + "."); }
+        catch (err) { $("#wkErr").textContent = (err.message || "Something went wrong") + "."; $("#wkErr").hidden = false; e.currentTarget.disabled = false; } };
+    };
+    $("#wkPrev").onclick = async e => { const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try { const r = await call({ action: "churchWeeklyPreview" });
+        openDlg(`<h2>${esc(r.subject)}</h2>${r.empty ? `<p class="err">Nothing new yet, so this wouldn't send.</p>` : ""}<iframe class="wk-frame" sandbox="" title="Email preview"></iframe>
+          <div class="btns"><button class="btn btn-outline btn-sm" data-x>Close</button></div>`);
+        dlgIn.querySelector(".wk-frame").srcdoc = `<base target="_blank"><div style="font-family:Helvetica,Arial,sans-serif;color:#1f2a22;font-size:15px;line-height:1.5;background:#f4efe3;padding:18px">${r.html}</div>`;
+        dlgIn.querySelector("[data-x]").onclick = () => dlg.close(); }
+      catch (err) { flash((err.message || "Something went wrong") + ".", true); }
+      b.disabled = false; b.textContent = "Preview"; };
   }
 
   /* ---------- Books we read from ---------- */
@@ -372,9 +422,9 @@
       openDlg(`<h2>Remove this recording?</h2><p>"${esc(a.title)}" comes off the church page. The file stays in the Church Audio folder in Google Drive.</p>
         <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
       dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
-      $("#go").onclick = async e => { e.currentTarget.disabled = true;
+      $("#go").onclick = async e => { const b = e.currentTarget, x = dlgIn.querySelector("[data-x]"); b.disabled = true; if (x) x.disabled = true; b.innerHTML = `<span class="spinner"></span> Removing…`;
         try { data = await call({ action: "churchAudioRemove", id: a.id }); dlg.close(); render(); flash("Recording removed."); }
-        catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+        catch (err) { b.disabled = false; if (x) x.disabled = false; b.textContent = "Try again"; let m = dlgIn.querySelector(".err"); if (!m) { m = document.createElement("p"); m.className = "err"; b.parentNode.before(m); } m.textContent = (err.message || "Something went wrong") + "."; } };
     });
     document.querySelectorAll("#listen [data-play] .pbtn").forEach(b => b.onclick = () => playRec(b.closest("[data-play]")));
   }
@@ -752,6 +802,7 @@
         songs: [], events: [{ id: "EV-1", title: "Advent candle-making night", next: suns[1], date: suns[1], until: "", repeats: "", start: "18:30", end: "20:00", allDay: false, location: "Farmhouse", description: "Bring a jar. We'll make Advent candles together.", link: "", public: true },
           { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
         eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
+        weekly: { week: "", status: "Auto", sendAt: "", count: 18, notes: 1, recordings: 2, empty: false, last: null },
         audioKinds: ["Weekly message", "Psalm of the week", "Proverb of the week", "Kids Bible story", "Other"], bookFor: ["Psalms & Proverbs", "Kids Bible stories"],
         books: [{ id: "BK-1", title: "Sample Psalms & Proverbs book", author: "An author", for: "Psalms & Proverbs", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-09-01", finished: "", note: "Our book for the Psalm and Proverb of the week.", current: true },
           { id: "BK-2", title: "Sample kids' story Bible", author: "Another author", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-11-01", finished: "", note: "", current: true },
@@ -801,6 +852,12 @@
       S.books.forEach(x => { x.current = (!x.started || x.started <= today()) && (!x.finished || x.finished >= today()); });
     }
     if (b.action === "churchBookRemove") S.books = S.books.filter(x => x.id !== b.id);
+    if (!S.weekly.week) { S.weekly.week = S.thisWeek; S.weekly.sendAt = S.thisWeek + " 07:00"; }
+    if (b.action === "churchWeekly") { const W = S.weekly;
+      if (b.op === "now" || b.op === "skip") { W.last = b.op === "now" ? { week: W.week, to: W.count } : W.last; W.week = addDaysYmd(W.week, 7); W.sendAt = W.week + " 07:00"; W.status = "Auto"; W.notes = 0; W.recordings = 0; W.empty = true; }
+      if (b.op === "later") { W.status = "Later"; W.sendAt = b.at.replace("T", " "); } if (b.op === "hold") { W.status = "Hold"; } if (b.op === "auto") { W.status = "Auto"; W.sendAt = W.week + " 07:00"; } }
+    if (b.action === "churchWeeklyPreview") return Promise.resolve({ ok: true, subject: "This week at Heirloom church · " + fmt(S.weekly.week, { month: "long", day: "numeric" }), empty: S.weekly.empty,
+      html: `<h1 style="font-family:Georgia,serif">This week at church</h1><div style="background:#fff;border-radius:12px;padding:16px">A sample note from Pastor Brit…</div><h2 style="font-family:Georgia,serif;color:#2e4a36">Listen this week</h2><div style="background:#fff;border-radius:12px;padding:16px">🎙️ Weekly message: Waiting well</div>` });
     if (b.action === "churchDay") { const sd = S.sundays.find(x => x.date === b.sunday); const all2 = [sd.main].concat(sd.bringing).filter(Boolean);
       Object.assign(sd, { style: b.style, title: b.title, dayNote: b.note }); if (b.style === "Usual") { sd.main = all2.find(x => x.kind === "Main") || null; sd.bringing = all2.filter(x => x !== sd.main); } else { sd.main = null; sd.bringing = all2; } }
     if (b.action === "churchSong" || b.action === "churchSongRemove") { S.songs.sort((a, c) => a.month < c.month ? 1 : -1); S.song = S.songs.find(x => x.month <= today().slice(0, 7)) || null; }

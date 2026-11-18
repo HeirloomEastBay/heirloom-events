@@ -99,6 +99,7 @@
     app.innerHTML = `<div class="panel-h"><div><h2>Church</h2><p>Add to the church page. Everyone sees the church page the same way; these open it with the editing tools on.</p></div>
         <a class="btn btn-forest btn-sm" href="church.html?manage=1">Edit the church page</a></div>
       <div class="ch-acts">
+        ${go("weekly", "📬", "This week's email", "Preview it, send it now or later, or skip a week")}
         ${go("audio", "🎙️", "Add a recording", "Weekly message, Psalm or Proverb of the week, Kids Bible story")}
         ${go("note", "📝", "Write a note", "For the church family, with photos, themes and scripture")}
         ${go("event", "📅", "Add a church event", "On the public calendar and #church-events by default")}

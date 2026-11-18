@@ -78,6 +78,7 @@
       ${resident ? "" : `<h3>Getting involved</h3>${volLine}
       <label class="chk"><input type="checkbox" data-p="church"${r.church ? " checked" : ""}><span><b>I'd like to be part of the church family</b>
         <small>You'll see the Supper Church sign-ups (who's bringing what on Sundays) and notes from Pastor Brit. You don't need to be an official member, and you can turn this off any time.</small></span></label>`}
+      ${resident || r.church ? `<label class="chk church-email"><input type="checkbox" data-p="churchEmail"${r.churchEmail !== false ? " checked" : ""}><span>Send me the Monday church email <small>Pastor Brit's notes and the week's recordings, plus Supper Church.</small></span></label>` : ""}
       <label class="f"><span>Anything else you'd like us to know? <span class="opt">(optional)</span></span><textarea data-p="about" maxlength="2000">${esc(r.about || "")}</textarea></label>
       <label class="chk"><input type="checkbox" data-p="news"${r.news ? " checked" : ""}><span>Send me Heirloom news &amp; updates</span></label>
       <h3>Appearance</h3>
@@ -92,6 +93,7 @@
       city: v("city"), state: v("state"), zip: v("zip"), emergency: v("emergency"), emergencyPhone: v("emergencyPhone"), dietary: v("dietary"), allergies: v("allergies"), about: v("about"), news: c("news"),
       interests: [...root.querySelectorAll('[data-p="interest"]:checked')].map(x => x.value) };
     if (c("church") !== undefined) b.church = c("church");
+    if (c("churchEmail") !== undefined) b.churchEmail = c("churchEmail");
     if (c("birthdayShow") !== undefined) b.birthdayShow = c("birthdayShow");
     if (c("volunteer")) b.volunteer = true;
     const th = root.querySelector('[data-p="theme"]:checked'); if (th) b.theme = th.value;

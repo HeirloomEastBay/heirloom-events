@@ -506,3 +506,11 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Scripture opens in place:** tap a 📖 passage on a note or recording and the text appears under it (bible-api.com, World English Bible, public domain), with a link to other translations on BibleGateway.
 - **Discord:** "Also post to #church-fam" starts unticked on notes and recordings. Round 3 adds a Monday summary to #church-fam with the weekly email.
 - **Church page is the same for everyone.** Editing moved to **Admin → Church**: shortcuts open church.html?manage=1 (with &do=audio|note|event|sunday|song|book to open that form) with an "Editing the church page" bar and all the add/change buttons.
+
+## Church round 3: the Monday email (Nov 18, 2026)
+
+- Every Monday at 7am (Settings → "Church weekly email: send Mondays at"), the church family gets "This week at Heirloom church". It holds Brit's notes (posted since the last email, or for that week's Sundays), the week's recordings with Listen buttons, this Sunday's Supper Church, the week's church events and the song of the month. A summary posts to #church-fam (Settings → "Church weekly email: also post to #church-fam").
+- It only sends when there's a note or a recording for that week; otherwise the week is marked skipped.
+- **Brit's controls** (Admin → Church → This week's email, or church.html?manage=1): Preview, Send now, Send later (any time that week), Hold, Back to Monday morning, Skip this week. The tab "Church weekly email" keeps a row per week.
+- **Who gets it:** residents and church family. Each person can turn it off in their Profile ("Send me the Monday church email") or with "Stop these emails" in the email.
+- The check runs inside warmFeed (every 10 minutes), so no new trigger is needed.
