@@ -337,6 +337,14 @@
   $("#repeat").addEventListener("change", () => { $("#untilField").hidden = $("#repeat").value === "none"; update(); });
   refreshRepeatLabels();
 
+  /* ---------- Heads-up: a public event that mentions a room (probably a guest stay) ---------- */
+  (function () {
+    const t = $("#title"), pub = $("#cal-public"), note = $("#roomNote");
+    if (!t || !pub || !note) return;
+    const check = () => { note.hidden = !(pub.checked && /(^|[^a-z])(rooms?|guest stay)(?![a-z])/i.test(t.value)); };
+    t.addEventListener("input", check); pub.addEventListener("change", check); setTimeout(check, 400);
+  })();
+
   /* ---------- "More details": a small rich-text editor ---------- */
   const rte = $("#details");
   let savedRange = null;
@@ -601,6 +609,8 @@
       return doneCard(t, m, `<p class="hint"><a href="${esc(location.href)}">Make more changes</a></p>`);
     }
     const live = r.status === "published";
+    if (r.held) return doneCard("Thanks! An admin will take a look first.", `Public events with "room" in the name get a quick check before they go on the website, in case they're a guest stay. We'll email ${v.email} as soon as "${v.title}" is up.`,
+      `<p class="hint">Booking a guest room? Use the <a href="stays.html">Guest rooms page</a> instead.</p>` + (r.editUrl ? `<p class="hint"><a href="${esc(r.editUrl)}">Edit or cancel this event</a></p>` : ""));
     const onlyPrivate = v.calendars.length === 1 && v.calendars[0] === "private";
     const volOnly = v.volunteer && v.volWho === "volunteers";
     const title = live ? (volOnly ? "It's posted for volunteers!" : "It's on the calendar!") : "Thanks! We got it.";

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Church family · Heirloom Activities</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="images/logo-badge.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2e4a36">
+<link rel="apple-touch-icon" href="images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Heirloom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261117a">
+<style>
+  .intro { background: var(--forest); color: #fff; padding-block: 36px 26px; }
+  .intro .kicker { color: var(--sage); }
+  .intro h1 { font-size: clamp(32px, 5vw, 46px); margin: 8px 0 8px; }
+  .intro p { margin: 0; max-width: 42em; color: #e1e8dc; font-size: 16.5px; }
+  .page { padding-top: 24px; padding-bottom: 56px; display: grid; gap: 34px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px 0; }
+  .empty { background: var(--paper); border-radius: var(--radius); padding: 32px 24px; text-align: center; color: var(--ink-soft); box-shadow: var(--shadow); }
+  .empty h2 { font-size: 22px; color: var(--forest); margin-bottom: 6px; }
+  .msg { margin: 0; padding: 12px 16px; border-radius: 12px; font-weight: 600; }
+  .msg.err { background: #f7e1dd; color: var(--barn-dark); }
+  .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
+
+  .sec-h { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
+  .sec-h h2 { font-size: clamp(24px, 4vw, 30px); color: var(--forest); margin: 0; }
+  .sec-h p { margin: 4px 0 0; color: var(--ink-soft); }
+
+  /* How many Sundays still need a main: the first thing people see */
+  .need-bar { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 14px; background: #f6e7c3; color: #5a3d0c; font-weight: 600; border: 2px solid var(--wheat); }
+  .need-bar b { font-family: var(--f-title); font-size: 30px; line-height: 1; color: var(--barn-dark); }
+  .need-bar.done { background: var(--sage-soft); color: var(--forest-deep); border-color: var(--sage); }
+
+  .diet { margin: 0 0 14px; padding: 12px 16px; background: var(--paper); border-radius: 12px; color: var(--ink-soft); font-size: 15px; box-shadow: var(--shadow); }
+  .diet b { color: var(--ink); }
+  .diet span { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 10px; border-radius: 999px; background: var(--sage-soft); color: var(--forest-deep); font-weight: 600; font-size: 13.5px; }
+
+  .suns { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+  .sun { position: relative; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px 16px 22px; display: grid; gap: 12px; align-content: start; overflow: hidden; }
+  .sun::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 7px; background: var(--forest); }
+  .sun.need { background: #fdf5e1; outline: 2px solid var(--wheat); }
+  .sun.need::before { background: var(--barn); }
+  .sun h3 { font-size: 21px; color: var(--forest-deep); margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+  .sun h3 small { font-family: var(--f-body, inherit); font-size: 13px; font-weight: 600; color: var(--muted); }
+  .pill { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill.need { background: var(--barn); color: #fff; }
+  .pill.ok { background: var(--forest); color: #fff; }
+  .pill.kind { background: var(--sage-soft); color: var(--forest-deep); }
+  .main-row { display: grid; gap: 8px; }
+  .main-row .dish { font-size: 18px; font-weight: 600; color: var(--ink); }
+  .main-row .by { color: var(--ink-soft); font-size: 14.5px; }
+  .main-need { display: grid; gap: 10px; }
+  .main-need p { margin: 0; color: #5a3d0c; font-weight: 600; }
+  .bring { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+  .bring li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 15px; }
+  .bring .by { color: var(--muted); font-size: 13.5px; }
+  .bring .none { color: var(--muted); font-size: 14.5px; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .quiet { appearance: none; background: none; border: 0; padding: 4px 2px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--forest); text-decoration: underline; cursor: pointer; min-height: 32px; }
+  .quiet.del { color: var(--barn-dark); }
+  .sun .note-link { font-size: 14px; font-weight: 600; }
+
+  /* Notes */
+  .note { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 22px; }
+  .note h3 { font-size: 22px; color: var(--forest-deep); margin: 0 0 4px; }
+  .note .meta { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  .note .body { font-size: 16.5px; line-height: 1.6; overflow-wrap: anywhere; }
+  .note .body p { margin: 0 0 12px; } .note .body p:last-child, .note .body ul:last-child, .note .body ol:last-child { margin-bottom: 0; }
+  .note .body ul, .note .body ol { margin: 0 0 12px; padding-left: 22px; }
+  .note .body a { color: var(--forest); font-weight: 600; }
+  .older { display: grid; gap: 10px; margin-top: 12px; }
+  .older > summary, details.note > summary { cursor: pointer; font-weight: 600; color: var(--forest); }
+  details.note { padding: 14px 18px; }
+  details.note > summary { font-size: 16.5px; color: var(--forest-deep); }
+  details.note > summary small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  details.note[open] > summary { margin-bottom: 10px; }
+
+  .about { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 22px; }
+  .about summary { cursor: pointer; font-family: var(--f-title); font-size: 20px; color: var(--forest); }
+  .about .in { margin-top: 12px; display: grid; gap: 10px; color: var(--ink-soft); line-height: 1.55; }
+  .about .in p, .about .in ol { margin: 0; } .about .in ol { padding-left: 22px; } .about b { color: var(--ink); }
+
+  dialog.cdlg { border: 0; border-radius: 18px; padding: 0; width: min(560px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(20,30,22,.35); }
+  dialog.cdlg::backdrop { background: rgba(20,30,22,.55); }
+  .cdlg .in { padding: 22px 20px; display: grid; gap: 14px; }
+  .cdlg h2 { font-size: 24px; color: var(--forest); margin: 0; }
+  .cdlg p { margin: 0; color: var(--ink-soft); }
+  .cdlg label.f { display: grid; gap: 5px; font-weight: 600; font-size: 15px; }
+  .cdlg input[type="text"], .cdlg select { width: 100%; min-height: 48px; padding: 10px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; font-weight: 400; }
+  .cdlg input[type="text"]:focus, .cdlg select:focus, .ed:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .cdlg .opt { font-weight: 400; color: var(--muted); }
+  .kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kinds label { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 8px 16px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-weight: 600; cursor: pointer; }
+  .kinds input { accent-color: var(--forest); }
+  .kinds label:has(input:checked) { border-color: var(--forest); background: var(--sage-soft); }
+  .cdlg .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+  .cdlg .err { margin-right: auto; color: var(--barn-dark); font-weight: 600; font-size: 14px; }
+  .chk { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 15.5px; }
+  .chk input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--forest); flex: none; }
+  /* The note editor: the same look as the event form's "More details" */
+  dialog.cdlg.wide { width: min(760px, calc(100vw - 20px)); }
+  .rte { border: 1.5px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+  .rte:focus-within { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .rte-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: #faf8f3; }
+  .rte-bar button { display: inline-flex; align-items: center; gap: 5px; min-width: 40px; min-height: 40px; padding: 4px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .rte-bar button:hover { background: var(--sage-soft); }
+  .rte-link { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); background: #faf8f3; } .rte-link[hidden] { display: none; }
+  .rte-link input { flex: 1 1 200px; min-height: 40px !important; }
+  .ed { min-height: 220px; max-height: 46vh; overflow-y: auto; padding: 12px 14px; outline: none; font-size: 16px; line-height: 1.55; }
+  .ed:empty::before { content: attr(data-ph); color: #a9a293; }
+  .ed img, .note .body img { max-width: 100%; height: auto; border-radius: 10px; margin: 8px 0; display: block; }
+  .ed h3, .note .body h3, .note .body h4 { font-family: var(--f-title); font-size: 20px; color: var(--forest-deep); margin: 14px 0 4px; }
+  .ed p { margin: 0 0 10px; } .ed ul, .ed ol { margin: 0 0 10px; padding-left: 22px; } .ed a { color: var(--forest); }
+  .ed blockquote, .note .body blockquote { margin: 0 0 12px; padding: 6px 0 6px 16px; border-left: 4px solid var(--wheat); color: var(--ink-soft); font-style: italic; }
+  .edstat { margin: -6px 0 0 !important; font-size: 13.5px; min-height: 0; } .edstat:empty { display: none; }
+  .sugg { font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: -6px !important; }
+  /* Finding notes */
+  .nfind { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .nfind input, .nfind select { min-height: 46px; padding: 9px 13px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; }
+  .nfind input { flex: 2 1 220px; } .nfind select { flex: 1 1 150px; }
+  .nfind input:focus, .nfind select:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(46,74,54,.15); }
+  .found { margin: 0 0 12px; color: var(--ink-soft); font-weight: 600; }
+  .note .tags { margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill.theme { appearance: none; border: 0; cursor: pointer; background: #efe6f5; color: #4a3d6a; font-family: var(--f-label); }
+  .pill.theme:hover { background: #e2d4ee; }
+  .pill.script { background: #f3e5c4; color: #5a3d0c; text-decoration: none; }
+  .pill.script:hover { background: #ecd7a4; }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Heirloom Activities">
+        <img class="badge" src="images/logo-badge.png" alt="">
+      </a>
+      <nav class="nav" aria-label="Main"><a class="btn btn-outline btn-sm nav-cal" href="index.html">See the calendar</a></nav>
+    </div>
+  </header>
+
+  <section class="intro">
+    <div class="wrap">
+      <span class="kicker">Heirloom Activities</span>
+      <h1 id="hello">Church family</h1>
+      <p>Supper Church sign-ups and notes for the church family. Everyone is welcome at the table.</p>
+    </div>
+  </section>
+
+  <main class="wrap page" id="app" aria-live="polite"><p class="loading">Loading…</p></main>
+
+  <dialog class="cdlg" id="dlg"><div class="in" id="dlgIn"></div></dialog>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-small" style="border:0;margin:0;padding:0">
+        <p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p>
+        <p id="footLine"></p>
+      </div>
+    </div>
+  </footer>
+
+<script src="config.js?v=20261117a"></script>
+<script src="common.js?v=20261117a"></script>
+<script src="nav.js?v=20261117a"></script>
+<script src="install.js?v=20261117a"></script>
+<script src="welcome.js?v=20261117a"></script>
+<script src="church.js?v=20261117a"></script>
+</body>
+</html>

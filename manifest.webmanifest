@@ -1,0 +1,16 @@
+{
+  "name": "Heirloom Activities",
+  "short_name": "Heirloom",
+  "description": "Events, volunteering and church family at Heirloom, a farm and intentional community in the Castro Valley hills.",
+  "start_url": "./mine.html?mine=1&app=1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4efe3",
+  "theme_color": "#2e4a36",
+  "icons": [
+    { "src": "images/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "images/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "images/app-icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

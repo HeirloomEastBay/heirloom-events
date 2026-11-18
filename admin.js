@@ -55,19 +55,19 @@
 
   /* ---------- Tabs ---------- */
   if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
-  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays", "venues"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
+  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays", "venues", "log"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
   const RES = () => state.viewer === "resident";
   // Residents get a lighter panel: no People tab, calendars to look at, add photos and chores
   function setViewer(v) {
     state.viewer = v;
     const res = v === "resident";
-    $("#tab-people").hidden = res;
+    $("#tab-people").hidden = res; $("#tab-log").hidden = res;
     $("#panelTitle").textContent = res ? "Resident panel" : "Admin";
     $("#panelIntro").textContent = res ? "Both calendars, the photo library, the chore chart and the guest rooms, in one place. You can add photos and chores, and book guest rooms. Approving and editing events stays with the admins."
       : "Edit, cancel or delete anything on either calendar, no matter who added it. Manage people, roles and the chore chart, and the photo library.";
     document.title = (res ? "Resident panel" : "Admin") + " · Heirloom Activities";
     if (res) { const rv = document.querySelector('[data-view="review"]'); if (rv) rv.remove(); if (state.view === "review") state.view = "upcoming"; }
-    if (res && state.tab === "people") show("public");
+    if (res && (state.tab === "people" || state.tab === "log")) show("public");
   }
   $("#tabs").hidden = false;
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => { qs.delete("p"); show(t.dataset.tab); });
@@ -82,7 +82,8 @@
     document.querySelectorAll(".tab").forEach(t => { const on = t.dataset.tab === tab; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; });
     if (tab !== "people" || !qs.get("p")) { qs.delete("p"); history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab); }
     if (tab === "photos") return photos(fresh);
-    if (tab === "people" && RES()) return show("public");
+    if ((tab === "people" || tab === "log") && RES()) return show("public");
+    if (tab === "log") return activity(fresh);
     if (tab === "people") return people(fresh);
     if (tab === "venues") { app.innerHTML = `<div class="panel-h"><div><h2>Venues</h2><p>Reserve places around the farm by the hour. Events from the event form hold their place automatically, and anything on the calendars that mentions a venue shows as a heads-up. Reservations go on the residents' calendar.</p></div></div><div id="venues"></div>`; return HLVenues.mount($("#venues")); }
     if (tab === "stays") { app.innerHTML = `<div class="panel-h"><div><h2>Guest rooms</h2><p>Who's in the 4 guest rooms, and when. Stays come from the residents' calendar ("Room 1: Sarah (Sabbath 365)") and from the Guest rooms page residents use. Admins can change any stay and block rooms.</p></div></div><div id="stays"></div>`; return HLStays.mount($("#stays"), { refresh: fresh }); }
@@ -453,7 +454,7 @@
     $("#ch").innerHTML = `<datalist id="whenList">${whens.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
       <h3 class="day-h" style="font-family:var(--f-label);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 8px">Add a chore</h3>
       ${slotForm({}, d, -1)}
-      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile.</p>
+      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile. Need a new kind of training for a chore? <button type="button" id="chTrn" style="background:none;border:0;padding:0;color:var(--forest);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer">Edit the trainings list</button></p>
       ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? `<details class="slotd${!s.volunteer ? " open-slot" : ""}"${state.openSlot === s.id ? " open" : ""} data-id="${esc(s.id)}">
         <summary${s.canEdit === false ? ' class="ro"' : ""}><b>${esc(s.chore)}</b><span class="w">${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
           <span class="who${!s.volunteer ? " open" : s.volunteer === "Volunteers" ? " pool" : ""}">${!s.volunteer ? "Open" : s.volunteer === "Volunteers" ? "Volunteers" : esc((d.volunteers.find(v => v.email === s.volunteer) || { name: s.volunteer }).name)}</span>
@@ -529,7 +530,7 @@
       const std = [["AM animal chores", days, "by 10am", 1, "Animal chores"], ["PM animal chores", days, "~5pm", 1, "Animal chores"], ["Eggs & welfare check", days, "after 2pm", 0.5, "Animal chores"],
         ["AM milking", days, "Morning", 0.5, "Goat milking"], ["Chicken feed/water refill", ["Tuesday", "Thursday", "Saturday"], "Anytime", 0.5, "Animal chores"]];
       let id = 0;
-      demoCh = { days, trainings: ["Animal chores", "Goat milking", "Garden tools", "Power tools"],
+      demoCh = { days, trainings: ["Animal feeding", "Collecting eggs", "Gardening", "Power tools & woodshop", "Goat milking", "Goat milk soap making", "Event help"],
         volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }],
         slots: std.flatMap(([chore, ds, when, hours, training]) => ds.map(day => ({ id: "S-" + (++id), chore, day, when, hours, training, volunteer: chore === "PM animal chores" && day === "Tuesday" ? "ana@example.com" : "Volunteers", notes: "", next: nextOf(day), sort: sortOf(when) }))),
         coverage: [] };
@@ -555,21 +556,66 @@
      background check, trainings, chores, and what they've done.
      ============================================================ */
   const pstate = { q: "", filter: "", news: false };
-  const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"]];
-  const NOT_VOL = "Not a volunteer";
-  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Trusted posters"], ["none", "Event posters & contacts"], ["removed", "Removed people"]];
-  const nameOf = p => (p.first + " " + p.last).trim() || p.email;
-  const initials = p => ((p.first || p.email)[0] + (p.last ? p.last[0] : "")).toUpperCase();
+  const BG = [["", "Not yet"], ["Sent", "Sent"], ["Cleared", "Cleared"], ["Failed", "Failed"]];
+  const NOT_VOL = "N/A (not currently a volunteer)";
+  const FILTERS = [["", "Everyone"], ["Resident", "Residents"], ["member", "Community members"], ["Volunteer", "Volunteers"], ["New", "New volunteers to follow up"], ["church", "Church family"], ["partner", "Community partners"],
+    ["admin", "Admins"], ["approver", "Event approvers"], ["trusted", "Post without review"], ["removed", "Removed people"]];
+  const POWER = t => /power tool|woodshop|machin/i.test(t || "");
+  const nameOf = p => ((p.preferred || p.first || "") + " " + (p.last || "")).trim() || p.email;
+  const initials = p => ((p.preferred || p.first || p.email)[0] + (p.last ? p.last[0] : "")).toUpperCase();
   const hrs = h => (h === 1 ? "1 hour" : (Math.round(h * 4) / 4) + " hours");
   const dateLong = ymd => /^\d{4}-\d{2}-\d{2}/.test(ymd || "") ? H.fmt(H.zoned(...ymd.slice(0, 10).split("-").map(Number), 12), { month: "short", day: "numeric", year: "numeric" }) : "";
 
   function setNewCount(list) { const n = list.filter(p => p.role === "Volunteer" && p.status === "New").length; $("#volCount").hidden = !n; $("#volCount").textContent = n; }
 
+  /* ============================================================
+     Activity log: who did what, and when (admins only)
+     ============================================================ */
+  const LOGF = { q: "", who: "", kind: "" };
+  const KINDS = [["", "Everything"], ["post", "Events posted or changed by people"], ["admin", "Approvals, edits, cancels, deletes"], ["people", "People and roles"], ["chores", "Chores and coverage"], ["rooms", "Guest rooms and venues"], ["church", "Church notes"]];
+  const kindOf = e => { const a = (e.action + " " + e.calendar + " " + e.event).toLowerCase();
+    if (/church note/.test(a)) return "church"; if (/posted an event|changed their event|changed a live event/.test(a)) return "post";
+    if (/stay|room|venue|reserv/.test(a)) return "rooms"; if (/chore|cover|slot|shift/.test(a)) return "chores";
+    if (/person|profile|role|volunteer|training|partner|admin list|approver|trusted|agreement|removed/.test(a)) return "people"; return "admin"; };
+  async function activity(fresh) {
+    app.innerHTML = `<div class="panel-h"><div><h2>Activity log</h2><p>Who did what, and when: events posted and changed, approvals, edits, cancels, deletes, people and roles, chores and church notes. Newest first. The full log, with backups for restoring deleted events, is the Admin log tab in the Sheet.</p></div>
+      <button class="btn btn-outline btn-sm" id="logRefresh">Refresh</button></div><div id="logBox"><p class="loading">Loading the log…</p></div>`;
+    $("#logRefresh").onclick = () => activity(true);
+    try {
+      if (fresh || !state.log) state.log = await call({ action: "adminLog", limit: 1500 });
+      if (state.tab === "log") renderLog();
+    } catch (err) { handle(err, $("#logBox")); }
+  }
+  function renderLog() {
+    const L = state.log, box = $("#logBox"); if (!box) return;
+    const people = [...new Set(L.entries.map(e => e.who).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const q = LOGF.q.trim().toLowerCase();
+    const list = L.entries.filter(e => (!LOGF.who || e.who === LOGF.who) && (!LOGF.kind || kindOf(e) === LOGF.kind)
+      && (!q || [e.who, e.email, e.event, e.action, e.details, e.calendar].join(" ").toLowerCase().includes(q)));
+    const day = w => String(w).slice(0, 10);
+    let last = "", rows = "";
+    list.slice(0, 400).forEach(e => {
+      if (day(e.when) !== last) { last = day(e.when); rows += `<li class="lday">${esc(/^\d{4}-\d{2}-\d{2}$/.test(last) ? dateLong(last) : last)}</li>`; }
+      rows += `<li class="lrow"><span class="lt">${esc(String(e.when).slice(11, 16))}</span><div><b>${esc(e.who || "Someone")}</b> ${esc(e.action.charAt(0).toLowerCase() + e.action.slice(1))}${e.event ? ` <span class="lev">${esc(e.event)}</span>` : ""}
+        ${e.calendar ? `<span class="status off">${esc(e.calendar)}</span>` : ""}${e.details ? `<span class="ld">${esc(e.details)}</span>` : ""}</div></li>`;
+    });
+    box.innerHTML = `<div class="lfind" role="search">
+        <input type="search" id="logQ" placeholder="Search names, events, actions…" aria-label="Search the log" value="${esc(LOGF.q)}">
+        <select id="logWho" aria-label="Person"><option value="">Everyone</option>${people.map(p => `<option${p === LOGF.who ? " selected" : ""}>${esc(p)}</option>`).join("")}</select>
+        <select id="logKind" aria-label="Kind">${KINDS.map(([v, l]) => `<option value="${v}"${v === LOGF.kind ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      </div>
+      <p class="hint" style="margin:0 0 10px">${list.length ? `Showing ${Math.min(list.length, 400)} of ${list.length} matching` : "Nothing matches"}${L.total > L.entries.length ? ` · the newest ${L.entries.length} of ${L.total} entries are loaded` : ""}.</p>
+      ${list.length ? `<ul class="llist">${rows}</ul>` : `<div class="empty"><p>Nothing in the log matches that.</p></div>`}`;
+    $("#logQ").oninput = e => { LOGF.q = e.target.value; const pos = e.target.selectionStart; renderLog(); const i = $("#logQ"); i.focus(); try { i.setSelectionRange(pos, pos); } catch (x) { /* fine */ } };
+    $("#logWho").onchange = e => { LOGF.who = e.target.value; renderLog(); };
+    $("#logKind").onchange = e => { LOGF.kind = e.target.value; renderLog(); };
+  }
+
   async function people(fresh) {
     const who = qs.get("p");
     if (who) return person(who);
     app.innerHTML = `<div class="panel-h"><div><h2>People</h2>
-      <p>Residents, volunteers, and everyone who posts events, in one list. Click a name to see their profile, change their role and permissions, or put them on the chore chart. It all lives on the People tab in the Sheet too.</p></div></div>
+      <p>Everyone is a resident or a community member. Click a name to see their profile, switch on what they do (volunteer, church family, partner, posting without review, admin), or put them on the chore chart. It all lives on the People tab in the Sheet too.</p></div></div>
       <div id="ppl"><p class="loading">Loading people…</p></div>`;
     try {
       if (fresh || !state.ppl) state.ppl = await call({ action: "adminPersons" });
@@ -606,7 +652,7 @@
       else if (p.removed) return false;
       if (f === "Resident" || f === "Volunteer") { if (p.role !== f) return false; }
       else if (f === "New") { if (!(p.role === "Volunteer" && p.status === "New")) return false; }
-      else if (f === "none") { if (p.role) return false; }
+      else if (f === "member") { if (p.role === "Resident") return false; }
       else if (f && f !== "removed" && !p[f]) return false;
       if (pstate.news && !p.news) return false;
       return !pstate.q || [p.first, p.last, p.email, p.phone].concat(p.others || []).join(" ").toLowerCase().includes(pstate.q.toLowerCase());
@@ -619,7 +665,7 @@
       $("#plist").innerHTML = list.length ? list.map(p => `<button type="button" class="prow" data-e="${esc(p.email)}">
           <span class="av${p.role === "Resident" ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
           <span class="pmain"><b>${esc(nameOf(p))}</b><span class="sub">${esc(p.email)}${(p.others || []).length ? " + " + p.others.length + " more" : ""}${p.phone ? " · " + esc(p.phone) : ""}</span>
-            <span class="chips2">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted && !p.admin && !p.approver ? `<span class="status">Trusted poster</span>` : ""}${p.slots ? `<span class="status src">${p.slots} chore slot${p.slots > 1 ? "s" : ""}</span>` : ""}${p.events ? `<span class="status src">${p.events} event${p.events > 1 ? "s" : ""} posted</span>` : ""}</span></span>
+            <span class="chips2">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted && !p.admin && !p.approver && p.role !== "Resident" ? `<span class="status">Posts without review</span>` : ""}${p.slots ? `<span class="status src">${p.slots} chore slot${p.slots > 1 ? "s" : ""}</span>` : ""}${p.events ? `<span class="status src">${p.events} event${p.events > 1 ? "s" : ""} posted</span>` : ""}</span></span>
           <span class="pstat">${p.hours ? `<b>${esc(hrs(p.hours))}</b>` : ""}${p.lastText ? `<span>Last helped ${esc(p.lastText)}</span>` : ""}</span>
         </button>`).join("")
         : `<div class="empty"><h2>${all.length ? "No one matches" : "No one yet"}</h2><p>${all.length ? "Try clearing a filter." : "Sign-ups from the volunteer form show up here, and so does anyone who posts an event."}</p></div>`;
@@ -636,8 +682,9 @@
       catch (e) { openDlg(`<h2>Emails</h2><p>Copy these:</p><textarea readonly style="min-height:140px">${esc(emails)}</textarea><div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Done</button></div>`); }
     };
     $("#pcsv").onclick = () => {
-      const cols = [["First name", "first"], ["Last name", "last"], ["Email", "email"], ["Phone", "phone"], ["Role", "role"], ["Volunteer stage", "status"], ["Background check", "bg"],
-        ["Trainings", p => p.trainings.join(", ")], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Trusted poster", "trusted"],
+      const cols = [["First name", "first"], ["Last name", "last"], ["Preferred name", "preferred"], ["Email", "email"], ["Phone", "phone"], ["Resident or community member", p => p.role === "Resident" ? "Resident" : "Community member"],
+        ["Volunteer stage", p => p.role === "Resident" ? "Resident" : p.status], ["Background check", "bg"],
+        ["Trainings", p => p.trainings.join(", ")], ["Church family", p => !!p.church], ["Partner of", "partner"], ["News & updates", "news"], ["Admin", "admin"], ["Approves events", "approver"], ["Posts without review", "trusted"],
         ["Chore slots", "slots"], ["Hours helped", "hours"], ["Last helped", "lastHelped"], ["Events posted", "events"]];
       const cell = x => `"${String(x === true ? "Yes" : x === false ? "No" : x == null ? "" : x).replace(/"/g, '""')}"`;
       const csv = [cols.map(c => cell(c[0])).join(",")].concat(filtered().map(p => cols.map(c => cell(typeof c[1] === "function" ? c[1](p) : p[c[1]])).join(","))).join("\r\n");
@@ -649,40 +696,47 @@
     draw();
   }
   function roleChip(p) {
-    if (p.role === "Resident") return `<span class="status news">Resident</span>`;
-    if (p.role === "Volunteer") return `<span class="status${p.status === "New" ? " new" : ""}">${p.status === "Active volunteer" ? "Volunteer" : "Volunteer · " + esc(p.status)}</span>`;
-    return p.events ? "" : `<span class="status off">Contact</span>`;
+    const out = [p.role === "Resident" ? `<span class="status news">Resident</span>` : `<span class="status off">Community member</span>`];
+    if (p.role === "Volunteer") out.push(`<span class="status${p.status === "New" ? " new" : ""}">${p.status === "Active volunteer" ? "Volunteer" : "Volunteer · " + esc(p.status)}</span>`);
+    if (p.partner) out.push(`<span class="status src">Partner · ${esc(p.partner)}</span>`);
+    if (p.church && p.role !== "Resident") out.push(`<span class="status">Church family</span>`);
+    return out.join("");
   }
 
+  document.addEventListener("click", e => { if (e.target && e.target.id === "chTrn") editTrainings(); });
   function editTrainings() {
-    const cur = (state.ppl && state.ppl.trainings) || (state.person && state.person.trainings) || [];
-    openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line.</p>
+    const cur = (state.tab === "chores" && state.chores && state.chores.trainings) || (state.ppl && state.ppl.trainings) || (state.person && state.person.trainings) || (state.chores && state.chores.trainings) || [];
+    openDlg(`<h2>Trainings</h2><p>The trainings you can check off for each volunteer, and require for opportunities and chore slots. One per line. Anything with "power tools", "woodshop" or "machine" in its name also asks the person to accept the safety agreement.</p>
       <textarea id="trnList" style="min-height:160px">${esc(cur.join("\n"))}</textarea>
       <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Save</button></div>`);
     $("#go").onclick = async e => {
       const b = e.currentTarget, list = $("#trnList").value.split("\n").map(x => x.trim()).filter(Boolean);
       b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-      try { const r = await call({ action: "adminTrainingsSave", list }); if (state.ppl) state.ppl.trainings = r.trainings; state.chores = null; dlg.close(); flash("Trainings updated."); if (qs.get("p")) person(qs.get("p")); }
+      try { const r = await call({ action: "adminTrainingsSave", list }); if (state.ppl) state.ppl.trainings = r.trainings; state.chores = null; dlg.close(); flash("Trainings updated."); if (state.tab === "chores") chores(true); else if (qs.get("p")) { state.person = null; person(qs.get("p")); } }
       catch (err) { b.disabled = false; b.textContent = "Save"; flash(err.message, true); }
     };
   }
 
   function addPerson() {
-    openDlg(`<h2>Add a person</h2><p>For residents, pre-approved volunteers, or anyone who hasn't filled out a form. They can log in right away with this email.</p>
+    openDlg(`<h2>Add a person</h2><p>Add anyone by email and set what they can do. They can log in right away with this email (we send a 6-digit code), and they'll be asked to fill in their profile the first time.</p>
       <form id="addP" class="f2" novalidate>
         <div class="two"><label class="lbl">First name<input type="text" name="first" maxlength="60" autocomplete="off"></label>
         <label class="lbl">Last name<input type="text" name="last" maxlength="60" autocomplete="off"></label></div>
         <label class="lbl">Email<input type="email" name="email" maxlength="120" autocomplete="off"></label>
         <label class="lbl">Phone <span class="opt">(optional)</span><input type="tel" name="phone" maxlength="40" autocomplete="off"></label>
         <span class="lbl">They are…</span>
-        <div class="checks" role="radiogroup"><label><input type="radio" name="role" value="Resident" checked> A resident</label><label><input type="radio" name="role" value="Volunteer"> A volunteer</label><label><input type="radio" name="role" value=""> Neither (posts events, or a contact)</label></div>
-        <p class="hint" style="margin:0">You can set everything else (stage, background check, trainings, permissions, chores) on their profile next.</p>
+        <div class="checks" role="radiogroup"><label><input type="radio" name="role" value="Resident"> A resident</label><label><input type="radio" name="role" value="" checked> A community member</label></div>
+        <label class="chk" id="addVolRow"><input type="checkbox" name="vol"> Already an approved volunteer</label>
+        <p class="hint" style="margin:0">Residents are volunteers and church family automatically. You can set everything else (background check, trainings, church family, partner, permissions, chores) on their profile next.</p>
       </form>
       <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Add and open profile</button></div>`);
     const f = $("#addP");
+    f.querySelectorAll('input[name="role"]').forEach(r => r.onchange = () => { $("#addVolRow").hidden = fd0().get("role") === "Resident"; });
+    function fd0() { return new FormData(f); }
     $("#go").onclick = async e => {
       const b = e.currentTarget, fd = new FormData(f);
-      const body = { action: "adminPersonSave", create: true, first: fd.get("first"), last: fd.get("last"), email: String(fd.get("email") || "").trim().toLowerCase(), phone: fd.get("phone"), role: fd.get("role"), status: "Active volunteer" };
+      const body = { action: "adminPersonSave", create: true, first: fd.get("first"), last: fd.get("last"), email: String(fd.get("email") || "").trim().toLowerCase(), phone: fd.get("phone"),
+        role: fd.get("role") === "Resident" ? "Resident" : fd.get("vol") ? "Volunteer" : "", status: "Active volunteer" };
       b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
       try { state.person = await call(body); state.ppl = null; dlg.close(); flash(`Added ${body.first}. They can log in with ${body.email}.`); goPerson(body.email); }
       catch (err) {
@@ -717,7 +771,7 @@
         <span class="av big${res ? " res" : ""}" aria-hidden="true">${esc(initials(p))}</span>
         <div><h2>${esc(nameOf(p))}</h2>
           <p class="sub"><a href="mailto:${esc(p.email)}">${esc(p.email)}</a>${p.phone ? ` · <a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""}${p.submitted ? ` · since ${esc(dateLong(p.submitted))}` : ""}</p>
-          <div class="chips2" style="margin:6px 0 0">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted ? `<span class="status">Trusted poster</span>` : ""}</div></div>
+          <div class="chips2" style="margin:6px 0 0">${roleChip(p)}${p.admin ? `<span class="status">Admin</span>` : ""}${p.approver ? `<span class="status">Approves events</span>` : ""}${p.trusted && p.role !== "Resident" ? `<span class="status">Posts without review</span>` : ""}</div></div>
         <div class="impact">${p.hours || p.shifts ? `<b>${esc(hrs(p.hours))}</b><span>${p.shifts} shift${p.shifts === 1 ? "" : "s"}${p.lastText ? " · last helped " + esc(p.lastText) : ""}</span>${since ? `<span>${since}</span>` : ""}` : `<span>No volunteer hours yet</span>`}</div>
       </section>
 
@@ -725,33 +779,47 @@
         <section class="pcard">
           <h3>Contact</h3>
           <div class="two">${field("first", "First name", p.first)}${field("last", "Last name", p.last)}</div>
+          <div class="two">${field("preferred", "Preferred name", p.preferred, "text", true)}${field("pronouns", "Pronouns", p.pronouns, "text", true)}</div>
           <label class="lbl">Email<input type="email" value="${esc(p.email)}" disabled></label>
           <label class="lbl">Other emails they log in with <span class="opt">(optional)</span><input type="text" data-k="others" value="${esc((p.others || []).join(", "))}" placeholder="their personal email, for example" autocomplete="off"></label>
           ${field("phone", "Phone", p.phone, "tel", true)}
-          ${field("address", "Address", p.address, "text", true)}
-          ${field("emergency", "Emergency contact", p.emergency, "text", true, "Name, relationship, phone")}
+          ${field("address", "Street address", p.address, "text", true)}
+          <div class="two">${field("city", "City", p.city)}<div class="two">${field("state", "State", p.state)}${field("zip", "Zip", p.zip)}</div></div>
+          <div class="two">${field("emergency", "Emergency contact", p.emergency, "text", true, "Name and relationship")}${field("emergencyPhone", "Their phone", p.emergencyPhone, "tel")}</div>
           <label class="chk"><input type="checkbox" data-k="news"${p.news ? " checked" : ""}> Wants news &amp; updates</label>
-          <p class="hint privacy">🔒 Phone, address and emergency contact are only shown to admins and to ${esc(p.first || "them")} on their own profile.</p>
+          <p class="hint privacy">🔒 Phone, address and emergency contact are only shown to admins and to ${esc(p.preferred || p.first || "them")} on their own profile.</p>
         </section>
 
         <section class="pcard">
-          <h3>Role &amp; permissions</h3>
-          <label class="switch"><input type="checkbox" data-k="resident"${res ? " checked" : ""}><span class="track" aria-hidden="true"></span><span><b>Resident</b><br><span class="hint">Lives at Heirloom</span></span></label>
-          <p class="hint res-note" ${res ? "" : "hidden"}>Residents count as approved volunteers, with a cleared background check and every training. Turning this on also lets them post events without review.</p>
-          <span class="lbl">Can</span>
-          <label class="chk"><input type="checkbox" data-k="trusted"${p.trusted ? " checked" : ""}> Post events without review</label>
-          <label class="chk"><input type="checkbox" data-k="approver"${p.approver ? " checked" : ""}> Approve other people's events <span class="hint">(gets the approval emails)</span></label>
-          <label class="chk"><input type="checkbox" data-k="admin"${p.admin ? " checked" : ""}> Use this Admin page${p.email === me ? " <span class='hint'>(that's you)</span>" : ""}</label>
-
-          <div class="vbox" ${res ? "hidden" : ""}>
-            <h3 style="margin-top:6px">Volunteer</h3>
+          <h3>Resident or community member</h3>
+          <label class="switch"><input type="checkbox" data-k="resident"${res ? " checked" : ""}><span class="track" aria-hidden="true"></span><span><b>Resident</b><br><span class="hint">Off = community member. Switch it any time, for example when someone moves out; their hours and history stay.</span></span></label>
+          <p class="hint res-note" ${res ? "" : "hidden"}>Residents see the residents' calendar and guest rooms, post events without review, are part of the church family, and count as approved volunteers trained for everything except power tools &amp; the woodshop.</p>
+          <div class="rbox" ${res ? "" : "hidden"}>
+            <span class="lbl">Power tools &amp; woodshop</span>
+            <div class="trn">${R.trainings.filter(POWER).map(t => `<label><input type="checkbox" data-k="trnR" value="${esc(t)}"${p.trainings.includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("") || `<span class="hint">No power tools training on the list.</span>`}</div>
+          </div>
+          <h3 style="margin-top:6px">Add-ons</h3>
+          <label class="chk"><input type="checkbox" data-k="trusted"${p.trusted || res ? " checked" : ""}${res ? " disabled" : ""}> Post events without review</label>
+          <label class="chk"><input type="checkbox" data-k="isvol"${res || stage !== NOT_VOL ? " checked" : ""}${res ? " disabled" : ""}> Volunteer</label>
+          <div class="vbox subbox" ${res || stage === NOT_VOL ? "hidden" : ""}>
+            ${(R.asked || []).length ? `<p class="hint" style="margin:0">🙋 Asked to learn: <b>${esc(R.asked.join(", "))}</b>. Tick it below once they're trained.</p>` : ""}
             <label class="lbl">Stage<select data-k="stage">${stages.concat(stages.includes(stage) ? [] : [stage]).map(s => `<option${s === stage ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+            <p class="hint na-note" style="margin:-4px 0 0" ${stage === "Not approved" ? "" : "hidden"}>Not approved: they can't take chores or volunteers-only shifts. They can still come to drop-in events that are open to everyone. The app doesn't tell them why.</p>
             <div class="vfields" ${stage === NOT_VOL ? "hidden" : ""}>
-              <label class="lbl">Background check<select data-k="bg">${BG.map(([v, l]) => `<option value="${v}"${v === (p.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+              <label class="lbl">Background check <span class="opt">(one time)</span><select data-k="bg">${BG.map(([v, l]) => `<option value="${v}"${v === (p.bg || "") ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+              <label class="lbl bgnote" ${p.bg === "Failed" || p.bgNote ? "" : "hidden"}>Note about the background check <span class="opt">(only admins see this)</span><textarea data-k="bgNote" maxlength="500" style="min-height:64px">${esc(p.bgNote || "")}</textarea></label>
               <span class="lbl">Trainings</span>
               <div class="trn">${R.trainings.map(t => `<label><input type="checkbox" data-k="trn" value="${esc(t)}"${p.trainings.includes(t) ? " checked" : ""}>${esc(t)}</label>`).join("") || `<span class="hint">No trainings set up yet.</span>`}</div>
+              <p class="hint" style="margin:0">${p.powerAccepted ? "✓ Accepted the power tools safety agreement: " + esc(p.powerAccepted) : "Power tools &amp; woodshop: the next time they sign in, they're asked to read and accept the safety agreement. It counts once they do."}</p>
             </div>
           </div>
+          <label class="chk"><input type="checkbox" data-k="church"${p.church || res ? " checked" : ""}${res ? " disabled" : ""}> Church family <span class="hint">(sees Supper Church sign-ups and Pastor Brit's notes; people can also turn this on themselves)</span></label>
+          <label class="chk"><input type="checkbox" data-k="ispartner"${p.partner ? " checked" : ""}> Community partner <span class="hint">(posts events without review, can reserve any venue)</span></label>
+          <div class="pbox subbox" ${p.partner ? "" : "hidden"}>
+            <label class="lbl">Which partner?<select data-k="partner"><option value="">Choose…</option>${(R.partners || []).concat(p.partner && !(R.partners || []).includes(p.partner) ? [p.partner] : []).map(n => `<option${n === p.partner ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="__new">＋ Add a new partner…</option></select></label>
+          </div>
+          <label class="chk"><input type="checkbox" data-k="approver"${p.approver ? " checked" : ""}> Approve other people's events <span class="hint">(gets the approval emails)</span></label>
+          <label class="chk"><input type="checkbox" data-k="admin"${p.admin ? " checked" : ""}> Admin <span class="hint">(can see and do everything, including People)${p.email === me ? " (that's you)" : ""}</span></label>
         </section>
 
         <section class="pcard wide">
@@ -779,6 +847,15 @@
         ${!R.signups.length && !R.coverage.length && !R.posted.length ? `<p class="hint" style="margin:0"><i>Nothing yet.</i></p>` : ""}
       </section>
 
+      ${p.birthday || p.dietary || p.allergies || p.picked || p.about ? `<section class="pcard">
+        <h3>From their profile</h3>
+        ${p.birthday ? `<p><span class="lbl">Birthday</span>${esc(dateLong(p.birthday))}</p>` : ""}
+        ${p.dietary ? `<p><span class="lbl">Dietary restrictions</span>${esc(p.dietary)}</p>` : ""}
+        ${p.allergies ? `<p><span class="lbl">Allergies</span>${esc(p.allergies)}</p>` : ""}
+        ${p.picked ? `<p><span class="lbl">Interested in</span>${esc(p.picked)}</p>` : ""}
+        ${p.about ? `<p><span class="lbl">Anything else</span><span class="cm">${esc(p.about)}</span></p>` : ""}
+        <p class="hint privacy" style="margin:0">🔒 Only admins and ${esc(p.preferred || p.first || "they")} can see these. ${p.profileDone ? "" : "They haven't finished the welcome questions yet."}</p>
+      </section>` : ""}
       ${p.interests || p.heard || p.comments ? `<section class="pcard">
         <h3>Volunteer form</h3>
         ${p.interests ? `<p><span class="lbl">Interested in</span>${esc(p.interests)}</p>` : ""}
@@ -795,13 +872,54 @@
     f.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", dirty));
     q("resident").addEventListener("change", () => {
       const on = q("resident").checked;
-      f.querySelector(".res-note").hidden = !on; f.querySelector(".vbox").hidden = on;
-      if (on && !q("trusted").checked) { q("trusted").checked = true; flash("Residents can post events without review, so that's on too. Approving events stays separate."); }
+      f.querySelector(".res-note").hidden = !on; f.querySelector(".vbox").hidden = on; f.querySelector(".rbox").hidden = !on;
+      q("church").disabled = on; q("trusted").disabled = on; q("isvol").disabled = on; q("isvol").checked = true;
+      if (on) { q("church").checked = true; q("trusted").checked = true; flash("Residents post without review and are church family and volunteers automatically. Approving events stays separate."); }
+      else {
+        // Moving out: they stay a volunteer and church family unless you turn those off
+        q("church").checked = true; q("trusted").checked = !!p.trusted && !res ? true : false;
+        if (q("stage").value === NOT_VOL) q("stage").value = "Active volunteer";
+        if (!q("bg").value) q("bg").value = "Cleared";
+        f.querySelector(".vfields").hidden = false;
+        flash("Now a community member. They stay a volunteer and part of the church family unless you turn those off. Tick the trainings that carry over, then save.");
+      }
     });
-    q("stage").addEventListener("change", () => { f.querySelector(".vfields").hidden = q("stage").value === NOT_VOL; });
+    q("stage").addEventListener("change", () => {
+      const na = q("stage").value === NOT_VOL;
+      f.querySelector(".vfields").hidden = na; f.querySelector(".na-note").hidden = q("stage").value !== "Not approved";
+      if (na) { q("isvol").checked = false; f.querySelector(".vbox").hidden = true; }
+    });
+    q("isvol").addEventListener("change", () => {
+      const on = q("isvol").checked;
+      if (on && q("stage").value === NOT_VOL) q("stage").value = "New";
+      if (!on) q("stage").value = NOT_VOL;
+      f.querySelector(".vbox").hidden = !on; f.querySelector(".vfields").hidden = !on; f.querySelector(".na-note").hidden = true;
+    });
+    q("bg").addEventListener("change", () => { f.querySelector(".bgnote").hidden = q("bg").value !== "Failed" && !q("bgNote").value; });
+    q("ispartner").addEventListener("change", () => { f.querySelector(".pbox").hidden = !q("ispartner").checked; if (!q("ispartner").checked) q("partner").value = ""; });
+    q("partner").addEventListener("change", () => {
+      if (q("partner").value !== "__new") return;
+      q("partner").value = p.partner || "";
+      openDlg(`<h2>Add a new partner</h2><p>This sends the details to the app's Owner (the community@ account), who sets up the new partner group. Once it's added, you can pick it here.</p>
+        <form id="newP" class="f2" novalidate>
+          <label class="lbl">Organization name<input type="text" name="org" maxlength="100" autocomplete="off"></label>
+          <div class="two"><label class="lbl">Contact's first name<input type="text" name="first" maxlength="60" value="${esc(p.first || "")}"></label><label class="lbl">Last name<input type="text" name="last" maxlength="60" value="${esc(p.last || "")}"></label></div>
+          <div class="two"><label class="lbl">Phone<input type="text" inputmode="tel" name="phone" maxlength="40" value="${esc(p.phone || "")}"></label><label class="lbl">Email<input type="text" inputmode="email" name="email" maxlength="120" value="${esc(p.email || "")}"></label></div>
+          <label class="lbl">Notes<textarea name="notes" maxlength="2000" placeholder="What they do, how they're connected to Heirloom, their website…"></textarea></label>
+        </form>
+        <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Send to the Owner</button></div>`);
+      $("#go").onclick = async e => {
+        const b = e.currentTarget, fd = new FormData($("#newP"));
+        if (!String(fd.get("org") || "").trim()) return flash("Add the organization's name first.", true);
+        b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+        try { await call({ action: "adminPartnerRequest", org: fd.get("org"), first: fd.get("first"), last: fd.get("last"), phone: fd.get("phone"), email: fd.get("email"), notes: fd.get("notes") }); dlg.close(); flash("Sent. The Owner will set up the new partner, then you can pick it here."); }
+        catch (err) { b.disabled = false; b.textContent = "Send to the Owner"; flash(err.message, true); }
+      };
+    });
     f.onsubmit = e => e.preventDefault();
     save.onclick = async () => {
       if (!q("first").value.trim()) { q("first").focus(); return flash("Add a first name first.", true); }
+      if (q("ispartner").checked && !q("partner").value) { q("partner").focus(); return flash("Choose which partner they're with, or untick Community partner.", true); }
       const admin = q("admin").checked;
       if (p.email === me && !admin && !save.dataset.ok) {
         openDlg(`<h2>Remove yourself as an admin?</h2><p>You won't be able to use this page anymore. Another admin would need to add you back.</p>
@@ -810,11 +928,12 @@
         return;
       }
       const resident = q("resident").checked, st = q("stage").value;
-      const body = { action: "adminPersonSave", email: p.email, first: q("first").value, last: q("last").value, phone: q("phone").value, address: q("address").value,
-        emergency: q("emergency").value, news: q("news").checked, notes: q("notes").value, others: q("others").value,
-        role: resident ? "Resident" : st === NOT_VOL ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("bg").value,
-        trainings: [...f.querySelectorAll('[data-k="trn"]:checked')].map(c => c.value),
-        trusted: q("trusted").checked, approver: q("approver").checked, admin };
+      const body = { action: "adminPersonSave", email: p.email, first: q("first").value, last: q("last").value, preferred: q("preferred").value, pronouns: q("pronouns").value, phone: q("phone").value, address: q("address").value, city: q("city").value, state: q("state").value, zip: q("zip").value,
+        emergency: q("emergency").value, emergencyPhone: q("emergencyPhone").value, news: q("news").checked, notes: q("notes").value, others: q("others").value,
+        role: resident ? "Resident" : st === NOT_VOL || !q("isvol").checked ? "" : "Volunteer", status: st === NOT_VOL ? "" : st, bg: q("bg").value, bgNote: q("bgNote").value,
+        trainings: [...f.querySelectorAll(resident ? '[data-k="trnR"]:checked' : '[data-k="trn"]:checked')].map(c => c.value),
+        church: resident || q("church").checked, partner: q("ispartner").checked ? q("partner").value : "",
+        trusted: resident ? undefined : q("trusted").checked, approver: q("approver").checked, admin };
       save.disabled = true; save.innerHTML = `<span class="spinner"></span> Saving…`;
       try {
         const r = await call(body);
@@ -891,6 +1010,13 @@
       { kind: "calendar", eventId: "b1", key: "cal:public:b1", title: "Supper Church", when: when(6, 18, 20), start: iso(6, 18), location: "Farmhouse", image: "images/farmhouse-lawn.jpg", hostName: "" },
       { kind: "partner", key: "partner:plantify:2", title: "Bed prep and cover crops", partner: "Plantify", when: when(8, 11, 14), start: iso(8, 11), location: "Paradise Community Garden", image: "images/squash-tunnel.jpg", hidden: true }
     ] };
+    if (b.action === "adminLog") return { ok: true, total: 6, entries: [
+      { when: "2026-11-17 18:40", who: "Lindsey Huffman", email: "lindsey.j.huffman@gmail.com", calendar: "Public", event: "Room 2: Sarah staying", action: "Deleted", details: "" },
+      { when: "2026-11-17 09:12", who: "Mark Hamiter", email: "mkhamiter@gmail.com", calendar: "Public, Residents", event: "Room 2: Sarah staying", action: "Posted an event (held for review)", details: "Title mentions \"Room\"" },
+      { when: "2026-11-16 20:05", who: "Brit Pastor", email: "staff@heirloomeastbay.com", calendar: "", event: "This Sunday: the great banquet", action: "Posted a church note", details: "Also sent to Discord" },
+      { when: "2026-11-16 14:30", who: "Lindsey Huffman", email: "lindsey.j.huffman@gmail.com", calendar: "", event: "Pat Lee", action: "Updated a person", details: "Volunteer · Active volunteer · trainings: Animal feeding" },
+      { when: "2026-11-16 11:02", who: "Riss Kostelnick", email: "kkostelnick@iliff.edu", calendar: "Public", event: "Goat happy hour", action: "Posted an event (went live)", details: "Posts without review" },
+      { when: "2026-11-15 17:45", who: "Lindsey Huffman", email: "lindsey.j.huffman@gmail.com", calendar: "Public", event: "Plant swap", action: "Approved", details: "" }] };
     if (b.action === "adminLibrary") return { ok: true, photos: demoLib };
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
     if (/^adminPerson|^adminTrainings/.test(b.action)) return demoPeople(b);
@@ -903,20 +1029,20 @@
   function demoPeople(b) {
     const d = n => H.dayKey(new Date(Date.now() + n * 86400000));
     if (!demoP) {
-      const T = ["Animal chores", "Goat milking", "Garden tools", "Power tools"];
+      const T = ["Animal feeding", "Collecting eggs", "Gardening", "Power tools & woodshop", "Goat milking", "Goat milk soap making", "Event help"];
       const base = (o) => Object.assign({ last: "", phone: "", role: "", status: "", bg: "", trainings: [], admin: false, approver: false, trusted: false, news: false, submitted: d(-60), hours: 0, shifts: 0, lastHelped: "", lastText: "", slots: 0, events: 0,
         address: "", emergency: "", interests: "", heard: "", comments: "", notes: "", firstHelped: "", firstText: "" }, o);
-      demoP = { trainings: T, statuses: ["New", "Contacted", "Active volunteer", "Background check sent", "Not right now"], people: [
+      demoP = { trainings: T, statuses: ["New", "Contacted", "Background check sent", "Active volunteer", "Not approved", "Not right now"], people: [
         base({ email: session.email, first: "You", role: "Resident", status: "Resident", admin: true, approver: true, trusted: true, hours: 31.5, shifts: 30, lastHelped: d(-2), lastText: "Nov 8", slots: 1, events: 6, firstHelped: d(-200), firstText: "Apr 24" }),
-        base({ email: "ana@example.com", first: "Ana", last: "Diaz", phone: "510-555-0142", role: "Volunteer", status: "Active volunteer", bg: "Cleared", trainings: ["Animal chores"], news: true, hours: 12, shifts: 11, lastHelped: d(-6), lastText: "Nov 4", slots: 1,
+        base({ email: "ana@example.com", first: "Ana", last: "Diaz", phone: "510-555-0142", role: "Volunteer", status: "Active volunteer", bg: "Cleared", trainings: ["Animal feeding"], news: true, hours: 12, shifts: 11, lastHelped: d(-6), lastText: "Nov 4", slots: 1,
           interests: "Weekly animal chores (approx. 1 hour/week), One-off Projects", heard: "A Friend", comments: "We're a family of four, kids are 8 and 11. Weekday afternoons work best!", emergency: "Luis Diaz (husband) 510-555-0199", firstHelped: d(-80), firstText: "Aug 22" }),
         base({ email: "marcus@example.com", first: "Marcus", last: "Lee", role: "Volunteer", status: "Contacted", interests: "Monthly Workdays (2 hours/month)", heard: "Website/Google", notes: "Coming to the Dec workday" }),
         base({ email: "priya@example.com", first: "Priya", last: "Shah", role: "Volunteer", status: "New", news: true, interests: "I'm not sure", heard: "Social Media", submitted: d(-1) }),
         base({ email: "nik@heirloomeastbay.com", first: "Nik", last: "R", role: "Resident", status: "Resident", trusted: true, events: 3, hours: 4, shifts: 4, lastHelped: d(-9), lastText: "Nov 1" }),
         base({ email: "sue@example.com", first: "Sue", last: "Miller", phone: "510-555-0101", events: 2 }) ] };
       demoP.slots = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].flatMap((day, i) => [
-        { id: "S-" + i + "a", chore: "AM animal chores", day, start: "07:00", time: "7am–8am", training: "Animal chores", volunteer: i === 1 ? "ana@example.com" : i === 4 ? session.email : "", reminders: i === 1, since: i === 1 ? d(-80) : d(-200) },
-        { id: "S-" + i + "b", chore: "PM animal chores", day, start: "17:00", time: "5pm–6pm", training: "Animal chores", volunteer: i === 3 ? "nik@heirloomeastbay.com" : "", reminders: false, since: d(-30) }]);
+        { id: "S-" + i + "a", chore: "AM animal chores", day, start: "07:00", time: "7am–8am", training: "Animal feeding", volunteer: i === 1 ? "ana@example.com" : i === 4 ? session.email : "", reminders: i === 1, since: i === 1 ? d(-80) : d(-200) },
+        { id: "S-" + i + "b", chore: "PM animal chores", day, start: "17:00", time: "5pm–6pm", training: "Animal feeding", volunteer: i === 3 ? "nik@heirloomeastbay.com" : "", reminders: false, since: d(-30) }]);
     }
     const P = demoP, find = e => P.people.find(x => x.email === e);
     const detail = e => {

@@ -325,3 +325,83 @@ The page's "Add to your calendar" button follows whatever the Settings tab says,
 The Heirloom Squarespace template uses Ajax loading: clicking a menu link swaps the page in without a real reload, and Squarespace doesn't run scripts inside Code blocks on those visits. So the calendar/volunteer frame stayed at 600px (inner scroll) until a refresh. Fix either way:
 1. **No code:** Design → Site Styles → turn off **Enable Ajax Loading**.
 2. **Keep Ajax:** paste `squarespace-code-injection.js` (wrapped in `<script>…</script>`) into Settings → Advanced → Code Injection → **Footer**. It sizes every Heirloom embed on every page, however the page was reached. The scripts in the Code blocks can stay; they do no harm.
+
+
+## Roles, profiles and trainings (Nov 16, 2026)
+
+Everyone is a **Resident** or a **Community member**. On top of that, admins switch on add-ons on the People page:
+Volunteer (the usual steps), Church family, Community partner, Post events without review, Approves events, Admin.
+
+- **Residents** see the residents' calendar and guest rooms, post without review, are church family, and count as
+  volunteers trained for everything **except power tools & the woodshop**.
+- **Power tools & woodshop** only counts after the person reads and accepts the safety agreement on their Profile.
+  The wording lives in `welcome.js` (search for `AGREEMENT`); if you change it, bump `POWER_AGREEMENT` in `Code.gs` too.
+  Who accepted, and when, is in the "Power tools agreement" column of the People tab.
+- **Background check** is one-time. Once it says Cleared on someone's profile, chores and volunteers-only shifts open up.
+  Drop-in events open to "Anyone" never need it.
+- **First sign-in** shows a Welcome popup (`welcome.js`) with the profile questions. Only a name is required.
+- **"I'd like to learn this"** in the volunteer portal adds a row to the new **Alerts** tab and, for now, emails the
+  "Volunteer applications go to" address. The admin home page (next stage) will list and clear these.
+- The first time `setup()` runs with this version it renames the old trainings (Animal chores → Animal feeding +
+  Collecting eggs, Garden tools → Gardening, Power tools → Power tools & woodshop) everywhere, and adds the residents
+  and first partners to the People tab. It only does each of those once.
+
+### Round 2 (Nov 16b)
+
+- **Welcome popup** appears right after the sign-in code. **Power tools agreement** pops up at the next sign-in after an
+  admin ticks that training (community members only; residents don't need it).
+- **Sign out** is in the top menu. **People** is the last tab on the Admin page.
+- **Profile:** last name required; address is Street / City / State / Zip; emergency contact is name + phone.
+- **Residents' birthdays** go on the residents' calendar as a yearly "🎂 Name's birthday" (month and day only). Each
+  resident can untick it on their Profile; the Settings line "Show residents' birthdays on the residents' calendar" turns it off for everyone.
+- **Chore chart privacy:** community members see "Covered" or "Needs a new regular", never names. Residents and admins see names.
+- **Volunteer emails:** volunteers can turn off coverage-request and open-slot emails in the portal (bottom of Chore chart / Coverage).
+- **Stages:** New → Contacted → Background check sent → Active volunteer, then Not approved / Not right now. Background check can be Failed, with an admin-only note.
+- **Settings added:** "Training requests go to" (staff@) and "Owner email (app help, new partner requests)" (community@).
+
+### Church family page (Nov 16c)
+
+`church.html` / `church.js`. For residents and anyone with "church family" on (people turn it on in their Profile, or an admin does on People).
+
+- **Supper Church:** the next 8 Sundays (the "Supper Church: Sundays to show" setting), skipping fifth Sundays
+  ("Supper Church: skip fifth Sundays"). Each has one main dish and an open list of sides, desserts and other things.
+  A Sunday with no main is highlighted. Sign-ups live on the **Supper Church** tab of the Sheet.
+- **Notes:** any admin can write one (bold, italics, lists, links), on its own or tied to a Sunday. They live on the **Church notes** tab.
+- **Dietary counts** come from church-family profiles, with no names.
+- **Discord:** add a row for `#church-fam` on the "Discord channels" tab (name + webhook URL, Active ticked). Then a new main
+  dish, a midweek nudge when Sunday has no main, a Saturday roundup, and notes (when the box is ticked) post there.
+  The channel name is the "Supper Church: Discord channel" setting. No row = nothing posts.
+- The "What is Supper Church?" words are at the top of `church.js` (`ABOUT`).
+
+### Church notes as a blog (Nov 16d)
+
+- The note editor is the same as the event form's "More details": bold, italics, headings, lists, quotes, links and up
+  to 6 photos per note (saved to the photo folder in Drive).
+- Each note can have **themes** and **scripture passages**. Passages link to BibleGateway.
+- Everyone in the church family can **search** notes by word and **filter** by theme or book of the Bible. Tapping a theme on a note filters to it.
+- The Church notes tab has three new columns (Format, Themes, Scripture); `setup()` adds them. Notes written before this still show.
+
+### Add to Home Screen (Nov 16e)
+
+- `manifest.webmanifest`, `sw.js`, `install.js` and the `images/app-icon-*.png` files make the site installable: an icon
+  on the phone's home screen that opens full screen. All of them must be uploaded with the rest of the site.
+- Signed-in people on phones see a one-time prompt. Android gets an Install button; iPhones get the two steps
+  (Share, then Add to Home Screen). The Profile page has an "Add to Home Screen" button any time.
+- The app opens on `mine.html` (their signed-in page). When the home page exists, change `start_url` in the manifest.
+- The service worker saves nothing, so updates show up as usual.
+
+### Room titles and the Activity log (Nov 17)
+
+- A **public** event whose title mentions "room", "rooms" or "guest stay" always waits for an admin, even from residents
+  and admins (guest stays don't belong on the website). The words are the Settings line "Always review public events
+  whose title mentions". The event form shows a heads-up with a link to the Guest rooms page while they type.
+- Every event posted or changed through the form is now written to the Admin log too.
+- **Activity log** tab on the Admin page (admins only): the newest 1,500 log entries, searchable, filterable by person and kind.
+
+### Discord posts follow edits (Nov 17b)
+
+- New Discord posts keep their message ID (two new columns on the Discord log tab: Message ID, Posted version).
+- When the event changes (time, date, place, title, photo, cost…), the post is edited in place. Cancelled or taken off
+  the public calendar: the post is changed to say so. Checked every 10 minutes and right after any edit.
+- Posts made before this version can't be edited. To redo one: delete it in Discord, delete its row on the Discord log
+  tab, and the next hourly run posts it again.

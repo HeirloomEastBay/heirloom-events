@@ -6,10 +6,17 @@
 <title>Admin · Heirloom Activities</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="images/logo-badge.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2e4a36">
+<link rel="apple-touch-icon" href="images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Heirloom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261111q">
+<link rel="stylesheet" href="styles.css?v=20261117a">
 <style>
   .intro { background: var(--forest); color: #fff; padding-block: 36px 0; }
   .intro .kicker { color: var(--sage); }
@@ -179,6 +186,16 @@
   .privacy { margin: 0; font-size: 13px; }
   .vbox, .vfields { display: grid; gap: 10px; }
   .vbox[hidden], .vfields[hidden] { display: none; }
+  .lfind { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .lfind input, .lfind select { min-height: 44px; padding: 8px 12px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 15.5px; }
+  .lfind input { flex: 2 1 240px; } .lfind select { flex: 1 1 180px; }
+  .llist { list-style: none; margin: 0; padding: 0; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .llist .lday { padding: 10px 16px 6px; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--cream); }
+  .llist .lrow { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.45; }
+  .llist .lt { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; padding-top: 1px; }
+  .llist .lev { font-weight: 600; color: var(--forest-deep); } .llist .status { margin-left: 6px; vertical-align: 1px; }
+  .llist .ld { display: block; color: var(--ink-soft); font-size: 13.5px; margin-top: 2px; overflow-wrap: anywhere; }
+  .subbox { display: grid; gap: 10px; margin: 0 0 4px 28px; padding: 12px 14px; border-left: 3px solid var(--sage); background: #fff; border-radius: 0 10px 10px 0; }
   .switch { display: flex; gap: 12px; align-items: center; cursor: pointer; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
   .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
   .switch .track { flex: none; width: 46px; height: 26px; border-radius: 999px; background: #cfd3c8; position: relative; transition: background .15s; }
@@ -283,10 +300,11 @@
         <button class="tab" role="tab" id="tab-public" aria-controls="app" data-tab="public"><span class="dot"></span>Public calendar</button>
         <button class="tab" role="tab" id="tab-residents" aria-controls="app" data-tab="residents"><span class="dot res"></span>Residents' calendar</button>
         <button class="tab" role="tab" id="tab-photos" aria-controls="app" data-tab="photos">Photo library</button>
-        <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People<span class="tab-n" id="volCount" hidden></span></button>
         <button class="tab" role="tab" id="tab-chores" aria-controls="app" data-tab="chores">Chore chart</button>
         <button class="tab" role="tab" id="tab-stays" aria-controls="app" data-tab="stays">Guest rooms</button>
         <button class="tab" role="tab" id="tab-venues" aria-controls="app" data-tab="venues">Venues</button>
+        <button class="tab" role="tab" id="tab-log" aria-controls="app" data-tab="log">Activity log</button>
+        <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People<span class="tab-n" id="volCount" hidden></span></button>
       </div>
     </div>
   </section>
@@ -304,13 +322,15 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261111q"></script>
-<script src="common.js?v=20261111q"></script>
-<script src="nav.js?v=20261111q"></script>
-<script src="flyer.js?v=20261111q"></script>
-<script src="venues.js?v=20261111q"></script>
-<script src="stays.js?v=20261111q"></script>
-<script src="dates.js?v=20261111q"></script>
-<script src="admin.js?v=20261111q"></script>
+<script src="config.js?v=20261117a"></script>
+<script src="common.js?v=20261117a"></script>
+<script src="nav.js?v=20261117a"></script>
+<script src="install.js?v=20261117a"></script>
+<script src="flyer.js?v=20261117a"></script>
+<script src="venues.js?v=20261117a"></script>
+<script src="stays.js?v=20261117a"></script>
+<script src="dates.js?v=20261117a"></script>
+<script src="welcome.js?v=20261117a"></script>
+<script src="admin.js?v=20261117a"></script>
 </body>
 </html>

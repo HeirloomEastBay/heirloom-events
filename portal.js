@@ -53,7 +53,7 @@
   function header() {
     const me = data.me;
     $("#hello").textContent = me && me.first ? `Hi, ${me.first}!` : "Volunteer portal";
-    if (window.HLNav) HLNav.setRoles({ email: data.email, admin: !!data.admin, volunteer: !!data.me, resident: !!data.resident });
+    if (window.HLNav) HLNav.setRoles({ email: data.email, admin: !!data.admin, volunteer: !!data.me, resident: !!data.resident, church: !!data.church });
     $("#signOut").hidden = false;
     $("#signOut").onclick = () => { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } if (window.HLNav) HLNav.signedOut(); location.href = "index.html"; };
     const b = [];
@@ -135,10 +135,38 @@
 
   function statusNote() {
     if (!data.me) return `<p class="note">We don't have a volunteer form from <b>${esc(data.email)}</b> yet. <a href="volunteer.html">Fill out the volunteer form</a> and a resident will be in touch. Meanwhile you can sign up for anything open to everyone.</p>`;
+    if (data.me.status === "Not approved") return `<p class="note">You can sign up for anything on the calendar that's open to everyone. For other ways to get involved, reach out to <a href="mailto:${esc(data.staff || C.EMAIL)}">${esc(data.staff || C.EMAIL)}</a>.</p>`;
     if (!data.me.active) return `<p class="note">Thanks for signing up! Once a resident approves you, you'll be able to join the chore chart and volunteers-only shifts. Meanwhile you can sign up for anything open to everyone.</p>`;
+    if (!data.me.bgCleared) return `<p class="note">One step left: your background check (a one-time thing, and Heirloom covers it). Once it clears, the chore chart and volunteers-only shifts open up. Meanwhile you can sign up for anything open to everyone.</p>`;
+    if (data.me.powerPending) return `<p class="note">You've been approved for power tools &amp; the woodshop. <a href="profile.html">Read and accept the safety agreement</a> on your Profile before your first shift.</p>`;
     return "";
   }
   const needText = miss => miss.length ? `Needs ${miss.join(" and ")}` : "";
+  // Which emails this volunteer gets. Everything still shows here in the portal either way.
+  const prefsHtml = () => !data.prefs ? "" : `<section class="prefs" aria-label="Email choices"><h3>Emails</h3>
+      <p>Choose what we email you about. Either way, it all shows up here when you sign in.</p>
+      <label><input type="checkbox" data-pref="cover"${data.prefs.cover ? " checked" : ""}> Email me when someone needs a shift covered</label>
+      <label><input type="checkbox" data-pref="open"${data.prefs.open ? " checked" : ""}> Email me when a regular chore slot opens up</label>
+      <p class="small">Confirmations and reminders for your own shifts are always emailed (reminders have their own switch on each shift).</p></section>`;
+  document.addEventListener("change", async e => {
+    const el = e.target; if (!el || !el.dataset || !el.dataset.pref) return;
+    el.disabled = true;
+    try { const r = await call({ action: "volPrefs", [el.dataset.pref]: el.checked }); if (r && r.prefs) data.prefs = r.prefs; flash(el.checked ? "Okay, we'll email you about those." : "Okay, no emails for those. You'll still see them here."); }
+    catch (err) { el.checked = !el.checked; showErr((err.message || "Something went wrong") + "."); }
+    el.disabled = false;
+  });
+  // Shifts someone isn't trained for still show, greyed out, with a way to ask for the training
+  const needs = (miss, training) => {
+    const t = training && miss.includes(training + " training") ? training : "";
+    const more = miss.some(m => /safety agreement/.test(m)) ? `<a class="btn btn-outline btn-sm" href="profile.html">Read and accept</a>`
+      : !t ? "" : (data.asked || []).includes(t) ? `<span class="tag mine">✓ You asked to learn this</span>`
+      : `<button class="btn btn-outline btn-sm" data-learn="${esc(t)}">I'd like to learn this</button>`;
+    return `<span class="needs">${esc(needText(miss))}</span>${more}`;
+  };
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-learn]"); if (!b) return;
+    run(b, { action: "volLearn", training: b.dataset.learn }, `Thanks! We let the Heirloom team know you'd like to learn ${b.dataset.learn}. Someone will reach out to set up a time.`);
+  });
 
   /* ---------- Sign up ---------- */
   function renderSignup() {
@@ -157,9 +185,9 @@
       if (o.spots) tags.push(`<span class="tag ${o.full ? "warn" : ""}">${o.going} of ${o.spots} signed up</span>`);
       if (o.mine) tags.push(`<span class="tag mine">${o.mine === "Waitlist" ? "On the waitlist" : "You're signed up"}</span>`);
       const act = o.mine ? `<button class="btn-quiet" data-cancel="${i}">Cancel my spot</button>`
-        : o.missing.length ? `<span class="needs">${esc(needText(o.missing))}</span>`
+        : o.missing.length ? needs(o.missing, o.training)
         : `<button class="btn btn-primary btn-sm" data-sign="${i}">${o.full ? "Join the waitlist" : "Sign up"}</button>`;
-      html += `<article class="item${o.image ? "" : " noimg"}">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ""}<div>
+      html += `<article class="item${o.image ? "" : " noimg"}${!o.mine && o.missing.length ? " locked" : ""}">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ""}<div>
         <h3>${esc(o.title)}</h3><p class="when">${esc(o.time)}${o.location ? " · " + esc(o.location) : ""}</p>
         <div class="tags">${tags.join("")}</div>${o.description ? `<p class="desc">${esc(o.description)}</p>` : ""}<div class="acts">${act}</div></div></article>`;
     });
@@ -230,15 +258,16 @@
       const slots = ch.filter(c => c.day === d);
       return `<section class="dcol" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
         const i = ch.indexOf(c);
-        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Open</span>` : `<span class="who">${esc(c.who)}</span>`;
+        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Needs a new regular</span>` : `<span class="who">${esc(c.who || "Covered")}</span>`;
         const canTake = (c.open || c.pool) && !c.missing.length;
         const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>${remBtn(!!c.reminders, `data-rem-slot="${esc(c.id)}"`)}<button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
-          : c.open ? (c.missing.length ? `<span class="needs">${esc(needText(c.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`)
+          : c.open ? (c.missing.length ? needs(c.missing, c.training) : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`)
           : canTake ? `<button class="btn-quiet" data-claim="${i}" style="justify-self:start;padding:2px 0">Make it my regular slot</button>` : "";
-        return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}"><b>${esc(c.chore)}</b><span class="t">${esc(c.time)}</span>
+        return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}${c.open && c.missing.length ? " locked" : ""}"><b>${esc(c.chore)}</b><span class="t">${esc(c.time)}</span>
           ${c.training ? `<span class="tag plain">${esc(c.training)}</span>` : ""}${who}${act}</div>`;
       }).join("") : `<p class="empty-day">No slots</p>`}</section>`;
     }).join("")}</div>`;
+    html += prefsHtml();
     app.innerHTML = html;
     wireRem(app);
     app.querySelectorAll("[data-claim]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.claim];
@@ -254,15 +283,16 @@
   function renderCoverage() {
     const open = data.coverage, mine = data.myRequests;
     let html = statusNote() + `<div class="panel-h"><div><h2>Coverage</h2><p>Dates other volunteers need covered. Only volunteers see these. Thank you for stepping in!</p></div></div>`;
-    if (!open.length) html += `<div class="empty"><h2>Nothing needs covering</h2><p>When someone needs a date covered, it shows up here and we'll email you.</p></div>`;
-    else html += `<div class="list">${open.map((r, i) => `<article class="item noimg"><div><h3>${esc(r.chore)}</h3>
-      <p class="when">${esc(dayName(r.date))} · ${esc(r.time)}</p><div class="tags"><span class="tag warn">${r.pool ? "Needs someone" : esc(r.by) + " needs coverage"}</span></div>
+    if (!open.length) html += `<div class="empty"><h2>Nothing needs covering</h2><p>When someone needs a date covered, it shows up here${data.prefs && !data.prefs.cover ? "" : ", and we'll email you"}.</p></div>`;
+    else html += `<div class="list">${open.map((r, i) => `<article class="item noimg${r.missing.length ? " locked" : ""}"><div><h3>${esc(r.chore)}</h3>
+      <p class="when">${esc(dayName(r.date))} · ${esc(r.time)}</p><div class="tags"><span class="tag warn">${r.pool ? "Needs someone" : r.by ? esc(r.by) + " needs coverage" : "Needs coverage"}</span></div>
       ${r.note ? `<p class="desc">“${esc(r.note)}”</p>` : ""}
-      <div class="acts">${r.missing.length ? `<span class="needs">${esc(needText(r.missing))}</span>` : `<button class="btn btn-primary btn-sm" data-take="${i}">I can cover</button>`}</div></div></article>`).join("")}</div>`;
+      <div class="acts">${r.missing.length ? needs(r.missing, r.training) : `<button class="btn btn-primary btn-sm" data-take="${i}">I can cover</button>`}</div></div></article>`).join("")}</div>`;
     if (mine.length) html += `<h3 class="day-h" style="margin-top:28px">Your requests</h3><div class="list">${mine.map((r, i) => `<article class="item noimg"><div><h3>${esc(r.chore)}</h3>
       <p class="when">${esc(dayName(r.date))} · ${esc(r.time)}</p>
-      <div class="tags">${r.status === "Covered" ? `<span class="tag mine">Covered by ${esc(r.coveredBy)}</span>` : `<span class="tag warn">Still open</span>`}</div>
+      <div class="tags">${r.status === "Covered" ? `<span class="tag mine">${r.coveredBy ? "Covered by " + esc(r.coveredBy) : "Covered"}</span>` : `<span class="tag warn">Still open</span>`}</div>
       ${r.status === "Open" ? `<div class="acts"><button class="btn-quiet" data-unreq="${i}">I can make it after all</button></div>` : ""}</div></article>`).join("")}</div>`;
+    html += prefsHtml();
     app.innerHTML = html;
     app.querySelectorAll("[data-take]").forEach(b => b.onclick = () => { const r = open[+b.dataset.take];
       confirmDlg(`Cover ${shortDay(r.date)}?`, r.pool ? `${r.chore}, ${r.time}. Thank you for pitching in!` : `${r.chore}, ${r.time}, for ${r.by}. We'll let them know.`, "I'll cover it",
@@ -339,21 +369,21 @@
   /* ---------- Preview mode: sample data ---------- */
   const dIn = n => { const d = new Date(Date.now() + n * 86400000); return H.dayKey(d); };
   const nextDow = (dow, extra) => { const d = new Date(); const add = ((dow - d.getDay() + 7) % 7) || 7; return dIn(add + (extra || 0)); };
-  const demoData = {
+  const demoData = { prefs: { cover: true, open: true }, showNames: false, staff: "staff@heirloomeastbay.com",
     ok: true, email: "ana@example.com", admin: false, hasEvents: true, form: "volunteer.html",
     me: { name: "Ana Diaz", first: "Ana", status: "Active volunteer", active: true, bgCleared: true, trainings: ["Animal chores", "Goat milking"] },
     opps: [
       { id: "EV-1", date: nextDow(6), title: "Garden Workday", time: "9am–12pm", start: "09:00", end: "12:00", location: "The garden", description: "Putting the garden to bed for winter. Gloves and snacks provided.", image: "images/squash-tunnel.jpg", area: "Workday", who: "Anyone", bg: false, training: "", spots: 10, going: 4, full: false, mine: "", rid: "", missing: [] },
       { id: "EV-2", date: nextDow(0), title: "Sunday goat milking", time: "7am–8am", start: "07:00", end: "08:00", location: "Goat pen", description: "", image: "images/goats.jpg", area: "Animal chores", who: "Approved volunteers", bg: true, training: "Goat milking", spots: 1, going: 0, full: false, mine: "Going", rid: "R-1", missing: [] },
-      { id: "EV-3", date: nextDow(5, 7), title: "Fence repair on the back pasture", time: "1pm–4pm", start: "13:00", end: "16:00", location: "Back pasture", description: "Restringing the goat fence before winter.", image: "", area: "One-off project", who: "Anyone", bg: true, training: "Power tools", spots: 4, going: 4, full: true, mine: "", rid: "", missing: ["Power tools training"] }
+      { id: "EV-3", date: nextDow(5, 7), title: "Fence repair on the back pasture", time: "1pm–4pm", start: "13:00", end: "16:00", location: "Back pasture", description: "Restringing the goat fence before winter.", image: "", area: "One-off project", who: "Anyone", bg: true, training: "Power tools & woodshop", spots: 4, going: 4, full: true, mine: "", rid: "", missing: ["Power tools & woodshop training"] }
     ],
     chores: [
-      { id: "S-1", chore: "Evening animal chores", day: "Tuesday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal chores", mine: true, open: false, who: "", missing: [], next: [0, 7, 14, 21, 28, 35, 42, 49].map(n => nextDow(2, n)) },
-      { id: "S-2", chore: "Evening animal chores", day: "Thursday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal chores", mine: false, open: true, who: "", missing: [], next: [] },
-      { id: "S-3", chore: "Evening animal chores", day: "Saturday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal chores", mine: false, open: false, who: "Bo", missing: [], next: [] },
+      { id: "S-1", chore: "Evening animal chores", day: "Tuesday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal feeding", mine: true, open: false, who: "", missing: [], next: [0, 7, 14, 21, 28, 35, 42, 49].map(n => nextDow(2, n)) },
+      { id: "S-2", chore: "Evening animal chores", day: "Thursday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal feeding", mine: false, open: true, who: "", missing: [], next: [] },
+      { id: "S-3", chore: "Evening animal chores", day: "Saturday", start: "15:00", end: "16:00", time: "3pm–4pm", training: "Animal feeding", mine: false, open: false, who: "Bo", missing: [], next: [] },
       { id: "S-4", chore: "Morning milking", day: "Saturday", start: "07:00", end: "08:00", time: "7am–8am", training: "Goat milking", mine: false, open: false, who: "Priya", missing: [], next: [] },
       { id: "S-5", chore: "Chicken coop clean-out", day: "Monday", start: "16:00", end: "17:00", time: "4pm–5pm", training: "", mine: false, open: true, who: "", missing: [], next: [] },
-      { id: "S-6", chore: "AM animal chores", day: "Monday", start: "09:00", end: "10:00", time: "by 10am", training: "Animal chores", mine: false, open: false, pool: true, who: "Volunteers", missing: [], next: [] }
+      { id: "S-6", chore: "AM animal chores", day: "Monday", start: "09:00", end: "10:00", time: "by 10am", training: "Animal feeding", mine: false, open: false, pool: true, who: "Volunteers", missing: [], next: [] }
     ],
     coverage: [{ id: "C-1", slotId: "S-3", chore: "Evening animal chores", date: nextDow(6, 7), time: "3pm–4pm", start: "15:00", end: "16:00", by: "Bo", note: "Visiting family that weekend!", status: "Open", missing: [] }],
     myRequests: [], myCovers: [{ id: "C-9", slotId: "S-4", chore: "Morning milking", date: nextDow(6), time: "7am–8am", start: "07:00", end: "08:00", by: "Priya", note: "", status: "Covered", coveredBy: "Ana", reminder: true, missing: [] }], mySignups: [],
@@ -363,6 +393,8 @@
   async function demo(b) {
     await new Promise(r => setTimeout(r, 300));
     if (b.action === "volPortal") return JSON.parse(JSON.stringify(demoData));
+    if (b.action === "volPrefs") { demoData.prefs = Object.assign({ cover: true, open: true }, demoData.prefs, b.cover !== undefined ? { cover: b.cover } : {}, b.open !== undefined ? { open: b.open } : {}); return { ok: true, prefs: demoData.prefs }; }
+    if (b.action === "volLearn") { demoData.asked = (demoData.asked || []).concat(b.training); return { ok: true, asked: demoData.asked }; }
     if (b.action === "volReminder") { demoData.chores.forEach(c => { if (c.id === b.slotId) c.reminders = b.on; }); demoData.myCovers.forEach(r => { if (r.id === b.coverId) r.reminder = b.on; }); }
     return { ok: true };
   }
