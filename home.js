@@ -40,30 +40,59 @@
     app.prepend(el); setTimeout(() => el.remove(), 6000);
   }
 
+  // Home comes in four parts, asked for all at once, each drawn as soon as it arrives:
+  // core (name, roles, alerts, your events), this week, shifts, church. The last full Home shows first.
+  const PARTS = ["core", "week", "shifts", "church"], state = {};
   const c0 = DEMO ? null : cached();
-  if (c0) { D = c0; draw(); }
-  load();
-  async function load() {
-    try { D = await call({ action: "homeGet" }); keep(D); draw(); }
-    catch (err) {
+  const knownRoles = read("heirloom-roles") || {};
+  D = c0 || { roles: knownRoles.email === session.email ? knownRoles : {}, first: ((read("heirloom-me") || {}).first || "") };
+  PARTS.forEach(p => state[p] = c0 ? "old" : "loading");
+  try { draw(); } catch (e) { console.error(e); }
+  PARTS.forEach(load);
+  async function load(part) {
+    state[part] = state[part] === "old" ? "old" : "loading";
+    const slow = setTimeout(() => { if (state[part] === "loading") { state[part] = "slow"; safeDraw(); } }, 20000);
+    try {
+      const r = await call({ action: "homeGet", part });
+      clearTimeout(slow);
+      ["first", "roles", "email", "today"].forEach(k => { if (r[k] !== undefined) D[k] = r[k]; });
+      ({ core: ["alerts", "mine", "alertKinds", "alertEmails"], week: ["week"], shifts: ["shifts"], church: ["church"] })[part].forEach(k => { D[k] = r[k] === undefined ? null : r[k]; });
+      state[part] = (r.failed || []).length ? "failed" : "done";
+      if (PARTS.every(p => state[p] === "done")) keep(D);
+    } catch (err) {
+      clearTimeout(slow);
       if (err.signedOut) { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } location.replace("mine.html?next=home"); return; }
-      if (!c0) app.innerHTML = `<div class="hcard"><h2>Couldn't load Home</h2><p class="empty-s">${esc(err.message)}.</p><p><button class="btn btn-primary" onclick="location.reload()">Try again</button></p></div>`;
+      state[part] = state[part] === "old" ? "old" : "failed";
     }
+    safeDraw();
   }
+  function safeDraw() { try { draw(); } catch (e) { console.error(e); } }
+  // A card for a part that's still coming (or didn't come)
+  function waiting(part, title) {
+    const st = state[part];
+    if (st === "failed") return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s">This part didn't load. <button type="button" class="dd-link" data-retry="${part}">Try again</button></p></section>`;
+    return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s"><span class="spinner"></span> ${st === "slow" ? "Still loading. This one's slow today…" : "Loading…"}</p></section>`;
+  }
+  const ready = p => state[p] === "done" || state[p] === "old";
+  // One broken card can't take the page down with it
+  const sec = (fn, title) => { try { return fn(); } catch (e) { console.error(title, e); return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s">This part didn't load. <button type="button" class="dd-link" onclick="location.reload()">Reload</button></p></section>`; } };
 
   function draw() {
     const R = D.roles || {};
     if (window.HLNav) HLNav.setRoles({ email: D.email, admin: !!R.admin, resident: !!R.resident, volunteer: !!R.volunteer || !!R.resident, church: !!R.church, sabbath: R.sabbath || "", residency: R.residency || "" });
     $("#hHi").textContent = D.first ? `Hi, ${D.first}!` : "Hi there!";
     const insider = R.resident || R.admin;
-    const parts = [];
-    if (D.alerts) parts.push(alertsCard());
+    const parts = [], volish = R.volunteer || R.resident || R.admin;
+    if (R.admin || R.approver) parts.push(ready("core") ? sec(() => D.alerts ? alertsCard() : "", "Alerts") : waiting("core", "Alerts"));
     parts.push(quick(insider, R));
+    const week = ready("week") ? sec(() => weekCard(insider), "This week") : waiting("week", "This week");
+    const shifts = ready("shifts") ? (D.shifts ? [sec(myShifts, "Your shifts"), sec(pickups, "Shifts to pick up")] : []) : volish ? [waiting("shifts", insider ? "Your shifts" : "Volunteer opportunities")] : [];
     // Residents: the week first. Volunteers (community members): volunteer opportunities right after Submit an event.
-    if (insider) { parts.push(weekCard(insider)); if (D.shifts) { parts.push(myShifts()); parts.push(pickups()); } }
-    else { if (D.shifts) { parts.push(pickups()); parts.push(myShifts()); } parts.push(weekCard(insider)); }
-    if (D.church) { parts.push(supper()); if (D.church.note) parts.push(noteCard()); }
-    parts.push(extras(R));
+    if (insider) { parts.push(week); parts.push(...shifts); }
+    else { parts.push(...shifts.slice().reverse()); parts.push(week); }
+    if (ready("church")) { if (D.church) { parts.push(sec(supper, "Supper Church")); if (D.church.note) parts.push(sec(noteCard, "From Brit")); } }
+    else if (R.church || R.resident || R.admin) parts.push(waiting("church", "Supper Church"));
+    if (ready("core")) parts.push(sec(() => extras(R), "Yours"));
     app.innerHTML = parts.filter(Boolean).join("");
     wire();
   }
@@ -169,10 +198,11 @@
   function wire() {
     app.querySelectorAll("[data-done]").forEach(b => b.onclick = async () => {
       b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-      try { D = await call({ action: "homeAlertDone", id: b.dataset.done }); keep(D); draw(); flash("Cleared for everyone."); }
+      try { const r = await call({ action: "homeAlertDone", id: b.dataset.done, part: "core" }); D.alerts = r.alerts; draw(); flash("Cleared for everyone."); }
       catch (err) { b.disabled = false; b.textContent = "Done"; flash(err.message, true); }
     });
     const pf = $("#aPrefs"); if (pf) pf.onclick = e => { e.preventDefault(); prefsDialog(); };
+    app.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { state[b.dataset.retry] = "loading"; safeDraw(); load(b.dataset.retry); });
   }
 
   /* ---------- Preview mode: home.html?demo=admin | resident | volunteer | other ---------- */
@@ -201,6 +231,7 @@
         note: { id: "N1", title: "Advent is almost here", by: "Brit", posted: plus(-4), excerpt: "This Sunday we begin Advent together. Bring a candle if you have one, and come ready to sit with the waiting…", image: "images/farmhouse.jpg", themes: ["Advent"] } };
     }
     if (b.action === "homeAlertDone") demoD.alerts = demoD.alerts.filter(a => a.id !== b.id);
+    if (QS.has("slow") && b.part === QS.get("slow")) return new Promise(() => {});
     if (b.action === "homeAlertPrefs") demoD.alertEmails = b.kinds;
     return new Promise(r => setTimeout(() => r(JSON.parse(JSON.stringify(demoD))), 250));
   }

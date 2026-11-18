@@ -459,3 +459,9 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Profile → Appearance:** Light, Dark or Match my phone. It's also in the first-login welcome popup. The choice shows right away, is kept on the device, and is saved on People (column "Theme"), so it follows the person to their other devices once they log in there.
 - Everyone starts on Light. The Squarespace embed always stays light.
 - How it works: `theme.js` (loaded in every page's `<head>`) sets `data-theme="dark"` on `<html>`, and the end of `styles.css` swaps the color variables. Light colors in pages are now variables (`--surface`, `--tint-*`, `--*-fill`), so new screens should use those instead of `#fff`.
+
+## Home speed and sign-in fixes (Nov 18, 2026)
+
+- Home asks for its four parts at once (core, week, shifts, church) and draws each as it arrives; a part that takes over 20 seconds says so, and a part that fails gets a "Try again" button. One broken card can't blank the page any more.
+- Each part's time is logged in Apps Script → Executions as "Home week 1.2s (email)".
+- After logging in, people go straight to Home (no flash of My events). Logged-in people: the logo goes to Home, and the calendar's "Log in" button becomes "My home".

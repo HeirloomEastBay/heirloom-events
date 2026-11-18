@@ -49,6 +49,11 @@
 
   function draw() {
     const signed = !!(session && session.token);
+    // The logo goes to Home when logged in, the public calendar when not
+    if (!embedded) {
+      document.querySelectorAll(".site-header .brand, .hero .mark").forEach(a => { a.href = signed ? "home.html" : "index.html"; });
+      const hl = document.getElementById("heroLogin"); if (hl) { hl.href = signed ? "home.html" : "mine.html"; hl.textContent = signed ? "My home" : "Log in"; }
+    }
     const r = signed && roles && roles.email === session.email ? roles : {};
     if (nav) {
       const L = signed ? links(r) : [["mine.html", "Log in"]];

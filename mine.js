@@ -90,6 +90,11 @@
   async function load() {
     const s = store.get(KEY);
     if (!s || !s.token) return askEmail((store.get(ME) || {}).email);
+    // Logged in and not asking for "My events": go straight on (Home, or the page that sent them here)
+    if (!new URLSearchParams(location.search).has("mine")) {
+      const nx = (new URLSearchParams(location.search).get("next") || "").replace(/\.html$/, "");
+      location.replace((/^(home|profile|portal|stays|church|sabbath|residency|submit|admin)$/.test(nx) ? nx : "home") + ".html"); return;
+    }
     app.innerHTML = `<p class="loading">Loading your events…</p>`;
     try {
       const r = await call({ action: "myEvents", token: s.token });
