@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<script src="theme.js?v=20261118l"></script>
-<link rel="stylesheet" href="styles.css?v=20261118l">
+<script src="theme.js?v=20261118m"></script>
+<link rel="stylesheet" href="styles.css?v=20261118m">
 <style>
   .intro { background: var(--forest-fill); color: #fff; padding-block: 36px 26px; }
   .intro .kicker { color: var(--sage); }
@@ -30,6 +30,18 @@
   .msg { margin: 0; padding: 12px 16px; border-radius: 12px; font-weight: 600; }
   .msg.err { background: var(--tint-red); color: var(--barn-dark); }
   .msg.ok { background: var(--sage-soft); color: var(--forest-deep); }
+
+  /* Editing mode (from Admin → Church) */
+  .manage-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: var(--tint-purple); color: var(--purple-ink); border: 2px solid #b9a5d6; position: sticky; top: 8px; z-index: 5; }
+  /* Player */
+  .player .pbtn { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--forest-fill); color: #fff; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .player .pbtn:disabled { opacity: .8; cursor: progress; } .player audio { width: 100%; height: 44px; } .player .perr { margin: 0; color: var(--barn-dark); font-size: 14px; }
+  /* Passages */
+  button.pill.script { border: 0; cursor: pointer; font: inherit; } button.pill.script[aria-expanded="true"] { outline: 2px solid var(--wheat); }
+  .passage { margin: 2px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--tint-wheat); border-left: 4px solid var(--wheat); }
+  .passage h4 { margin: 0 0 6px; font-family: var(--f-title); font-size: 17px; color: var(--ink); }
+  .passage .ptext { margin: 0; line-height: 1.7; font-size: 16px; color: var(--ink); } .passage sup { font-size: 10.5px; color: var(--barn); font-weight: 700; margin-right: 2px; }
+  .passage .pfoot { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); } .passage .ploading { margin: 0; color: var(--muted); }
 
   /* Books we read from */
   .books { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
@@ -231,11 +243,11 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118l"></script>
-<script src="common.js?v=20261118l"></script>
-<script src="nav.js?v=20261118l"></script>
-<script src="install.js?v=20261118l"></script>
-<script src="welcome.js?v=20261118l"></script>
-<script src="church.js?v=20261118l"></script>
+<script src="config.js?v=20261118m"></script>
+<script src="common.js?v=20261118m"></script>
+<script src="nav.js?v=20261118m"></script>
+<script src="install.js?v=20261118m"></script>
+<script src="welcome.js?v=20261118m"></script>
+<script src="church.js?v=20261118m"></script>
 </body>
 </html>

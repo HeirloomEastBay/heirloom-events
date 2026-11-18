@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<script src="theme.js?v=20261118l"></script>
-<link rel="stylesheet" href="styles.css?v=20261118l">
+<script src="theme.js?v=20261118m"></script>
+<link rel="stylesheet" href="styles.css?v=20261118m">
 <style>
   .intro { background: var(--forest-fill); color: #fff; padding-block: 36px 0; }
   .intro .kicker { color: var(--sage); }
@@ -280,6 +280,10 @@
   .pickgrid button[aria-pressed="true"] { border-color: var(--forest); box-shadow: 0 0 0 2px var(--forest); }
   .pickgrid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; }
   .pickgrid span { display: block; font-size: 12px; padding: 4px 6px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--paper); }
+  .ch-acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+  .ch-act { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px 12px; align-items: center; padding: 16px; border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); text-decoration: none; color: inherit; border: 2px solid transparent; }
+  .ch-act:hover { border-color: var(--forest); }
+  .ch-act span { grid-row: 1 / span 2; font-size: 28px; } .ch-act b { font-size: 17px; color: var(--forest-deep); } .ch-act small { color: var(--ink-soft); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -306,6 +310,7 @@
         <button class="tab" role="tab" id="tab-chores" aria-controls="app" data-tab="chores">Chore chart</button>
         <button class="tab" role="tab" id="tab-stays" aria-controls="app" data-tab="stays">Guest rooms</button>
         <button class="tab" role="tab" id="tab-venues" aria-controls="app" data-tab="venues">Venues</button>
+        <button class="tab" role="tab" id="tab-church" aria-controls="app" data-tab="church">Church</button>
         <button class="tab" role="tab" id="tab-log" aria-controls="app" data-tab="log">Activity log</button>
         <button class="tab" role="tab" id="tab-people" aria-controls="app" data-tab="people">People<span class="tab-n" id="volCount" hidden></span></button>
       </div>
@@ -325,15 +330,15 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118l"></script>
-<script src="common.js?v=20261118l"></script>
-<script src="nav.js?v=20261118l"></script>
-<script src="install.js?v=20261118l"></script>
-<script src="flyer.js?v=20261118l"></script>
-<script src="venues.js?v=20261118l"></script>
-<script src="stays.js?v=20261118l"></script>
-<script src="dates.js?v=20261118l"></script>
-<script src="welcome.js?v=20261118l"></script>
-<script src="admin.js?v=20261118l"></script>
+<script src="config.js?v=20261118m"></script>
+<script src="common.js?v=20261118m"></script>
+<script src="nav.js?v=20261118m"></script>
+<script src="install.js?v=20261118m"></script>
+<script src="flyer.js?v=20261118m"></script>
+<script src="venues.js?v=20261118m"></script>
+<script src="stays.js?v=20261118m"></script>
+<script src="dates.js?v=20261118m"></script>
+<script src="welcome.js?v=20261118m"></script>
+<script src="admin.js?v=20261118m"></script>
 </body>
 </html>

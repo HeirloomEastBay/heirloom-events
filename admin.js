@@ -55,13 +55,13 @@
 
   /* ---------- Tabs ---------- */
   if (qs.get("tab") === "volunteers") qs.set("tab", "people"); // the Volunteers tab is part of People now
-  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays", "venues", "log"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
+  const state = { tab: ["public", "residents", "photos", "chores", "people", "stays", "venues", "church", "log"].includes(qs.get("tab")) ? qs.get("tab") : "public", view: "upcoming", q: "", cache: {}, viewer: "" };
   const RES = () => state.viewer === "resident";
   // Residents get a lighter panel: no People tab, calendars to look at, add photos and chores
   function setViewer(v) {
     state.viewer = v;
     const res = v === "resident";
-    $("#tab-people").hidden = res; $("#tab-log").hidden = res;
+    $("#tab-people").hidden = res; $("#tab-log").hidden = res; $("#tab-church").hidden = res;
     $("#panelTitle").textContent = res ? "Resident panel" : "Admin";
     $("#panelIntro").textContent = res ? "Both calendars, the photo library, the chore chart and the guest rooms, in one place. You can add photos and chores, and book guest rooms. Approving and editing events stays with the admins."
       : "Edit, cancel or delete anything on either calendar, no matter who added it. Manage people, roles and the chore chart, and the photo library.";
@@ -82,13 +82,31 @@
     document.querySelectorAll(".tab").forEach(t => { const on = t.dataset.tab === tab; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; });
     if (tab !== "people" || !qs.get("p")) { qs.delete("p"); history.replaceState(null, "", tab === "public" ? "admin.html" : "admin.html?tab=" + tab); }
     if (tab === "photos") return photos(fresh);
-    if ((tab === "people" || tab === "log") && RES()) return show("public");
+    if ((tab === "people" || tab === "log" || tab === "church") && RES()) return show("public");
+    if (tab === "church") return churchTab();
     if (tab === "log") return activity(fresh);
     if (tab === "people") return people(fresh);
     if (tab === "venues") { app.innerHTML = `<div class="panel-h"><div><h2>Venues</h2><p>Reserve places around the farm by the hour. Events from the event form hold their place automatically, and anything on the calendars that mentions a venue shows as a heads-up. Reservations go on the residents' calendar.</p></div></div><div id="venues"></div>`; return HLVenues.mount($("#venues")); }
     if (tab === "stays") { app.innerHTML = `<div class="panel-h"><div><h2>Guest rooms</h2><p>Who's in the 4 guest rooms, and when. Stays come from the residents' calendar ("Room 1: Sarah (Sabbath 365)") and from the Guest rooms page residents use. Admins can change any stay and block rooms.</p></div></div><div id="stays"></div>`; return HLStays.mount($("#stays"), { refresh: fresh }); }
     if (tab === "chores") return chores(fresh);
     calendar(tab, fresh);
+  }
+
+  /* ---------- Church: everything Brit adds to the church page ----------
+     The church page itself looks the same for everyone; these open it in editing mode. */
+  function churchTab() {
+    const go = (k, icon, title, text) => `<a class="ch-act" href="church.html?manage=1${k ? "&do=" + k : ""}"><span aria-hidden="true">${icon}</span><b>${title}</b><small>${text}</small></a>`;
+    app.innerHTML = `<div class="panel-h"><div><h2>Church</h2><p>Add to the church page. Everyone sees the church page the same way; these open it with the editing tools on.</p></div>
+        <a class="btn btn-forest btn-sm" href="church.html?manage=1">Edit the church page</a></div>
+      <div class="ch-acts">
+        ${go("audio", "🎙️", "Add a recording", "Weekly message, Psalm or Proverb of the week, Kids Bible story")}
+        ${go("note", "📝", "Write a note", "For the church family, with photos, themes and scripture")}
+        ${go("event", "📅", "Add a church event", "On the public calendar and #church-events by default")}
+        ${go("sunday", "🥧", "Change a Sunday", "Potluck, or no Supper Church that week")}
+        ${go("song", "🎵", "Song of the month", "Title, YouTube, lyrics link")}
+        ${go("book", "📚", "Add a book", "Psalms & Proverbs or Kids Bible stories, with a buy link")}
+      </div>
+      <p class="muted" style="margin-top:18px">Public list of our books: <a href="books.html" target="_blank" rel="noopener">books.html ↗</a></p>`;
   }
 
   /* ============================================================

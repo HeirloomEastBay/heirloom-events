@@ -25,12 +25,15 @@
     <ol><li>We share a meal at the table.</li><li>We sing the Doxology together.</li><li>A community member or pastor shares a Scripture reading and a short reflection.</li><li>We pray over the bread and grape juice and pass them around the table.</li></ol>
     <p>Questions? <a href="mailto:${esc(C.EMAIL)}">${esc(C.EMAIL)}</a> · <a href="https://www.heirloomeastbay.com/supper-church" target="_blank" rel="noopener">More on the website</a></p>`;
 
+  // Everyone sees the church page the same way. Admins edit it from Admin → Church, which opens it with ?manage=1.
+  const QS = new URLSearchParams(location.search), MANAGE = QS.has("manage"), DO = QS.get("do") || "";
+  const viewAs = r => { if (r && r.ok && r.sundays) { r.isAdmin = !!r.admin; if (!MANAGE) { r.admin = false; r.canPost = false; } } return r; };
   async function call(body) {
-    if (DEMO) return demo(body);
+    if (DEMO) return viewAs(await demo(body));
     const res = await fetch(C.API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ token: session && session.token }, body)) });
     const r = await res.json();
     if (!r.ok) { const e = new Error(r.error || "Something went wrong"); e.signedOut = r.signedOut; e.notChurch = r.notChurch; throw e; }
-    return r;
+    return viewAs(r);
   }
   function flash(text, bad) {
     const el = document.createElement("p");
@@ -92,16 +95,22 @@
         <details class="about" open><summary>What is Supper Church?</summary><div class="in">${ABOUT}</div></details>`; return; }
       app.innerHTML = `<div class="empty"><h2>Couldn't load this page</h2><p>${esc(err.message || "Something went wrong")}.</p><p><button class="btn btn-primary" onclick="location.reload()">Try again</button></p></div>`; return;
     }
-    if (window.HLNav) HLNav.setRoles({ email: data.email, church: true, admin: !!data.admin, resident: !!data.resident, volunteer: !!data.volunteer });
+    if (window.HLNav) HLNav.setRoles({ email: data.email, church: true, admin: !!data.isAdmin, resident: !!data.resident, volunteer: !!data.volunteer });
     if (data.me) $("#hello").textContent = "Church family";
     render();
     // Links like church.html#listen or #note-… land on that part once it's drawn
+    // From Admin → Church: open the form they picked
+    if (MANAGE && data.isAdmin && DO) {
+      const acts = { audio: () => audioDlg(), note: () => noteDlg(), event: () => eventDlg(), song: () => songDlg(data.song), book: () => bookDlg(),
+        sunday: () => { const t = document.getElementById("hS"); if (t) t.scrollIntoView({ block: "start" }); flash("Tap “Change this Sunday” on the Sunday you want."); } };
+      if (acts[DO]) setTimeout(acts[DO], 60);
+    }
     if (location.hash) { const t = document.getElementById(location.hash.slice(1)); if (t) { if (t.tagName === "DETAILS") t.open = true; const o = t.closest("details.older"); if (o) o.open = true; setTimeout(() => t.scrollIntoView({ block: "start" }), 50); } }
   }
 
   /* ---------- Draw ---------- */
   function noteHtml(n, open) {
-    const tags = `${(n.scripture || []).map(p => `<a class="pill script" href="${passageLink(p)}" target="_blank" rel="noopener" title="Read ${esc(p)}">📖 ${esc(p)}</a>`).join("")}${(n.themes || []).map(t => `<button type="button" class="pill theme" data-theme="${esc(t)}" title="Show notes about ${esc(t)}">${esc(t)}</button>`).join("")}`;
+    const tags = `${(n.scripture || []).map(p => `<button type="button" class="pill script" data-passage="${esc(p)}" aria-expanded="false" title="Read ${esc(p)}">📖 ${esc(p)}</button>`).join("")}${(n.themes || []).map(t => `<button type="button" class="pill theme" data-theme="${esc(t)}" title="Show notes about ${esc(t)}">${esc(t)}</button>`).join("")}`;
     const meta = `${n.sunday ? `<span class="pill kind">For ${esc(fmt(n.sunday, { weekday: "short", month: "short", day: "numeric" }))}</span>` : ""}<span>${esc(n.by || "Heirloom")} · ${esc(postedText(n.posted))}${n.edited ? " · edited" : ""}</span>
       ${data.canPost ? `<button class="quiet" data-edit="${esc(n.id)}">Edit</button><button class="quiet del" data-del="${esc(n.id)}">Remove</button>` : ""}`;
     const inner = `<p class="meta">${meta}</p>${tags ? `<p class="tags">${tags}</p>` : ""}<div class="body">${bodyHtml(n)}</div>`;
@@ -171,7 +180,8 @@
     const usual = data.sundays.filter(s => (s.style || "Usual") === "Usual"), need = usual.filter(s => !s.main).length, n = usual.length;
     const uniq = a => a.filter((t, i) => t && a.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i).sort((a, b) => a.localeCompare(b));
     const themes = uniq(data.notes.flatMap(x => x.themes || [])), books = uniq(data.notes.flatMap(x => (x.scripture || []).map(bookOf)));
-    app.innerHTML = `
+    app.innerHTML = `${MANAGE && data.isAdmin ? `<div class="manage-bar" role="status"><span>✏️ <b>Editing the church page.</b> The buttons to add and change things are on.</span><a class="btn btn-outline btn-sm" href="church.html">Done</a></div>`
+        : MANAGE ? "" : ""}
       <div class="need-bar${need ? "" : " done"}" role="status">${need
         ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${usual.find(s => !s.main).date}">See which</a>` : ""}</span>`
         : `<span>✓ Every one of the next ${n} Sundays has a main dish. Thank you!</span>`}</div>
@@ -310,13 +320,13 @@
   const weekText = w => "Week of " + fmt(w, { month: "long", day: "numeric" });
   const addDaysYmd = (d, n) => { const t = dateOf(d); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
   function recHtml(a) {
-    const tags = `${(a.scripture || []).map(p => `<a class="pill script" href="${passageLink(p)}" target="_blank" rel="noopener">📖 ${esc(p)}</a>`).join("")}${(a.themes || []).map(t => `<button type="button" class="pill theme" data-atheme="${esc(t)}">${esc(t)}</button>`).join("")}`;
+    const tags = `${(a.scripture || []).map(p => `<button type="button" class="pill script" data-passage="${esc(p)}" aria-expanded="false">📖 ${esc(p)}</button>`).join("")}${(a.themes || []).map(t => `<button type="button" class="pill theme" data-atheme="${esc(t)}">${esc(t)}</button>`).join("")}`;
     return `<article class="rec" id="rec-${esc(a.id)}">
       <p class="rk"><span>${ICON[a.kind] || "🎧"} ${esc(a.kind)}</span>${a.seconds ? `<span>${esc(mins(a.seconds))}</span>` : ""}</p>
       <h3>${esc(a.title)}</h3>
       ${tags ? `<p class="tags">${tags}</p>` : ""}
       ${(bk => bk ? `<p class="rbook">📚 From <a href="#book-${esc(bk.id)}">${esc(bk.title)}</a>${a.pages ? ", " + esc(/^\s*(p|pg|pp|page)/i.test(a.pages) ? a.pages : (/[-–,]/.test(a.pages) ? "pp. " : "p. ") + a.pages) : ""}</p>` : a.pages ? `<p class="rbook">📚 ${esc(a.pages)}</p>` : "")(bookFor(a))}
-      <audio controls preload="none" src="${esc(a.url)}"></audio>
+      <div class="player" data-play="${esc(a.id)}"><button type="button" class="pbtn"><span aria-hidden="true">▶</span> Play${a.seconds ? " · " + esc(mins(a.seconds)) : ""}</button></div>
       ${a.description ? `<details class="rd"><summary>About this one</summary><p>${esc(a.description)}</p></details>` : ""}
       <p class="rf"><a href="${esc(a.page)}" target="_blank" rel="noopener">Trouble playing? Open it</a>${data.canPost ? ` <button class="quiet" data-aedit="${esc(a.id)}">Edit</button><button class="quiet del" data-adel="${esc(a.id)}">Remove</button>` : ""}</p>
     </article>`;
@@ -366,8 +376,26 @@
         try { data = await call({ action: "churchAudioRemove", id: a.id }); dlg.close(); render(); flash("Recording removed."); }
         catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
     });
-    // Only one plays at a time
-    document.querySelectorAll("#listen audio").forEach(au => au.addEventListener("play", () => document.querySelectorAll("#listen audio").forEach(o => { if (o !== au) o.pause(); })));
+    document.querySelectorAll("#listen [data-play] .pbtn").forEach(b => b.onclick = () => playRec(b.closest("[data-play]")));
+  }
+  // The app fetches the recording and plays it here (Drive won't stream into a web page's player)
+  const SOUNDS = {};
+  async function playRec(box) {
+    const id = box.dataset.play, a = data.audio.find(x => x.id === id); if (!a) return;
+    const btn = box.querySelector(".pbtn");
+    if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Loading${a.bytes ? " " + (a.bytes / 1048576).toFixed(1) + " MB" : ""}…`; }
+    try {
+      if (!SOUNDS[id]) {
+        if (DEMO) SOUNDS[id] = a.url;
+        else { const r = await call({ action: "churchAudioGet", id });
+          const bin = atob(r.data), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+          SOUNDS[id] = URL.createObjectURL(new Blob([u8], { type: r.type || "audio/mp4" })); }
+      }
+      box.innerHTML = `<audio controls preload="auto" src="${SOUNDS[id]}"></audio>`;
+      const au = box.querySelector("audio");
+      au.addEventListener("play", () => document.querySelectorAll("#listen audio").forEach(o => { if (o !== au) o.pause(); }));
+      au.play().catch(() => { /* phones may want one more tap on the player */ });
+    } catch (err) { box.innerHTML = `<p class="perr">Couldn't load it. <a href="${esc(a.page)}" target="_blank" rel="noopener">Open it in Google Drive</a></p>`; }
   }
   const MAX_MB = 30;
   function audioDlg(a) {
@@ -390,7 +418,7 @@
       <div class="two"><label class="f">Scripture <span class="opt">(optional)</span><input id="au_scr" maxlength="200" placeholder="Psalm 23; John 10:11" value="${esc(a ? (a.scripture || []).join("; ") : "")}"></label>
         <label class="f">Themes <span class="opt">(optional)</span><input id="au_themes" maxlength="200" placeholder="Rest, Trust" value="${esc(a ? (a.themes || []).join(", ") : "")}"></label></div>
       <label class="f">About it <span class="opt">(optional)</span><textarea id="au_desc" rows="3" maxlength="4000" placeholder="A few words on what this one's about.">${esc(a ? a.description : "")}</textarea></label>
-      ${a ? "" : `<label class="chk"><input type="checkbox" id="au_disc"${data.discord ? " checked" : " disabled"}><span>Also post it to #church-fam on Discord${data.discord ? "" : " <small class=\"opt\">(not connected)</small>"}</span></label>`}
+      ${a ? "" : `<label class="chk"><input type="checkbox" id="au_disc"${data.discord ? "" : " disabled"}><span>Also post it to #church-fam on Discord now${data.discord ? " <small class=\"opt\">(the Monday email posts a summary there anyway)</small>" : " <small class=\"opt\">(not connected)</small>"}</span></label>`}
       <p class="err" id="auErr" hidden></p>
       <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="auGo">${a ? "Save" : "Post"}</button></div>`);
     const q = k => dlgIn.querySelector(k), err = q("#auErr");
@@ -459,6 +487,27 @@
       catch (x) { q("#dErr").textContent = (x.message || "Something went wrong") + "."; q("#dErr").hidden = false; b.disabled = false; b.textContent = "Save"; }
     };
   }
+
+  /* ---------- Scripture: tap a passage to read it right here ----------
+     Text from bible-api.com (World English Bible, public domain); other translations on BibleGateway. */
+  const PASSAGES = {};
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-passage]"); if (!b) return;
+    const p = b.dataset.passage, row = b.closest(".tags");
+    let box = row && row.nextElementSibling && row.nextElementSibling.classList.contains("passage") ? row.nextElementSibling : null;
+    if (box && box.dataset.p === p) { box.remove(); b.setAttribute("aria-expanded", "false"); return; }
+    if (row) row.querySelectorAll("[data-passage]").forEach(x => x.setAttribute("aria-expanded", "false"));
+    if (!box) { box = document.createElement("div"); box.className = "passage"; row ? row.after(box) : b.after(box); }
+    box.dataset.p = p; b.setAttribute("aria-expanded", "true");
+    const foot = `<p class="pfoot">World English Bible · <a href="${passageLink(p)}" target="_blank" rel="noopener">Other translations ↗</a> · <button type="button" class="quiet" data-pclose>Close</button></p>`;
+    box.innerHTML = `<p class="ploading"><span class="spinner"></span> ${esc(p)}…</p>`;
+    try {
+      if (!PASSAGES[p]) { const r = await fetch("https://bible-api.com/" + encodeURIComponent(p.replace(/[–—]/g, "-")) + "?translation=web"); const j = await r.json(); if (!r.ok || j.error || !j.verses) throw new Error(j.error || "not found"); PASSAGES[p] = j; }
+      const j = PASSAGES[p], multi = new Set(j.verses.map(v => v.chapter)).size > 1;
+      box.innerHTML = `<h4>${esc(j.reference)}</h4><p class="ptext">${j.verses.map(v => `<sup>${multi ? v.chapter + ":" : ""}${v.verse}</sup>${esc(String(v.text).replace(/\s+/g, " ").trim())}`).join(" ")}</p>${foot}`;
+    } catch (err) { box.innerHTML = `<p>We couldn't load ${esc(p)} here. <a href="${passageLink(p)}" target="_blank" rel="noopener">Read it on BibleGateway ↗</a></p>${foot}`; }
+    const c = box.querySelector("[data-pclose]"); if (c) c.onclick = () => { box.remove(); b.setAttribute("aria-expanded", "false"); };
+  });
 
   /* ---------- Song of the month ---------- */
   const monthName = m => { const [y, mo] = String(m || "").split("-").map(Number); return y ? new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" }) : ""; };
@@ -624,7 +673,7 @@
       <label class="f"><span>Themes <span class="opt">(optional; separate with commas)</span></span><input type="text" id="nThemes" maxlength="250" value="${esc(n ? (n.themes || []).join(", ") : "")}" placeholder="Hospitality, Advent, Rest"></label>
       ${known.length ? `<p class="sugg">Used before: ${known.map(t => `<button type="button" class="pill theme" data-add="${esc(t)}">${esc(t)}</button>`).join("")}</p>` : ""}
       <label class="f"><span>Is this about a specific Sunday? <span class="opt">(optional)</span></span><select id="nSun"><option value="">No, it's a general note</option>${opts.map(d => `<option value="${d}"${n && n.sunday === d ? " selected" : ""}>${esc(longDay(d))}</option>`).join("")}</select></label>
-      ${n ? "" : data.discord ? `<label class="chk"><input type="checkbox" id="nDisc" checked><span>Also post to #church-fam on Discord</span></label>` : `<p style="font-size:14px">Discord isn't connected for the church channel yet, so this stays in the app.</p>`}
+      ${n ? "" : data.discord ? `<label class="chk"><input type="checkbox" id="nDisc"><span>Also post to #church-fam on Discord now</span></label>` : `<p style="font-size:14px">Discord isn't connected for the church channel yet, so this stays in the app.</p>`}
       <div class="btns"><span class="err" id="nerr" hidden></span><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary" id="go">${n ? "Save" : "Post"}</button></div>`);
     dlg.addEventListener("close", () => dlg.classList.remove("wide"), { once: true });
     const ed = $("#ed"); let range = null;

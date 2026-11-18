@@ -499,3 +499,10 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Books we're reading** (tab "Church books"): admins add a book with title, author, "For" (Psalms & Proverbs or Kids Bible stories), cover image, buy link and store name (e.g. Books on Bee), started and finished dates, and a note. Adding a new book finishes the current one of the same kind (the day before), which moves it to "Books we've read".
 - **Recordings** have "From the book" (defaults to the book current that week) and **Pages**. The card shows "📚 From *Book*, pp. 42–47".
 - **books.html** is a public page (no sign-in) listing the books we're reading now and the ones we've read, with covers and buy links. Its data comes from ?action=churchBooks.
+
+## Church fixes (Nov 18, 2026)
+
+- **Audio plays in the page:** Drive won't stream into a web page's player, so ▶ Play fetches the recording through the app (churchAudioGet) and plays it here. "Trouble playing? Open it" stays as a backup.
+- **Scripture opens in place:** tap a 📖 passage on a note or recording and the text appears under it (bible-api.com, World English Bible, public domain), with a link to other translations on BibleGateway.
+- **Discord:** "Also post to #church-fam" starts unticked on notes and recordings. Round 3 adds a Monday summary to #church-fam with the weekly email.
+- **Church page is the same for everyone.** Editing moved to **Admin → Church**: shortcuts open church.html?manage=1 (with &do=audio|note|event|sunday|song|book to open that form) with an "Editing the church page" bar and all the add/change buttons.
