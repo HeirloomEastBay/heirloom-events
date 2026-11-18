@@ -531,3 +531,10 @@ html[data-theme="dark"] img.badge, html[data-theme="dark"] .brand img { filter: 
 html[data-theme="dark"] dialog { color: var(--ink); }
 html[data-theme="dark"] a { color: inherit; }
 html[data-theme="dark"] .site-footer { background: #0d140f; }
+
+/* ---------- Long words and links wrap instead of running off the screen (phones) ---------- */
+body { overflow-wrap: anywhere; }
+:where(h1, h2, h3, h4, p, li, a, b, strong, em, span, label, legend, td, th, dd, dt, small, summary) { overflow-wrap: anywhere; min-width: 0; }
+:where(section, article, li, .card, .hcard, fieldset, .field, .form-col) { min-width: 0; }
+img, video, iframe, svg { max-width: 100%; }
+.pill, .tag, .chip { white-space: normal; max-width: 100%; }

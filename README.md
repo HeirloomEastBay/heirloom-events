@@ -465,3 +465,5 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Home asks for its four parts at once (core, week, shifts, church) and draws each as it arrives; a part that takes over 20 seconds says so, and a part that fails gets a "Try again" button. One broken card can't blank the page any more.
 - Each part's time is logged in Apps Script → Executions as "Home week 1.2s (email)".
 - After logging in, people go straight to Home (no flash of My events). Logged-in people: the logo goes to Home, and the calendar's "Log in" button becomes "My home".
+- Home parts are saved on the server for 5 minutes per person. Any change made through the app or an email link clears them all, so Home is never stale. Edits typed straight into the Sheet can take up to 5 minutes to show on Home.
+- Phones: long words and links wrap inside cards instead of running off the right edge (rules at the end of styles.css; Home's grids use minmax(0, 1fr); church theme pills wrap).
