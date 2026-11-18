@@ -95,6 +95,8 @@
     if (window.HLNav) HLNav.setRoles({ email: data.email, church: true, admin: !!data.admin, resident: !!data.resident, volunteer: !!data.volunteer });
     if (data.me) $("#hello").textContent = "Church family";
     render();
+    // Links like church.html#listen or #note-… land on that part once it's drawn
+    if (location.hash) { const t = document.getElementById(location.hash.slice(1)); if (t) { if (t.tagName === "DETAILS") t.open = true; const o = t.closest("details.older"); if (o) o.open = true; setTimeout(() => t.scrollIntoView({ block: "start" }), 50); } }
   }
 
   /* ---------- Draw ---------- */
@@ -161,6 +163,8 @@
         ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${data.sundays.find(s => !s.main).date}">See which</a>` : ""}</span>`
         : `<span>✓ Every one of the next ${n} Sundays has a main dish. Thank you!</span>`}</div>
 
+      ${listenHtml()}
+
       ${songHtml()}
 
       <section aria-labelledby="hN">
@@ -206,6 +210,122 @@
     if ($("#songEdit")) $("#songEdit").onclick = () => songDlg(data.song);
     if ($("#songNew")) $("#songNew").onclick = () => songDlg(null);
     if ($("#evNew")) $("#evNew").onclick = () => eventDlg();
+    wireListen();
+  }
+
+  /* ---------- Listen: Brit's weekly recordings ---------- */
+  const af = { q: "", kind: "", theme: "", book: "" };
+  const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Kids Bible story": "🌱", "Other": "🎧" };
+  const mins = sec => sec ? (sec < 60 ? sec + " sec" : Math.round(sec / 60) + " min") : "";
+  const weekText = w => "Week of " + fmt(w, { month: "long", day: "numeric" });
+  const addDaysYmd = (d, n) => { const t = dateOf(d); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  function recHtml(a) {
+    const tags = `${(a.scripture || []).map(p => `<a class="pill script" href="${passageLink(p)}" target="_blank" rel="noopener">📖 ${esc(p)}</a>`).join("")}${(a.themes || []).map(t => `<button type="button" class="pill theme" data-atheme="${esc(t)}">${esc(t)}</button>`).join("")}`;
+    return `<article class="rec" id="rec-${esc(a.id)}">
+      <p class="rk"><span>${ICON[a.kind] || "🎧"} ${esc(a.kind)}</span>${a.seconds ? `<span>${esc(mins(a.seconds))}</span>` : ""}</p>
+      <h3>${esc(a.title)}</h3>
+      ${tags ? `<p class="tags">${tags}</p>` : ""}
+      <audio controls preload="none" src="${esc(a.url)}"></audio>
+      ${a.description ? `<details class="rd"><summary>About this one</summary><p>${esc(a.description)}</p></details>` : ""}
+      <p class="rf"><a href="${esc(a.page)}" target="_blank" rel="noopener">Trouble playing? Open it</a>${data.canPost ? ` <button class="quiet" data-aedit="${esc(a.id)}">Edit</button><button class="quiet del" data-adel="${esc(a.id)}">Remove</button>` : ""}</p>
+    </article>`;
+  }
+  function listenHtml() {
+    const all = data.audio || [];
+    if (!all.length && !data.canPost) return "";
+    const wk = data.thisWeek, now = all.filter(a => a.week === wk);
+    const q = af.q.trim().toLowerCase(), on = !!(q || af.kind || af.theme || af.book);
+    const hit = a => (!af.kind || a.kind === af.kind) && (!af.theme || (a.themes || []).some(t => t.toLowerCase() === af.theme.toLowerCase()))
+      && (!af.book || (a.scripture || []).some(p => bookOf(p).toLowerCase() === af.book.toLowerCase()))
+      && (!q || [a.title, a.kind, a.description, (a.themes || []).join(" "), (a.scripture || []).join(" ")].join(" ").toLowerCase().includes(q));
+    const earlier = all.filter(a => a.week !== wk && a.week < wk);
+    const uniq = arr => arr.filter((t, i) => t && arr.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i).sort((x, y) => x.localeCompare(y));
+    const themes = uniq(all.flatMap(a => a.themes || [])), books = uniq(all.flatMap(a => (a.scripture || []).map(bookOf)));
+    const byWeek = list => { const g = {}; list.forEach(a => (g[a.week] = g[a.week] || []).push(a)); return Object.keys(g).sort().reverse().map(w => `<div class="wk"><h4>${esc(weekText(w))}</h4>${g[w].map(recHtml).join("")}</div>`).join(""); };
+    const found = all.filter(hit);
+    return `<section class="listen" aria-labelledby="hL" id="listen">
+      <div class="sec-h"><div><h2 id="hL">Listen</h2><p>${esc(weekText(wk))}: the weekly message, Psalm of the week and Kids Bible story.</p></div>
+        ${data.canPost ? `<button class="btn btn-forest btn-sm" id="aNew">Add a recording</button>` : ""}</div>
+      ${all.length > 2 ? `<div class="nfind" role="search">
+        <input type="search" id="afQ" placeholder="Search recordings…" aria-label="Search recordings" value="${esc(af.q)}">
+        <select id="afKind" aria-label="Kind"><option value="">Everything</option>${(data.audioKinds || []).map(k => `<option${k === af.kind ? " selected" : ""}>${esc(k)}</option>`).join("")}</select>
+        ${themes.length ? `<select id="afTheme" aria-label="Theme"><option value="">All themes</option>${themes.map(t => `<option${t.toLowerCase() === af.theme.toLowerCase() ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>` : ""}
+        ${books.length ? `<select id="afBook" aria-label="Scripture"><option value="">All scripture</option>${books.map(t => `<option${t.toLowerCase() === af.book.toLowerCase() ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>` : ""}
+      </div>` : ""}
+      <div id="recList">${on
+        ? `<p class="found">${found.length} ${found.length === 1 ? "recording" : "recordings"} found <button type="button" class="quiet" id="afClear">Show all</button></p>${found.length ? byWeek(found) : `<div class="empty"><p>Nothing matches. Try a different word, theme or book.</p></div>`}`
+        : (now.length ? `<div class="recs">${now.map(recHtml).join("")}</div>` : `<p class="empty-s">Nothing posted for this week yet.${data.canPost ? " Add the first recording!" : ""}</p>`)
+          + (earlier.length ? `<details class="older"><summary>Earlier weeks (${earlier.length})</summary>${byWeek(earlier)}</details>` : "")}</div>
+    </section>`;
+  }
+  function wireListen() {
+    const redraw = () => { const sec = $("#listen"); if (!sec) return; sec.outerHTML = listenHtml(); wireListen(); };
+    if ($("#aNew")) $("#aNew").onclick = () => audioDlg();
+    if ($("#afQ")) $("#afQ").oninput = e => { af.q = e.target.value; const pos = e.target.selectionStart; redraw(); const i = $("#afQ"); i.focus(); try { i.setSelectionRange(pos, pos); } catch (x) { /* fine */ } };
+    [["#afKind", "kind"], ["#afTheme", "theme"], ["#afBook", "book"]].forEach(([k, f]) => { if ($(k)) $(k).onchange = e => { af[f] = e.target.value; redraw(); }; });
+    if ($("#afClear")) $("#afClear").onclick = () => { af.q = af.kind = af.theme = af.book = ""; redraw(); };
+    document.querySelectorAll("#listen [data-atheme]").forEach(b => b.onclick = () => { af.theme = b.dataset.atheme; redraw(); $("#hL").scrollIntoView({ block: "start" }); });
+    document.querySelectorAll("#listen [data-aedit]").forEach(b => b.onclick = () => audioDlg(data.audio.find(a => a.id === b.dataset.aedit)));
+    document.querySelectorAll("#listen [data-adel]").forEach(b => b.onclick = () => {
+      const a = data.audio.find(x => x.id === b.dataset.adel);
+      openDlg(`<h2>Remove this recording?</h2><p>"${esc(a.title)}" comes off the church page. The file stays in the Church Audio folder in Google Drive.</p>
+        <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
+      dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
+      $("#go").onclick = async e => { e.currentTarget.disabled = true;
+        try { data = await call({ action: "churchAudioRemove", id: a.id }); dlg.close(); render(); flash("Recording removed."); }
+        catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+    });
+    // Only one plays at a time
+    document.querySelectorAll("#listen audio").forEach(au => au.addEventListener("play", () => document.querySelectorAll("#listen audio").forEach(o => { if (o !== au) o.pause(); })));
+  }
+  const MAX_MB = 30;
+  function audioDlg(a) {
+    const wk = data.thisWeek, weeks = [addDaysYmd(wk, 7), wk, addDaysYmd(wk, -7), addDaysYmd(wk, -14)];
+    if (a && weeks.indexOf(a.week) === -1) weeks.push(a.week);
+    const used = (data.audio || []).filter(x => x.week === wk).map(x => x.kind);
+    const kind0 = a ? a.kind : (data.audioKinds || []).find(k => k !== "Other" && used.indexOf(k) === -1) || "Other";
+    let file = null;
+    openDlg(`<h2>${a ? "Edit recording" : "Add a recording"}</h2>
+      <div class="two"><label class="f">Which<select id="au_kind">${(data.audioKinds || []).map(k => `<option${k === kind0 ? " selected" : ""}>${esc(k)}</option>`).join("")}</select></label>
+        <label class="f">Week<select id="au_week">${weeks.map(w => `<option value="${w}"${w === (a ? a.week : wk) ? " selected" : ""}>${esc(weekText(w))}${w === wk ? " (this week)" : w > wk ? " (next week)" : ""}</option>`).join("")}</select></label></div>
+      <div class="f"><span>${a ? "Replace the recording <span class=\"opt\">(optional)</span>" : "The recording"}</span>
+        <label class="pickfile"><input type="file" id="au_file" accept="audio/*,.m4a,.mp3,.aac,.wav,.caf"><span id="au_fname">${a ? "Keep the current one" : "Choose a voice memo"}</span></label>
+        <small class="opt">On iPhone: in Voice Memos, tap ⋯ → Save to Files, then pick it here. Up to ${MAX_MB} MB (about an hour).</small></div>
+      <label class="f">Title<input id="au_title" maxlength="140" placeholder="Psalm 23: The Lord is my shepherd" value="${esc(a ? a.title : "")}"></label>
+      <div class="two"><label class="f">Scripture <span class="opt">(optional)</span><input id="au_scr" maxlength="200" placeholder="Psalm 23; John 10:11" value="${esc(a ? (a.scripture || []).join("; ") : "")}"></label>
+        <label class="f">Themes <span class="opt">(optional)</span><input id="au_themes" maxlength="200" placeholder="Rest, Trust" value="${esc(a ? (a.themes || []).join(", ") : "")}"></label></div>
+      <label class="f">About it <span class="opt">(optional)</span><textarea id="au_desc" rows="3" maxlength="4000" placeholder="A few words on what this one's about.">${esc(a ? a.description : "")}</textarea></label>
+      ${a ? "" : `<label class="chk"><input type="checkbox" id="au_disc"${data.discord ? " checked" : " disabled"}><span>Also post it to #church-fam on Discord${data.discord ? "" : " <small class=\"opt\">(not connected)</small>"}</span></label>`}
+      <p class="err" id="auErr" hidden></p>
+      <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="auGo">${a ? "Save" : "Post"}</button></div>`);
+    const q = k => dlgIn.querySelector(k), err = q("#auErr");
+    q("[data-x]").onclick = () => dlg.close();
+    q("#au_file").onchange = () => {
+      const f = q("#au_file").files[0]; file = null; err.hidden = true; if (!f) return;
+      if (f.size > MAX_MB * 1024 * 1024) { err.textContent = "That file is " + (f.size / 1048576).toFixed(1) + " MB, over the " + MAX_MB + " MB limit."; err.hidden = false; return; }
+      file = { f, seconds: 0 };
+      q("#au_fname").textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
+      // How long it is (for the page and, later, podcast apps)
+      const probe = new Audio(); probe.preload = "metadata"; probe.onloadedmetadata = () => { if (isFinite(probe.duration)) { file.seconds = Math.round(probe.duration); q("#au_fname").textContent += " · " + mins(file.seconds); } URL.revokeObjectURL(probe.src); };
+      probe.src = URL.createObjectURL(f);
+      if (!q("#au_title").value.trim()) q("#au_title").value = f.name.replace(/\.[^.]+$/, "").replace(/^New Recording\s*\d*$/i, "");
+    };
+    q("#auGo").onclick = async e => {
+      const b = e.currentTarget; err.hidden = true;
+      if (!a && !file) { err.textContent = "Choose a recording first."; err.hidden = false; return; }
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span> ${file ? "Uploading " + (file.f.size / 1048576).toFixed(1) + " MB…" : "Saving…"}`;
+      try {
+        let audio = null;
+        if (file) {
+          const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error("Couldn't read that file")); r.readAsDataURL(file.f); });
+          audio = { data: String(dataUrl).split(",")[1], type: file.f.type || "audio/mp4", name: file.f.name, seconds: file.seconds };
+        }
+        data = await call({ action: "churchAudio", id: a ? a.id : undefined, kind: q("#au_kind").value, week: q("#au_week").value, title: q("#au_title").value.trim(),
+          scripture: splitList(q("#au_scr").value.replace(/,(?=\s*(?:[1-3]\s*)?[A-Za-z])/g, ";")), themes: splitList(q("#au_themes").value), description: q("#au_desc").value.trim(),
+          discord: !a && q("#au_disc") && q("#au_disc").checked, audio: audio, _demoUrl: DEMO && file ? URL.createObjectURL(file.f) : undefined });
+        dlg.close(); render(); flash(a ? "Saved." : "Posted. It's on the church page" + (!a && q("#au_disc") && q("#au_disc").checked ? " and #church-fam." : "."));
+      } catch (x) { err.textContent = (x.message || "Something went wrong") + "."; err.hidden = false; b.disabled = false; b.textContent = a ? "Save" : "Post"; }
+    };
   }
 
   /* ---------- Song of the month ---------- */
@@ -428,6 +548,12 @@
     };
   }
 
+  // A second of silence, so the sample players work in preview mode
+  function silentWav() { const n = 8000, buf = new ArrayBuffer(44 + n), v = new DataView(buf), w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    let s = ""; new Uint8Array(buf).forEach(c => s += String.fromCharCode(c)); return "data:audio/wav;base64," + btoa(s); }
+
   /* ---------- Preview mode (no backend connected) ---------- */
   function demo(b) {
     if (!demoState) {
@@ -444,10 +570,16 @@
         songs: [], events: [{ id: "EV-1", title: "Advent candle-making night", next: suns[1], date: suns[1], until: "", repeats: "", start: "18:30", end: "20:00", allDay: false, location: "Farmhouse", description: "Bring a jar. We'll make Advent candles together.", link: "", public: true },
           { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
         eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
+        audioKinds: ["Weekly message", "Psalm of the week", "Kids Bible story", "Other"], thisWeek: (() => { const t = dateOf(today()), wd = t.getUTCDay(); t.setUTCDate(t.getUTCDate() + (wd === 0 ? 1 : 1 - wd)); return t.toISOString().slice(0, 10); })(),
+        audio: [],
         sundays: suns.map((day, i) => ({ date: day, main: i === 0 ? { id: "D-1", kind: "Main", what: "Veggie lasagna", name: "Riss K.", mine: false } : i === 2 ? { id: "D-4", kind: "Main", what: "", name: "Ana D.", mine: true } : null,
           bringing: i === 0 ? [{ id: "D-2", kind: "Side", what: "Green salad", name: "Lisa S.", mine: false }, { id: "D-3", kind: "Dessert", what: "Apple crisp", name: "Ana D.", mine: true }] : [] })) };
     }
     demoState.events.sort((a, c) => a.next.localeCompare(c.next));
+    if (!demoState.audio.length && !demoState._seeded) { demoState._seeded = true; const w = demoState.thisWeek, prev = (() => { const t = dateOf(w); t.setUTCDate(t.getUTCDate() - 7); return t.toISOString().slice(0, 10); })(), sil = silentWav();
+      demoState.audio = [{ id: "AU-1", week: w, kind: "Weekly message", title: "Waiting well", description: "On Advent as a season of waiting, and what it asks of us.", scripture: ["Isaiah 40:31"], themes: ["Advent", "Waiting"], url: sil, page: sil, seconds: 482, posted: "", by: "Brit P." },
+        { id: "AU-2", week: w, kind: "Psalm of the week", title: "Psalm 130", description: "", scripture: ["Psalm 130"], themes: ["Waiting"], url: sil, page: sil, seconds: 214, posted: "", by: "Brit P." },
+        { id: "AU-3", week: prev, kind: "Kids Bible story", title: "Noah and the rainbow", description: "", scripture: ["Genesis 9:8-17"], themes: ["Promises"], url: sil, page: sil, seconds: 305, posted: "", by: "Brit P." }]; }
     const S = demoState, all = () => S.sundays.flatMap(s => [s.main].concat(s.bringing).filter(Boolean));
     if (b.action === "churchBring") {
       const s = S.sundays.find(x => x.date === b.sunday);
@@ -467,6 +599,13 @@
       if (b.id) Object.assign(S.songs.find(x => x.id === b.id), f); else S.songs.unshift(Object.assign({ id: "SG-" + Math.random().toString(36).slice(2, 6) }, f));
     }
     if (b.action === "churchSongRemove") S.songs = S.songs.filter(x => x.id !== b.id);
+    if (b.action === "churchAudio") {
+      const f = { kind: b.kind, week: b.week, title: b.title || b.kind, description: b.description, scripture: b.scripture || [], themes: b.themes || [] };
+      if (b.audio) Object.assign(f, { url: b._demoUrl, page: b._demoUrl, seconds: b.audio.seconds });
+      if (b.id) Object.assign(S.audio.find(x => x.id === b.id), f); else S.audio.push(Object.assign({ id: "AU-" + Math.random().toString(36).slice(2, 6), posted: "", by: "Ana D." }, f));
+      const order = k => S.audioKinds.indexOf(k); S.audio.sort((x, y) => x.week < y.week ? 1 : x.week > y.week ? -1 : order(x.kind) - order(y.kind));
+    }
+    if (b.action === "churchAudioRemove") S.audio = S.audio.filter(x => x.id !== b.id);
     if (b.action === "churchSong" || b.action === "churchSongRemove") { S.songs.sort((a, c) => a.month < c.month ? 1 : -1); S.song = S.songs.find(x => x.month <= today().slice(0, 7)) || null; }
     if (b.action === "churchEvent") {
       if (!b.title) return Promise.reject(new Error("Please add an event name"));

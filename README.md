@@ -474,3 +474,11 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Discord:** #church-events posts once a Discord channels row has Event type "Church", Active TRUE and its webhook.
 - **Church filter** on the public calendar (shows when there are church events coming up).
 - **Song of the month** (tab "Church songs", added by setup): title, writers, YouTube (plays on the page), a note, a copyright line and a lyrics link. Lyrics only show when "Public domain, or we have permission" is ticked, because a CCLI license doesn't cover lyrics on websites. The church family never receives lyrics that aren't ticked. Next month's song can be posted early; it shows when its month starts.
+
+## Church round 2: weekly recordings (Nov 18, 2026)
+
+- **Listen** section at the top of the church page. It shows this week's recordings (Weekly message, Psalm of the week, Kids Bible story, Other), each with a player, length, scripture links, theme tags and an optional description. Earlier weeks fold below. Search, kind, theme and scripture filters appear once there are a few.
+- **Add a recording** (admins): choose the kind and week (next, this or the past two), upload a voice memo (up to 30 MB), and add a title, scripture, themes and description. Optionally post to #church-fam. Edit replaces the text or the file; Remove takes it off the page and leaves the file in Drive.
+- Weeks start Monday. A recording posted on Sunday defaults to the coming week.
+- Files go to the "Heirloom Church Audio" Drive folder (made by setup, shared "anyone with the link can view"). The "Church audio" tab keeps what a podcast feed needs later: title, description, date, length, type, size and episode number.
+- Home shows "Listen this week" for church family when there are recordings.

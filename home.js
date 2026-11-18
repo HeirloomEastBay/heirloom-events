@@ -90,7 +90,7 @@
     // Residents: the week first. Volunteers (community members): volunteer opportunities right after Submit an event.
     if (insider) { parts.push(week); parts.push(...shifts); }
     else { parts.push(...shifts.slice().reverse()); parts.push(week); }
-    if (ready("church")) { if (D.church) { parts.push(sec(supper, "Supper Church")); if (D.church.note) parts.push(sec(noteCard, "From Brit")); } }
+    if (ready("church")) { if (D.church) { parts.push(sec(supper, "Supper Church")); if ((D.church.audio || []).length) parts.push(sec(listenCard, "Listen this week")); if (D.church.note) parts.push(sec(noteCard, "From Brit")); } }
     else if (R.church || R.resident || R.admin) parts.push(waiting("church", "Supper Church"));
     if (ready("core")) parts.push(sec(() => extras(R), "Yours"));
     app.innerHTML = parts.filter(Boolean).join("");
@@ -177,6 +177,12 @@
         ${s.bringing.length ? `<ul>${s.bringing.map(b => `<li>${esc(kinds[b.kind] || b.kind)}${b.what ? ": " + esc(b.what) : ""} (${esc(b.mine ? "you" : b.name)})</li>`).join("")}</ul>` : `<p class="empty-s">No sides or desserts yet.</p>`}
         <a class="more" href="church.html">Bring a side or dessert →</a></div></section>`;
   }
+  function listenCard() {
+    const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Kids Bible story": "🌱" };
+    return `<section class="hcard" aria-labelledby="hLs"><header><h2 id="hLs">Listen this week</h2><a href="church.html#listen">All recordings</a></header>
+      <ul class="shifts">${D.church.audio.map(a => `<li><b>${ICON[a.kind] || "🎧"} ${esc(a.title)}</b><span>${esc(a.kind)}</span><span class="n">${a.seconds ? Math.max(1, Math.round(a.seconds / 60)) + " min" : ""}</span></li>`).join("")}</ul>
+      <a class="btn btn-forest btn-sm" href="church.html#listen" style="justify-self:start">Listen</a></section>`;
+  }
   function noteCard() {
     const n = D.church.note;
     return `<section class="hcard" aria-labelledby="hN"><header><h2 id="hN">From Brit</h2><a href="church.html">All notes</a></header>
@@ -228,7 +234,7 @@
         pick: [{ date: plus(2), title: "Collecting eggs", time: "5–5:30pm", kind: "cover", note: "Mark needs a sub", missing: [] }, { date: plus(6), title: "Goat milking", time: "6–7am", kind: "cover", note: "Needs someone", missing: volunteer ? ["Goat milking training"] : [] },
           { date: "", title: "Garden watering", time: "Thursday 6–7pm", kind: "slot", note: "Needs a new regular", missing: [] }], pickTotal: 5 };
       if (resident || volunteer) demoD.church = { sunday: { date: plus((7 - new Date().getDay()) % 7 || 7), main: null, bringing: [{ kind: "Side", what: "Roasted squash", name: "Martha S.", mine: false }, { kind: "Dessert", what: "", name: "Ana D.", mine: false }] },
-        note: { id: "N1", title: "Advent is almost here", by: "Brit", posted: plus(-4), excerpt: "This Sunday we begin Advent together. Bring a candle if you have one, and come ready to sit with the waiting…", image: "images/farmhouse.jpg", themes: ["Advent"] } };
+        audio: [{ kind: "Weekly message", title: "Waiting well", seconds: 482 }, { kind: "Psalm of the week", title: "Psalm 130", seconds: 214 }], note: { id: "N1", title: "Advent is almost here", by: "Brit", posted: plus(-4), excerpt: "This Sunday we begin Advent together. Bring a candle if you have one, and come ready to sit with the waiting…", image: "images/farmhouse.jpg", themes: ["Advent"] } };
     }
     if (b.action === "homeAlertDone") demoD.alerts = demoD.alerts.filter(a => a.id !== b.id);
     if (QS.has("slow") && b.part === QS.get("slow")) return new Promise(() => {});
