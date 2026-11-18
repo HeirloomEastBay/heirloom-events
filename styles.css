@@ -490,7 +490,11 @@ dialog.vn-dlg { width: min(860px, calc(100vw - 24px)); }
 /* ---------- Bottom tab bar (phones, signed in) ---------- */
 .tabbar { display: none; }
 @media (max-width: 760px) {
-  body.has-tabs { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  /* Room for the tab bar, inside the footer so its dark green runs to the bottom of the screen */
+  body.has-tabs { padding-bottom: 0; }
+  body.has-tabs .site-footer { padding-bottom: calc(32px + 68px + env(safe-area-inset-bottom)); }
+  body.has-tabs .foot { padding-bottom: calc(36px + 68px + env(safe-area-inset-bottom)); }
+  body.has-tabs:not(:has(.site-footer, .foot)) { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
   body.has-tabs .site-header .nav a.nav-link, body.has-tabs .site-header .nav .nav-cal { display: none; }
   .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     background: rgba(251,248,241,.97); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid var(--line);

@@ -172,13 +172,15 @@
     const s = D.church.sunday; if (!s) return "";
     const kinds = { Side: "Side", Dessert: "Dessert", Other: "Other", Drink: "Drink" };
     return `<section class="hcard" aria-labelledby="hC"><header><h2 id="hC">Supper Church · ${esc(fmt(s.date, { weekday: "long", month: "short", day: "numeric" }))}</h2><a href="church.html">Church family</a></header>
-      <div class="sup">${s.main ? `<div class="main"><span>Main dish: <b>${esc(s.main.what || "something good")}</b> · ${esc(s.main.mine ? "you" : s.main.name)}</span></div>`
+      <div class="sup">${s.style === "No Supper Church" ? `<div class="main"><span>🕯️ <b>${esc(s.title || "No Supper Church this week")}</b>${s.dayNote ? " · " + esc(s.dayNote) : ""}</span></div>`
+        : s.style === "Potluck" ? `<div class="main"><span>🥧 <b>${esc(s.title || "Potluck")}</b>: bring a dish to share!</span><a class="btn btn-primary btn-sm" href="church.html#sun-${esc(s.date)}">I'm bringing…</a></div>`
+        : s.main ? `<div class="main"><span>Main dish: <b>${esc(s.main.what || "something good")}</b> · ${esc(s.main.mine ? "you" : s.main.name)}</span></div>`
         : `<div class="main need"><b>Main dish still needed!</b><a class="btn btn-primary btn-sm" href="church.html">I'll make it</a></div>`}
-        ${s.bringing.length ? `<ul>${s.bringing.map(b => `<li>${esc(kinds[b.kind] || b.kind)}${b.what ? ": " + esc(b.what) : ""} (${esc(b.mine ? "you" : b.name)})</li>`).join("")}</ul>` : `<p class="empty-s">No sides or desserts yet.</p>`}
-        <a class="more" href="church.html">Bring a side or dessert →</a></div></section>`;
+        ${s.bringing.length ? `<ul>${s.bringing.map(b => `<li>${esc(kinds[b.kind] || b.kind)}${b.what ? ": " + esc(b.what) : ""} (${esc(b.mine ? "you" : b.name)})</li>`).join("")}</ul>` : s.style === "No Supper Church" ? "" : `<p class="empty-s">${s.style === "Potluck" ? "Nobody's said what they're bringing yet." : "No sides or desserts yet."}</p>`}
+        ${s.style === "No Supper Church" ? "" : `<a class="more" href="church.html#sun-${esc(s.date)}">${s.style === "Potluck" ? "Say what you're bringing →" : "Bring a side or dessert →"}</a>`}</div></section>`;
   }
   function listenCard() {
-    const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Kids Bible story": "🌱" };
+    const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Proverb of the week": "📜", "Kids Bible story": "🌱" };
     return `<section class="hcard" aria-labelledby="hLs"><header><h2 id="hLs">Listen this week</h2><a href="church.html#listen">All recordings</a></header>
       <ul class="shifts">${D.church.audio.map(a => `<li><b>${ICON[a.kind] || "🎧"} ${esc(a.title)}</b><span>${esc(a.kind)}</span><span class="n">${a.seconds ? Math.max(1, Math.round(a.seconds / 60)) + " min" : ""}</span></li>`).join("")}</ul>
       <a class="btn btn-forest btn-sm" href="church.html#listen" style="justify-self:start">Listen</a></section>`;
@@ -233,7 +235,7 @@
       if (resident || volunteer) demoD.shifts = { mine: [{ date: plus(1), title: "Animal chores (AM)", time: "7–8am", kind: "chore" }, { date: plus(4), title: "Farm Work Day", time: "9am–12pm", kind: "signup" }],
         pick: [{ date: plus(2), title: "Collecting eggs", time: "5–5:30pm", kind: "cover", note: "Mark needs a sub", missing: [] }, { date: plus(6), title: "Goat milking", time: "6–7am", kind: "cover", note: "Needs someone", missing: volunteer ? ["Goat milking training"] : [] },
           { date: "", title: "Garden watering", time: "Thursday 6–7pm", kind: "slot", note: "Needs a new regular", missing: [] }], pickTotal: 5 };
-      if (resident || volunteer) demoD.church = { sunday: { date: plus((7 - new Date().getDay()) % 7 || 7), main: null, bringing: [{ kind: "Side", what: "Roasted squash", name: "Martha S.", mine: false }, { kind: "Dessert", what: "", name: "Ana D.", mine: false }] },
+      if (resident || volunteer) demoD.church = { sunday: { date: plus((7 - new Date().getDay()) % 7 || 7), style: "Potluck", title: "Thanksgiving potluck", main: null, bringing: [{ kind: "Side", what: "Roasted squash", name: "Martha S.", mine: false }, { kind: "Dessert", what: "", name: "Ana D.", mine: false }] },
         audio: [{ kind: "Weekly message", title: "Waiting well", seconds: 482 }, { kind: "Psalm of the week", title: "Psalm 130", seconds: 214 }], note: { id: "N1", title: "Advent is almost here", by: "Brit", posted: plus(-4), excerpt: "This Sunday we begin Advent together. Bring a candle if you have one, and come ready to sit with the waiting…", image: "images/farmhouse.jpg", themes: ["Advent"] } };
     }
     if (b.action === "homeAlertDone") demoD.alerts = demoD.alerts.filter(a => a.id !== b.id);

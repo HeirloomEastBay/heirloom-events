@@ -482,3 +482,20 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Weeks start Monday. A recording posted on Sunday defaults to the coming week.
 - Files go to the "Heirloom Church Audio" Drive folder (made by setup, shared "anyone with the link can view"). The "Church audio" tab keeps what a podcast feed needs later: title, description, date, length, type, size and episode number.
 - Home shows "Listen this week" for church family when there are recordings.
+
+## Special Sundays + footer (Nov 18, 2026)
+
+- **Phones:** the footer's dark green runs to the bottom of the screen. The room for the tab bar is inside the footer now instead of under it.
+- **Fifth Sundays** were already skipped ("Supper Church: skip fifth Sundays"). The church page now shows a "No Supper Church: it's a fifth Sunday" line in their place.
+- **Special Sundays** (admins: "Change this Sunday" on any Sunday card; tab "Supper Church days"):
+  - **Potluck:** everyone brings a dish, no main needed. Several people can bring mains, the need bar and Wednesday nudge skip it, and the Saturday roundup lists what's coming.
+  - **No Supper Church:** sign-ups close, and the reminders skip it.
+  - Each has an optional name and note, and an optional Discord announcement to #church-fam. Existing sign-ups are kept.
+- Setup marks Sunday, Nov 22, 2026 as a "Thanksgiving potluck" (once).
+
+## Church books + Proverb of the week (Nov 18, 2026)
+
+- **Proverb of the week** is a recording type. It shares a slot with the Psalm, so "Add a recording" suggests whichever of the two hasn't been posted that week.
+- **Books we're reading** (tab "Church books"): admins add a book with title, author, "For" (Psalms & Proverbs or Kids Bible stories), cover image, buy link and store name (e.g. Books on Bee), started and finished dates, and a note. Adding a new book finishes the current one of the same kind (the day before), which moves it to "Books we've read".
+- **Recordings** have "From the book" (defaults to the book current that week) and **Pages**. The card shows "📚 From *Book*, pp. 42–47".
+- **books.html** is a public page (no sign-in) listing the books we're reading now and the ones we've read, with covers and buy links. Its data comes from ?action=churchBooks.

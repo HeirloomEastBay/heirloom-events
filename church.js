@@ -138,6 +138,19 @@
   }
   function sunHtml(s, i) {
     const note = data.notes.find(n => n.sunday === s.date);
+    const adminLink = data.admin ? `<button class="quiet" data-day="${i}">Change this Sunday</button>` : "";
+    const head = `<h3>${esc(fmt(s.date, { weekday: "short", month: "long", day: "numeric" }))} <small>${esc(whenWord(s.date))}</small></h3>`;
+    if (s.style === "No Supper Church") return `<article class="sun off" id="sun-${s.date}">${head}
+      <p class="day-banner">🕯️ <b>${esc(s.title || "No Supper Church this week")}</b>${s.dayNote ? `<span>${esc(s.dayNote)}</span>` : ""}</p>
+      ${adminLink ? `<div class="acts">${adminLink}</div>` : ""}</article>`;
+    if (s.style === "Potluck") {
+      const mineP = k => `<button class="quiet" data-change="${esc(k.id)}" data-sun="${i}">Change</button><button class="quiet del" data-remove="${esc(k.id)}">Remove</button>`;
+      return `<article class="sun potluck" id="sun-${s.date}">${head}
+        <p class="day-banner">🥧 <b>${esc(s.title || "Potluck")}</b><span>${esc(s.dayNote || "Everyone brings a dish to share. No one main dish needed.")}</span></p>
+        <ul class="bring" aria-label="Bringing">${s.bringing.length ? s.bringing.map(b => `<li><span class="pill kind">${esc(b.kind)}</span><span>${esc(b.what || "A dish to share")}</span><span class="by">${b.mine ? "You" : esc(b.name)}</span>${b.mine ? mineP(b) : data.admin ? `<button class="quiet del" data-remove="${esc(b.id)}">Remove</button>` : ""}</li>`).join("") : `<li class="none">Nobody's said what they're bringing yet.</li>`}</ul>
+        <div class="acts"><button class="btn btn-primary btn-sm" data-bring="${i}" data-kind="Main">I'm bringing a dish</button>${note ? `<a class="note-link" href="#note-${esc(note.id)}" data-open="${esc(note.id)}">📝 Note for this Sunday</a>` : ""}${adminLink}</div>
+      </article>`;
+    }
     const mine = k => `<button class="quiet" data-change="${esc(k.id)}" data-sun="${i}">Change</button><button class="quiet del" data-remove="${esc(k.id)}">Remove</button>`;
     const main = s.main
       ? `<div class="main-row"><span><span class="pill ok">✓ Main dish</span></span><span class="dish">${esc(s.main.what || "Main dish (to be announced)")}</span>
@@ -151,19 +164,21 @@
       <h3>${esc(fmt(s.date, { weekday: "short", month: "long", day: "numeric" }))} <small>${esc(whenWord(s.date))}</small></h3>
       ${main}
       <ul class="bring" aria-label="Also coming">${list}</ul>
-      <div class="acts"><button class="btn btn-outline btn-sm" data-bring="${i}" data-kind="Side">I'm bringing something</button>${note ? `<a class="note-link" href="#note-${esc(note.id)}" data-open="${esc(note.id)}">📝 Note for this Sunday</a>` : ""}</div>
+      <div class="acts"><button class="btn btn-outline btn-sm" data-bring="${i}" data-kind="Side">I'm bringing something</button>${note ? `<a class="note-link" href="#note-${esc(note.id)}" data-open="${esc(note.id)}">📝 Note for this Sunday</a>` : ""}${adminLink}</div>
     </article>`;
   }
   function render() {
-    const need = data.sundays.filter(s => !s.main).length, n = data.sundays.length;
+    const usual = data.sundays.filter(s => (s.style || "Usual") === "Usual"), need = usual.filter(s => !s.main).length, n = usual.length;
     const uniq = a => a.filter((t, i) => t && a.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i).sort((a, b) => a.localeCompare(b));
     const themes = uniq(data.notes.flatMap(x => x.themes || [])), books = uniq(data.notes.flatMap(x => (x.scripture || []).map(bookOf)));
     app.innerHTML = `
       <div class="need-bar${need ? "" : " done"}" role="status">${need
-        ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${data.sundays.find(s => !s.main).date}">See which</a>` : ""}</span>`
+        ? `<b>${need}</b><span>of the next ${n} Sundays still ${need === 1 ? "needs" : "need"} a main dish. ${need ? `<a href="#sun-${usual.find(s => !s.main).date}">See which</a>` : ""}</span>`
         : `<span>✓ Every one of the next ${n} Sundays has a main dish. Thank you!</span>`}</div>
 
       ${listenHtml()}
+
+      ${booksHtml()}
 
       ${songHtml()}
 
@@ -183,7 +198,8 @@
       <section aria-labelledby="hS">
         <div class="sec-h"><div><h2 id="hS">Supper Church</h2><p>Sundays at 5:30pm, setup at 5:00. The main dish is the one we need most; sides and desserts are a bonus. Sign up as far ahead as you like.</p></div></div>
         ${data.dietary.length ? `<p class="diet"><b>Cooking for the group?</b> In the church family: ${data.dietary.map(d => `<span>${d.count} ${esc(d.label)}</span>`).join("")}</p>` : ""}
-        <div class="suns">${data.sundays.map(sunHtml).join("")}</div>
+        <div class="suns">${data.sundays.map((s, i) => ({ d: s.date, h: sunHtml(s, i) })).concat((data.skipped || []).map(d => ({ d, h: `<article class="sun skip"><h3>${esc(fmt(d, { weekday: "short", month: "long", day: "numeric" }))}</h3><p>No Supper Church: it's a fifth Sunday.</p></article>` })))
+          .sort((a, b) => a.d.localeCompare(b.d)).map(x => x.h).join("")}</div>
       </section>
 
       <details class="about"><summary>What is Supper Church?</summary><div class="in">${ABOUT}</div></details>`;
@@ -210,12 +226,86 @@
     if ($("#songEdit")) $("#songEdit").onclick = () => songDlg(data.song);
     if ($("#songNew")) $("#songNew").onclick = () => songDlg(null);
     if ($("#evNew")) $("#evNew").onclick = () => eventDlg();
+    app.querySelectorAll("[data-day]").forEach(b => b.onclick = () => dayDlg(data.sundays[+b.dataset.day]));
     wireListen();
+    if ($("#bkNew")) $("#bkNew").onclick = () => bookDlg();
+    app.querySelectorAll("[data-bkedit]").forEach(b => b.onclick = () => bookDlg(data.books.find(x => x.id === b.dataset.bkedit)));
+    app.querySelectorAll("[data-bkdel]").forEach(b => b.onclick = () => {
+      const bk = data.books.find(x => x.id === b.dataset.bkdel);
+      openDlg(`<h2>Remove this book?</h2><p>"${esc(bk.title)}" comes off the church page and the public book list. (To show it as finished instead, edit it and add the date you finished.)</p>
+        <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
+      dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
+      $("#go").onclick = async e => { e.currentTarget.disabled = true;
+        try { data = await call({ action: "churchBookRemove", id: bk.id }); dlg.close(); render(); flash("Book removed."); } catch (err) { dlg.close(); flash((err.message || "Something went wrong") + ".", true); } };
+    });
+  }
+
+  /* ---------- Books we read from ---------- */
+  const shortDate = d => d ? fmt(d, { month: "short", day: "numeric", year: "numeric" }) : "";
+  function bookCard(b, small) {
+    return `<article class="book${small ? " small" : ""}" id="book-${esc(b.id)}">
+      ${b.cover ? `<img src="${esc(b.cover)}" alt="Cover of ${esc(b.title)}" loading="lazy">` : `<div class="nocover" aria-hidden="true">📚</div>`}
+      <div class="bi"><span class="bfor">${esc(b.for)}</span><h3>${esc(b.title)}</h3>${b.author ? `<p class="bau">${esc(b.author)}</p>` : ""}
+        ${small ? `<p class="bdates">${esc(shortDate(b.started))}${b.finished ? " – " + esc(shortDate(b.finished)) : ""}</p>` : b.note ? `<p class="bnote">${esc(b.note)}</p>` : ""}
+        <p class="bact">${b.buy ? `<a class="btn btn-${small ? "outline" : "primary"} btn-sm" href="${esc(b.buy)}" target="_blank" rel="noopener">${esc(b.buyLabel ? "Buy at " + b.buyLabel : "Get the book")} ↗</a>` : ""}
+          ${data.admin ? `<button class="quiet" data-bkedit="${esc(b.id)}">Edit</button><button class="quiet del" data-bkdel="${esc(b.id)}">Remove</button>` : ""}</p></div>
+    </article>`;
+  }
+  function booksHtml() {
+    const books = data.books || [], now = books.filter(b => b.current), past = books.filter(b => !b.current && b.finished);
+    if (!books.length && !data.admin) return "";
+    return `<section aria-labelledby="hB" id="books"><div class="sec-h"><div><h2 id="hB">Books we're reading</h2><p>The Psalms &amp; Proverbs and Kids Bible story readings come from these. <a href="books.html">All our books ↗</a></p></div>
+        ${data.admin ? `<button class="btn btn-forest btn-sm" id="bkNew">Add a book</button>` : ""}</div>
+      ${now.length ? `<div class="books">${now.map(b => bookCard(b)).join("")}</div>` : `<p class="empty-s">No books added yet.</p>`}
+      ${past.length ? `<details class="older"><summary>Books we've read (${past.length})</summary><div class="books past">${past.map(b => bookCard(b, true)).join("")}</div></details>` : ""}
+    </section>`;
+  }
+  function bookDlg(b) {
+    let cover = null;
+    openDlg(`<h2>${b ? "Edit book" : "Add a book"}</h2>
+      <label class="f">For<select id="bk_for">${(data.bookFor || []).map(f => `<option${b && b.for === f ? " selected" : ""}>${esc(f)}</option>`).join("")}</select></label>
+      <label class="f">Title<input id="bk_title" maxlength="160" value="${esc(b ? b.title : "")}" placeholder="The Jesus Storybook Bible"></label>
+      <label class="f">Author <span class="opt">(optional)</span><input id="bk_author" maxlength="160" value="${esc(b ? b.author : "")}"></label>
+      <div class="f"><span>Cover <span class="opt">(a photo of it, or the publisher's image)</span></span>
+        <label class="pickfile pickimg"><input type="file" id="bk_cover" accept="image/*"><span id="bk_cname">${b && b.cover ? "Keep the current cover" : "Choose a cover image"}</span></label>
+        ${b && b.cover ? `<img class="bkprev" src="${esc(b.cover)}" alt="">` : `<img class="bkprev" alt="" hidden>`}</div>
+      <div class="two"><label class="f">Buy link <span class="opt">(optional)</span><input id="bk_buy" inputmode="url" value="${esc(b ? b.buy : "")}" placeholder="https://…"></label>
+        <label class="f">Store <span class="opt">(optional)</span><input id="bk_label" maxlength="60" value="${esc(b ? b.buyLabel : "")}" placeholder="Books on Bee"></label></div>
+      <div class="two"><label class="f">Started<input type="date" id="bk_start" value="${esc(b ? b.started : today())}"></label>
+        <label class="f">Finished <span class="opt">(leave empty while reading)</span><input type="date" id="bk_end" value="${esc(b ? b.finished : "")}"></label></div>
+      <label class="f">A note <span class="opt">(optional)</span><textarea id="bk_note" rows="2" maxlength="600">${esc(b ? b.note : "")}</textarea></label>
+      ${b ? "" : `<p class="opt" style="margin:0;font-size:13.5px">Adding a new book finishes the current one of the same kind, so it moves to "Books we've read".</p>`}
+      <p class="err" id="bkErr" hidden></p>
+      <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="bkGo">${b ? "Save" : "Add the book"}</button></div>`);
+    const q = k => dlgIn.querySelector(k), err = q("#bkErr");
+    q("[data-x]").onclick = () => dlg.close();
+    q("#bk_cover").onchange = async () => {
+      const f = q("#bk_cover").files[0]; if (!f) return;
+      try { const img = await loadImage(f), scale = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        cover = c.toDataURL("image/jpeg", 0.85); q(".bkprev").src = cover; q(".bkprev").hidden = false; q("#bk_cname").textContent = f.name; }
+      catch (x) { err.textContent = "Couldn't read that image."; err.hidden = false; }
+    };
+    q("#bkGo").onclick = async e => {
+      const btn = e.currentTarget, v = k => q(k).value.trim(); err.hidden = true;
+      let buy = v("#bk_buy"); if (buy && !/^https?:\/\//i.test(buy)) buy = "https://" + buy;
+      btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Saving…`;
+      try {
+        data = await call({ action: "churchBook", id: b ? b.id : undefined, for: q("#bk_for").value, title: v("#bk_title"), author: v("#bk_author"), buy: buy, buyLabel: v("#bk_label"),
+          started: v("#bk_start"), finished: v("#bk_end"), note: v("#bk_note"), cover: cover ? { data: cover.split(",")[1] } : undefined, _demoCover: DEMO ? cover : undefined });
+        dlg.close(); render(); flash(b ? "Saved." : "Book added.");
+      } catch (x) { err.textContent = (x.message || "Something went wrong") + "."; err.hidden = false; btn.disabled = false; btn.textContent = b ? "Save" : "Add the book"; }
+    };
   }
 
   /* ---------- Listen: Brit's weekly recordings ---------- */
   const af = { q: "", kind: "", theme: "", book: "" };
-  const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Kids Bible story": "🌱", "Other": "🎧" };
+  const ICON = { "Weekly message": "🎙️", "Psalm of the week": "📖", "Proverb of the week": "📜", "Kids Bible story": "🌱", "Other": "🎧" };
+  // Which book a recording is read from: the book for its kind that was current that week
+  const BOOK_OF = { "Psalm of the week": "Psalms & Proverbs", "Proverb of the week": "Psalms & Proverbs", "Kids Bible story": "Kids Bible stories" };
+  const bookFor = a => { if (a.bookId) { const picked = (data.books || []).find(b => b.id === a.bookId); if (picked) return picked; }
+    const f = BOOK_OF[a.kind]; if (!f) return null; const end = addDaysYmd(a.week, 6);
+    return (data.books || []).find(b => b.for === f && (!b.started || b.started <= end) && (!b.finished || b.finished >= a.week)) || null; };
   const mins = sec => sec ? (sec < 60 ? sec + " sec" : Math.round(sec / 60) + " min") : "";
   const weekText = w => "Week of " + fmt(w, { month: "long", day: "numeric" });
   const addDaysYmd = (d, n) => { const t = dateOf(d); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
@@ -225,6 +315,7 @@
       <p class="rk"><span>${ICON[a.kind] || "🎧"} ${esc(a.kind)}</span>${a.seconds ? `<span>${esc(mins(a.seconds))}</span>` : ""}</p>
       <h3>${esc(a.title)}</h3>
       ${tags ? `<p class="tags">${tags}</p>` : ""}
+      ${(bk => bk ? `<p class="rbook">📚 From <a href="#book-${esc(bk.id)}">${esc(bk.title)}</a>${a.pages ? ", " + esc(/^\s*(p|pg|pp|page)/i.test(a.pages) ? a.pages : (/[-–,]/.test(a.pages) ? "pp. " : "p. ") + a.pages) : ""}</p>` : a.pages ? `<p class="rbook">📚 ${esc(a.pages)}</p>` : "")(bookFor(a))}
       <audio controls preload="none" src="${esc(a.url)}"></audio>
       ${a.description ? `<details class="rd"><summary>About this one</summary><p>${esc(a.description)}</p></details>` : ""}
       <p class="rf"><a href="${esc(a.page)}" target="_blank" rel="noopener">Trouble playing? Open it</a>${data.canPost ? ` <button class="quiet" data-aedit="${esc(a.id)}">Edit</button><button class="quiet del" data-adel="${esc(a.id)}">Remove</button>` : ""}</p>
@@ -283,7 +374,9 @@
     const wk = data.thisWeek, weeks = [addDaysYmd(wk, 7), wk, addDaysYmd(wk, -7), addDaysYmd(wk, -14)];
     if (a && weeks.indexOf(a.week) === -1) weeks.push(a.week);
     const used = (data.audio || []).filter(x => x.week === wk).map(x => x.kind);
-    const kind0 = a ? a.kind : (data.audioKinds || []).find(k => k !== "Other" && used.indexOf(k) === -1) || "Other";
+    // Psalm and Proverb share a slot: usually one or the other each week
+    const slot = k => /Psalm|Proverb/.test(k) ? "pp" : k, usedSlots = used.map(slot);
+    const kind0 = a ? a.kind : (data.audioKinds || []).find(k => k !== "Other" && usedSlots.indexOf(slot(k)) === -1) || "Other";
     let file = null;
     openDlg(`<h2>${a ? "Edit recording" : "Add a recording"}</h2>
       <div class="two"><label class="f">Which<select id="au_kind">${(data.audioKinds || []).map(k => `<option${k === kind0 ? " selected" : ""}>${esc(k)}</option>`).join("")}</select></label>
@@ -292,6 +385,8 @@
         <label class="pickfile"><input type="file" id="au_file" accept="audio/*,.m4a,.mp3,.aac,.wav,.caf"><span id="au_fname">${a ? "Keep the current one" : "Choose a voice memo"}</span></label>
         <small class="opt">On iPhone: in Voice Memos, tap ⋯ → Save to Files, then pick it here. Up to ${MAX_MB} MB (about an hour).</small></div>
       <label class="f">Title<input id="au_title" maxlength="140" placeholder="Psalm 23: The Lord is my shepherd" value="${esc(a ? a.title : "")}"></label>
+      <div class="two au-book"><label class="f">From the book<select id="au_book"></select></label>
+        <label class="f">Pages <span class="opt">(optional)</span><input id="au_pages" maxlength="40" placeholder="42–47" value="${esc(a ? a.pages || "" : "")}"></label></div>
       <div class="two"><label class="f">Scripture <span class="opt">(optional)</span><input id="au_scr" maxlength="200" placeholder="Psalm 23; John 10:11" value="${esc(a ? (a.scripture || []).join("; ") : "")}"></label>
         <label class="f">Themes <span class="opt">(optional)</span><input id="au_themes" maxlength="200" placeholder="Rest, Trust" value="${esc(a ? (a.themes || []).join(", ") : "")}"></label></div>
       <label class="f">About it <span class="opt">(optional)</span><textarea id="au_desc" rows="3" maxlength="4000" placeholder="A few words on what this one's about.">${esc(a ? a.description : "")}</textarea></label>
@@ -300,6 +395,16 @@
       <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="auGo">${a ? "Save" : "Post"}</button></div>`);
     const q = k => dlgIn.querySelector(k), err = q("#auErr");
     q("[data-x]").onclick = () => dlg.close();
+    // The book list follows the kind: current books of that kind first, then earlier ones
+    const fillBooks = () => {
+      const k = q("#au_kind").value, f = BOOK_OF[k], wk = q("#au_week").value, sel = q("#au_book");
+      q(".au-book").hidden = !f && !(a && a.pages);
+      const list = (data.books || []).filter(b => !f || b.for === f);
+      const auto = bookFor({ kind: k, week: wk, bookId: "" });
+      const keep = a && a.bookId ? a.bookId : "";
+      sel.innerHTML = `<option value="">${auto ? "The current one: " + esc(auto.title) : "None"}</option>` + list.filter(b => !auto || b.id !== auto.id).map(b => `<option value="${esc(b.id)}"${b.id === keep ? " selected" : ""}>${esc(b.title)}${b.current ? "" : " (earlier)"}</option>`).join("");
+    };
+    q("#au_kind").addEventListener("change", fillBooks); q("#au_week").addEventListener("change", fillBooks); fillBooks();
     q("#au_file").onchange = () => {
       const f = q("#au_file").files[0]; file = null; err.hidden = true; if (!f) return;
       if (f.size > MAX_MB * 1024 * 1024) { err.textContent = "That file is " + (f.size / 1048576).toFixed(1) + " MB, over the " + MAX_MB + " MB limit."; err.hidden = false; return; }
@@ -322,9 +427,36 @@
         }
         data = await call({ action: "churchAudio", id: a ? a.id : undefined, kind: q("#au_kind").value, week: q("#au_week").value, title: q("#au_title").value.trim(),
           scripture: splitList(q("#au_scr").value.replace(/,(?=\s*(?:[1-3]\s*)?[A-Za-z])/g, ";")), themes: splitList(q("#au_themes").value), description: q("#au_desc").value.trim(),
+          bookId: q(".au-book").hidden ? "" : q("#au_book").value, pages: q(".au-book").hidden ? "" : q("#au_pages").value.trim(),
           discord: !a && q("#au_disc") && q("#au_disc").checked, audio: audio, _demoUrl: DEMO && file ? URL.createObjectURL(file.f) : undefined });
         dlg.close(); render(); flash(a ? "Saved." : "Posted. It's on the church page" + (!a && q("#au_disc") && q("#au_disc").checked ? " and #church-fam." : "."));
       } catch (x) { err.textContent = (x.message || "Something went wrong") + "."; err.hidden = false; b.disabled = false; b.textContent = a ? "Save" : "Post"; }
+    };
+  }
+
+  /* ---------- A special Sunday (admins): potluck, or no Supper Church ---------- */
+  function dayDlg(s) {
+    const st = s.style || "Usual";
+    openDlg(`<h2>${esc(longDay(s.date))}</h2>
+      <div class="kinds" role="radiogroup" aria-label="This Sunday">${[["Usual", "Usual Supper Church"], ["Potluck", "Potluck"], ["No Supper Church", "No Supper Church"]].map(([k, l]) => `<label><input type="radio" name="dstyle" value="${k}"${k === st ? " checked" : ""}>${l}</label>`).join("")}</div>
+      <p class="dhint" style="margin:0;font-size:14.5px"></p>
+      <label class="f dname">Name <span class="opt">(optional)</span><input id="d_title" maxlength="80" value="${esc(s.title || "")}" placeholder="Thanksgiving potluck"></label>
+      <label class="f dnote">Note <span class="opt">(optional)</span><textarea id="d_note" rows="3" maxlength="600" placeholder="Bring a dish to share. We'll have the turkey!">${esc(s.dayNote || "")}</textarea></label>
+      ${data.discord ? `<label class="chk dann"><input type="checkbox" id="d_ann" checked><span>Tell #church-fam on Discord</span></label>` : ""}
+      ${s.bringing.length || s.main ? `<p class="opt" style="margin:0;font-size:13.5px">Sign-ups so far stay as they are.</p>` : ""}
+      <p class="err" id="dErr" hidden></p>
+      <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="dGo">Save</button></div>`);
+    const q = k => dlgIn.querySelector(k);
+    const sync = () => { const v = q('input[name="dstyle"]:checked').value;
+      q(".dhint").textContent = v === "Potluck" ? "Everyone brings a dish to share; no one main dish needed." : v === "No Supper Church" ? "Sign-ups close for this Sunday, and the reminders skip it." : "One main dish, plus sides and desserts.";
+      q(".dname").hidden = q(".dnote").hidden = v === "Usual"; if (q(".dann")) q(".dann").hidden = v === "Usual"; };
+    dlgIn.querySelectorAll('input[name="dstyle"]').forEach(r => r.onchange = sync); sync();
+    q("[data-x]").onclick = () => dlg.close();
+    q("#dGo").onclick = async e => {
+      const b = e.currentTarget, v = q('input[name="dstyle"]:checked').value; b.disabled = true; b.innerHTML = `<span class="spinner"></span> Saving…`;
+      try { data = await call({ action: "churchDay", sunday: s.date, style: v, title: v === "Usual" ? "" : q("#d_title").value.trim(), note: v === "Usual" ? "" : q("#d_note").value.trim(), announce: v !== "Usual" && q("#d_ann") && q("#d_ann").checked });
+        dlg.close(); render(); flash(v === "Potluck" ? "It's a potluck!" : v === "No Supper Church" ? "Marked: no Supper Church that Sunday." : "Back to the usual Supper Church."); }
+      catch (x) { q("#dErr").textContent = (x.message || "Something went wrong") + "."; q("#dErr").hidden = false; b.disabled = false; b.textContent = "Save"; }
     };
   }
 
@@ -439,12 +571,13 @@
 
   /* ---------- "I'm bringing…" ---------- */
   function bringDlg(s, kind, existing) {
-    const mainFree = !s.main || (existing && existing.kind === "Main");
+    const pot = s.style === "Potluck";
+    const mainFree = pot || !s.main || (existing && existing.kind === "Main");
     const kinds = (mainFree ? ["Main"] : []).concat(["Side", "Dessert", "Other"]);
     if (!kinds.includes(kind)) kind = "Side";
     const label = { Main: "The main dish", Side: "A side", Dessert: "A dessert", Other: "Something else" };
     openDlg(`<h2>${esc(longDay(s.date))}</h2>
-      <p>${existing ? "Change what you're bringing." : mainFree ? "The main dish is the one we need most. Sides, desserts and anything else are welcome too." : `${esc(s.main.name)} is making the main${s.main.what ? " (" + esc(s.main.what) + ")" : ""}. What would you like to add?`}</p>
+      <p>${existing ? "Change what you're bringing." : pot ? `It's a potluck${s.title ? ": " + esc(s.title) : ""}! Bring whatever you'd like to share.` : mainFree ? "The main dish is the one we need most. Sides, desserts and anything else are welcome too." : `${esc(s.main.name)} is making the main${s.main.what ? " (" + esc(s.main.what) + ")" : ""}. What would you like to add?`}</p>
       <div class="kinds" role="radiogroup" aria-label="What are you bringing?">${kinds.map(k => `<label><input type="radio" name="kind" value="${k}"${k === kind ? " checked" : ""}>${label[k]}</label>`).join("")}</div>
       <label class="f"><span>What is it? <span class="opt">(optional, but it helps everyone plan)</span></span><input type="text" id="what" maxlength="120" value="${esc(existing ? existing.what : "")}" placeholder="Veggie lasagna, green salad, apple pie…"></label>
       ${data.dietary.length ? `<p style="font-size:14px">In the church family: ${data.dietary.map(d => d.count + " " + esc(d.label)).join(" · ")}</p>` : ""}
@@ -570,21 +703,25 @@
         songs: [], events: [{ id: "EV-1", title: "Advent candle-making night", next: suns[1], date: suns[1], until: "", repeats: "", start: "18:30", end: "20:00", allDay: false, location: "Farmhouse", description: "Bring a jar. We'll make Advent candles together.", link: "", public: true },
           { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
         eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
-        audioKinds: ["Weekly message", "Psalm of the week", "Kids Bible story", "Other"], thisWeek: (() => { const t = dateOf(today()), wd = t.getUTCDay(); t.setUTCDate(t.getUTCDate() + (wd === 0 ? 1 : 1 - wd)); return t.toISOString().slice(0, 10); })(),
+        audioKinds: ["Weekly message", "Psalm of the week", "Proverb of the week", "Kids Bible story", "Other"], bookFor: ["Psalms & Proverbs", "Kids Bible stories"],
+        books: [{ id: "BK-1", title: "Sample Psalms & Proverbs book", author: "An author", for: "Psalms & Proverbs", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-09-01", finished: "", note: "Our book for the Psalm and Proverb of the week.", current: true },
+          { id: "BK-2", title: "Sample kids' story Bible", author: "Another author", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-11-01", finished: "", note: "", current: true },
+          { id: "BK-3", title: "An earlier kids' book", author: "", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-09-15", finished: "2026-10-31", note: "", current: false }], thisWeek: (() => { const t = dateOf(today()), wd = t.getUTCDay(); t.setUTCDate(t.getUTCDate() + (wd === 0 ? 1 : 1 - wd)); return t.toISOString().slice(0, 10); })(),
         audio: [],
-        sundays: suns.map((day, i) => ({ date: day, main: i === 0 ? { id: "D-1", kind: "Main", what: "Veggie lasagna", name: "Riss K.", mine: false } : i === 2 ? { id: "D-4", kind: "Main", what: "", name: "Ana D.", mine: true } : null,
+        skipped: (() => { const out = []; let t = dateOf(today()); while (t.getUTCDay() !== 0) t = new Date(+t + 86400000); for (; t.toISOString().slice(0, 10) <= suns[suns.length - 1]; t = new Date(+t + 7 * 86400000)) if (t.getUTCDate() > 28) out.push(t.toISOString().slice(0, 10)); return out; })(),
+        sundays: suns.map((day, i) => ({ date: day, style: i === 0 ? "Potluck" : "Usual", title: i === 0 ? "Thanksgiving potluck" : "", dayNote: i === 0 ? "A Thanksgiving-style potluck! Bring a dish to share: mains, sides and desserts all welcome." : "", main: i === 0 ? { id: "D-1", kind: "Main", what: "Veggie lasagna", name: "Riss K.", mine: false } : i === 2 ? { id: "D-4", kind: "Main", what: "", name: "Ana D.", mine: true } : null,
           bringing: i === 0 ? [{ id: "D-2", kind: "Side", what: "Green salad", name: "Lisa S.", mine: false }, { id: "D-3", kind: "Dessert", what: "Apple crisp", name: "Ana D.", mine: true }] : [] })) };
     }
     demoState.events.sort((a, c) => a.next.localeCompare(c.next));
     if (!demoState.audio.length && !demoState._seeded) { demoState._seeded = true; const w = demoState.thisWeek, prev = (() => { const t = dateOf(w); t.setUTCDate(t.getUTCDate() - 7); return t.toISOString().slice(0, 10); })(), sil = silentWav();
       demoState.audio = [{ id: "AU-1", week: w, kind: "Weekly message", title: "Waiting well", description: "On Advent as a season of waiting, and what it asks of us.", scripture: ["Isaiah 40:31"], themes: ["Advent", "Waiting"], url: sil, page: sil, seconds: 482, posted: "", by: "Brit P." },
-        { id: "AU-2", week: w, kind: "Psalm of the week", title: "Psalm 130", description: "", scripture: ["Psalm 130"], themes: ["Waiting"], url: sil, page: sil, seconds: 214, posted: "", by: "Brit P." },
-        { id: "AU-3", week: prev, kind: "Kids Bible story", title: "Noah and the rainbow", description: "", scripture: ["Genesis 9:8-17"], themes: ["Promises"], url: sil, page: sil, seconds: 305, posted: "", by: "Brit P." }]; }
+        { id: "AU-2", week: w, kind: "Psalm of the week", title: "Psalm 130", description: "", scripture: ["Psalm 130"], themes: ["Waiting"], pages: "88–90", url: sil, page: sil, seconds: 214, posted: "", by: "Brit P." },
+        { id: "AU-3", week: prev, kind: "Kids Bible story", title: "Noah and the rainbow", description: "", scripture: ["Genesis 9:8-17"], themes: ["Promises"], pages: "36–43", url: sil, page: sil, seconds: 305, posted: "", by: "Brit P." }]; }
     const S = demoState, all = () => S.sundays.flatMap(s => [s.main].concat(s.bringing).filter(Boolean));
     if (b.action === "churchBring") {
       const s = S.sundays.find(x => x.date === b.sunday);
       if (b.id) { const k = all().find(x => x.id === b.id); S.sundays.forEach(x => { if (x.main === k) x.main = null; x.bringing = x.bringing.filter(y => y !== k); }); k.kind = b.kind; k.what = b.what; if (b.kind === "Main") s.main = k; else s.bringing.push(k); }
-      else { const k = { id: "D-" + Math.random().toString(36).slice(2, 7), kind: b.kind, what: b.what, name: "Ana D.", mine: true }; if (b.kind === "Main") s.main = k; else s.bringing.push(k); }
+      else { const k = { id: "D-" + Math.random().toString(36).slice(2, 7), kind: b.kind, what: b.what, name: "Ana D.", mine: true }; if (b.kind === "Main" && (s.style || "Usual") === "Usual") s.main = k; else s.bringing.push(k); }
     }
     if (b.action === "churchUnbring") S.sundays.forEach(x => { if (x.main && x.main.id === b.id) x.main = null; x.bringing = x.bringing.filter(y => y.id !== b.id); });
     if (b.action === "churchNote") { const f = { title: b.title, note: b._demoHtml || b.note, format: "html", themes: b.themes || [], scripture: b.scripture || [], sunday: b.sunday };
@@ -600,12 +737,23 @@
     }
     if (b.action === "churchSongRemove") S.songs = S.songs.filter(x => x.id !== b.id);
     if (b.action === "churchAudio") {
-      const f = { kind: b.kind, week: b.week, title: b.title || b.kind, description: b.description, scripture: b.scripture || [], themes: b.themes || [] };
+      const f = { kind: b.kind, week: b.week, title: b.title || b.kind, description: b.description, scripture: b.scripture || [], themes: b.themes || [], bookId: b.bookId, pages: b.pages };
       if (b.audio) Object.assign(f, { url: b._demoUrl, page: b._demoUrl, seconds: b.audio.seconds });
       if (b.id) Object.assign(S.audio.find(x => x.id === b.id), f); else S.audio.push(Object.assign({ id: "AU-" + Math.random().toString(36).slice(2, 6), posted: "", by: "Ana D." }, f));
       const order = k => S.audioKinds.indexOf(k); S.audio.sort((x, y) => x.week < y.week ? 1 : x.week > y.week ? -1 : order(x.kind) - order(y.kind));
     }
     if (b.action === "churchAudioRemove") S.audio = S.audio.filter(x => x.id !== b.id);
+    if (b.action === "churchBook") {
+      if (!b.title) return Promise.reject(new Error("Add the book's title"));
+      const f = { title: b.title, author: b.author, for: b.for, buy: b.buy, buyLabel: b.buyLabel, started: b.started, finished: b.finished, note: b.note };
+      if (b._demoCover) f.cover = b._demoCover;
+      if (b.id) Object.assign(S.books.find(x => x.id === b.id), f);
+      else { S.books.forEach(x => { if (x.for === b.for && !x.finished) { x.finished = addDaysYmd(b.started, -1); } }); S.books.unshift(Object.assign({ id: "BK-" + Math.random().toString(36).slice(2, 6), cover: "" }, f)); }
+      S.books.forEach(x => { x.current = (!x.started || x.started <= today()) && (!x.finished || x.finished >= today()); });
+    }
+    if (b.action === "churchBookRemove") S.books = S.books.filter(x => x.id !== b.id);
+    if (b.action === "churchDay") { const sd = S.sundays.find(x => x.date === b.sunday); const all2 = [sd.main].concat(sd.bringing).filter(Boolean);
+      Object.assign(sd, { style: b.style, title: b.title, dayNote: b.note }); if (b.style === "Usual") { sd.main = all2.find(x => x.kind === "Main") || null; sd.bringing = all2.filter(x => x !== sd.main); } else { sd.main = null; sd.bringing = all2; } }
     if (b.action === "churchSong" || b.action === "churchSongRemove") { S.songs.sort((a, c) => a.month < c.month ? 1 : -1); S.song = S.songs.find(x => x.month <= today().slice(0, 7)) || null; }
     if (b.action === "churchEvent") {
       if (!b.title) return Promise.reject(new Error("Please add an event name"));

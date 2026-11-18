@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Books we read together · Heirloom</title>
+<link rel="icon" href="images/logo-badge.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2e4a36">
+<link rel="apple-touch-icon" href="images/app-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Heirloom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<script src="theme.js?v=20261118l"></script>
+<link rel="stylesheet" href="styles.css?v=20261118l">
+<style>
+  .page { padding-top: 24px; padding-bottom: 48px; display: grid; gap: 30px; max-width: 900px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px 0; }
+  .sec h2 { font-size: clamp(24px, 4vw, 30px); color: var(--forest); margin: 0 0 14px; }
+  .books { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+  .book { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; align-items: start; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+  .book img, .book .nocover { width: 110px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.18); background: var(--tint-sage); }
+  .book .nocover { display: grid; place-items: center; font-size: 36px; }
+  .bi { display: grid; gap: 4px; } .bi h3 { margin: 0; font-size: 20px; color: var(--forest-deep); }
+  .bfor { font-family: var(--f-label); font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--barn); }
+  .bi p { margin: 0; color: var(--ink-soft); font-size: 15px; } .bi .bact { margin-top: 8px; }
+  .past .book { grid-template-columns: 72px minmax(0, 1fr); padding: 12px; } .past .book img, .past .book .nocover { width: 72px; } .past .bi h3 { font-size: 17px; }
+  .empty-s { color: var(--muted); margin: 0; }
+  .intro { background: var(--forest-fill); color: #fff; padding-block: 34px 30px; }
+  .intro .kicker { color: var(--sage); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .intro h1 { font-size: clamp(32px, 6vw, 48px); margin: 6px 0 8px; } .intro p { margin: 0; max-width: 640px; color: #e2e8df; }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="Heirloom Activities">
+        <img class="badge" src="images/logo-badge.png" alt="">
+      </a>
+      <nav class="nav" aria-label="Main"><a class="btn btn-outline btn-sm nav-cal" href="index.html">See the calendar</a></nav>
+    </div>
+  </header>
+  <section class="intro"><div class="wrap" style="max-width:900px">
+    <span class="kicker">Heirloom church family</span>
+    <h1>Books we read together</h1>
+    <p>Each week we read a Psalm or Proverb and a Bible story with the kids. These are the books we read from, and the ones we've read before.</p>
+  </div></section>
+  <main class="wrap page" id="app" aria-live="polite"><p class="loading">Loading…</p></main>
+  <footer class="site-footer"><div class="wrap"><div class="footer-small" style="border:0;margin:0;padding:0"><p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p><p id="footLine"></p></div></div></footer>
+
+<script src="config.js?v=20261118l"></script>
+<script src="common.js?v=20261118l"></script>
+<script src="nav.js?v=20261118l"></script>
+<script src="books.js?v=20261118l"></script>
+</body>
+</html>
