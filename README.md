@@ -442,3 +442,14 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **No 3-month trial:** switching someone to Resident no longer sets a lease, trial end date or reminder.
 - **Occupied guest rooms:** Settings → "Occupied guest rooms (room: who lives there)", e.g. `4: Lisa Sharpe`. An occupied room can't be booked on any date until it's unticked. Admins change it on the Guest rooms page (tap the room's card, or "A resident lives in a guest room?") or with the Occupied tick on a resident's People profile when their living space is a guest room.
 - **Living spaces:** Main house rooms 1-3, Guest room 4, Loft, Alcove. Set-up adds Loft and Alcove and puts Lisa in Guest room 4.
+
+## Home pages, tab bar and alert emails (Nov 18, 2026)
+
+- **home.html** is where everyone lands after logging in (and where the installed app opens). It's different for each role:
+  - **Admins:** Alerts first (event requests, training requests, Sabbath 365 and residency, new volunteers), each with Review/Open or Done.
+  - **Residents:** Submit an event + Book a guest room, a smaller "Reserve a space", then this week (public and residents' calendars together, duplicates removed), their shifts, shifts to pick up, Supper Church this Sunday and Brit's latest note (hidden after 3 weeks).
+  - **Volunteers:** Submit an event, volunteer opportunities, their shifts, this week (public), then church if they're church family.
+  - **Everyone else:** Submit an event, this week, their own events and any Sabbath 365 or residency progress.
+- **Bottom tab bar on phones**, by role. Admins: Admin · Home · Calendar · Guest rooms · More. Residents: Home · Calendar · Guest rooms · Church · More. Volunteers: Home · Calendar · Shifts · (Church) · More. Others: Home · Calendar · My events · (Church) · More.
+- **Alert emails per admin:** "Email me about…" on the Alerts card (saved in the People column "Alert emails"). staff@ gets everything except chore-chart and venue emails by default; other admins get none until they tick some. If no admin wants a kind, it goes to the old Settings address. Approvers who aren't admins still get event-request emails.
+- **Venues:** "Every week on…" shows the days of the week to pick (e.g. Mon, Wed, Fri 3–5pm).

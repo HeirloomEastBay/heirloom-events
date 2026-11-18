@@ -480,3 +480,26 @@ dialog.vn-dlg { width: min(860px, calc(100vw - 24px)); }
   .st-reqb { display: flex; gap: 10px; align-items: center; }
 
 .st-quick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .st-quick span { font-weight: 600; font-size: 14.5px; margin-right: 4px; } .st-quick[hidden] { display: none; }
+
+/* ---------- Bottom tab bar (phones, signed in) ---------- */
+.tabbar { display: none; }
+@media (max-width: 760px) {
+  body.has-tabs { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  body.has-tabs .site-header .nav a.nav-link, body.has-tabs .site-header .nav .nav-cal { display: none; }
+  .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: rgba(251,248,241,.97); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 18px rgba(31,42,34,.06); }
+  .tabbar a, .tabbar button { appearance: none; background: none; border: 0; font: inherit; cursor: pointer; display: grid; justify-items: center; gap: 3px; padding: 5px 2px; border-radius: 12px;
+    color: var(--muted); text-decoration: none; font-family: var(--f-label); font-size: 11px; font-weight: 700; letter-spacing: .02em; min-height: 52px; }
+  .tabbar svg { width: 25px; height: 25px; }
+  .tabbar .on { color: var(--forest); } .tabbar .on svg { stroke-width: 2.2; }
+  .tabbar .on span { position: relative; } .tabbar .on span::after { content: ""; position: absolute; left: 20%; right: 20%; bottom: -4px; height: 3px; border-radius: 3px; background: var(--wheat); }
+}
+.more-sheet { border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 520px; border-radius: 20px 20px 0 0; background: var(--paper); box-shadow: 0 -10px 40px rgba(0,0,0,.2); }
+.more-sheet::backdrop { background: rgba(28,48,36,.4); }
+.more-sheet .ms-in { display: grid; padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); }
+.more-sheet .ms-h { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px 10px; font-family: var(--f-title); font-size: 22px; color: var(--forest); }
+.more-sheet .ms-x { appearance: none; border: 0; background: none; font-size: 28px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+.more-sheet a { display: block; padding: 15px 6px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-family: var(--f-label); font-weight: 700; font-size: 16px; }
+.more-sheet a[aria-current] { color: var(--barn); }
+.more-sheet a.ms-out { color: var(--barn-dark); }

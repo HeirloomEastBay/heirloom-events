@@ -16,7 +16,8 @@
   const mins = hm => { const m = String(hm || "").match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : 0; };
   const t12 = hm => { if (!hm) return ""; const [h, m] = hm.split(":").map(Number); return ((h % 12) || 12) + (m ? ":" + p2(m) : "") + (h < 12 ? "am" : "pm"); };
   const range = (a, b) => t12(a) + "–" + t12(b);
-  const REPEATS = [["none", "Doesn't repeat"], ["weekly", "Every week"], ["days", "Certain days each week"], ["biweekly", "Every other week"], ["monthlyDate", "Monthly (same date)"], ["monthlyNth", "Monthly (same weekday)"]];
+  // "Every week" shows the days of the week to pick (Mon, Wed, Fri…); it's saved as "days"
+  const REPEATS = [["none", "Doesn't repeat"], ["weekly", "Every week on…"], ["biweekly", "Every other week"], ["monthlyDate", "Monthly (same date)"], ["monthlyNth", "Monthly (same weekday)"]];
   const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const wdOf = s => (parse(s).getUTCDay() + 6) % 7; // Monday = 0
 
@@ -155,19 +156,20 @@
     const isNew = !r;
     r = r || Object.assign({ venues: [], what: "", date: day, start: "18:00", end: "20:00", setup: 0, repeatKey: "none", weekdays: [], until: "", host: D.me || "", notes: "", showOn: [] }, pre || {});
     const show = new Set(r.showOn || []);
+    const rk = r.repeatKey === "days" ? "weekly" : r.repeatKey;
     const wd = new Set(r.weekdays && r.weekdays.length ? r.weekdays : [wdOf(r.date)]);
     const chosen = new Set(r.venues);
     const box = openDlg(`<h2>${isNew ? "Reserve a venue" : "Edit reservation"}</h2>
       <form id="vnForm" class="st-form" novalidate>
         <label class="dd-f">What's it for<input name="what" maxlength="100" value="${esc(r.what)}" placeholder="Book club, Rehearsal, Birthday party"></label>
         <div class="dd-f"><span>Where <span class="opt">(pick one or more)</span></span><div class="vn-pick">${D.venues.filter(v => v.reservable).map(v => `<label><input type="checkbox" value="${esc(v.name)}"${chosen.has(v.name) ? " checked" : ""}><span>${esc(v.name)}</span></label>`).join("")}</div></div>
-        <label class="dd-f">Date<input type="date" name="date" value="${esc(r.date)}"></label>
+        <label class="dd-f">Date <span class="opt">(the first date, if it repeats)</span><input type="date" name="date" value="${esc(r.date)}"></label>
         <div class="dd-two"><label class="dd-f">Starts<input type="time" name="start" value="${esc(r.start)}" step="900"></label><label class="dd-f">Ends<input type="time" name="end" value="${esc(r.end)}" step="900"></label></div>
         <label class="dd-chk"><input type="checkbox" name="pad"${r.setup ? " checked" : ""}> Add setup &amp; cleanup time</label>
         <label class="dd-f vn-padf" ${r.setup ? "" : "hidden"}>Hours before and after<input type="number" name="setup" min="0.25" max="6" step="0.25" value="${esc(r.setup || 1)}"></label>
-        <div class="dd-two"><label class="dd-f">Repeats<select name="repeats">${REPEATS.map(([k, l]) => `<option value="${k}"${k === r.repeatKey ? " selected" : ""}>${l}</option>`).join("")}</select></label>
-          <label class="dd-f vn-until" ${r.repeatKey === "none" ? "hidden" : ""}>Until<input type="date" name="until" value="${esc(r.until)}"></label></div>
-        <div class="dd-f vn-days" ${r.repeatKey === "days" ? "" : "hidden"}><span>On</span><div class="vn-pick vn-wd">${WD.map((n, i) => `<label><input type="checkbox" value="${i}"${wd.has(i) ? " checked" : ""}><span>${n}</span></label>`).join("")}</div></div>
+        <div class="dd-two"><label class="dd-f">Repeats<select name="repeats">${REPEATS.map(([k, l]) => `<option value="${k}"${k === rk ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+          <label class="dd-f vn-until" ${rk === "none" ? "hidden" : ""}>Until<input type="date" name="until" value="${esc(r.until)}"></label></div>
+        <div class="dd-f vn-days" ${rk === "weekly" ? "" : "hidden"}><span>On <span class="opt">(pick one or more days; same time each day)</span></span><div class="vn-pick vn-wd">${WD.map((n, i) => `<label><input type="checkbox" value="${i}"${wd.has(i) ? " checked" : ""}><span>${n}</span></label>`).join("")}</div></div>
         <label class="dd-f">Host<input name="host" maxlength="80" value="${esc(r.host)}" placeholder="Who's in charge"></label>
         <label class="dd-f"><span>Notes <span class="opt">(optional)</span></span><textarea name="notes" maxlength="1000" placeholder="We'll need the folding tables.">${esc(r.notes)}</textarea></label>
         <div class="dd-f"><span>Also show it on</span>
@@ -179,14 +181,16 @@
       <div class="dd-btns"><button class="btn btn-outline btn-sm" id="vnBack">${isNew ? "Cancel" : "Back"}</button><button class="btn btn-forest btn-sm" id="vnGo">${isNew ? "Reserve" : "Save"}</button></div>`);
     const f = box.querySelector("#vnForm"), val = n => f.elements[n].value;
     f.elements.pad.onchange = () => box.querySelector(".vn-padf").hidden = !f.elements.pad.checked;
-    f.elements.repeats.onchange = () => { box.querySelector(".vn-until").hidden = val("repeats") === "none"; box.querySelector(".vn-days").hidden = val("repeats") !== "days"; };
+    f.elements.repeats.onchange = () => { box.querySelector(".vn-until").hidden = val("repeats") === "none"; box.querySelector(".vn-days").hidden = val("repeats") !== "weekly"; };
+    // Changing the date ticks that weekday if nothing's picked yet
+    f.elements.date.addEventListener("change", () => { if (!wd.size && val("date")) { wd.add(wdOf(val("date"))); const c = box.querySelector(`.vn-wd input[value="${wdOf(val("date"))}"]`); if (c) c.checked = true; } });
     box.querySelectorAll(".vn-wd input").forEach(c => c.onchange = () => { c.checked ? wd.add(+c.value) : wd.delete(+c.value); });
     box.querySelectorAll(".vn-pick:not(.vn-wd) input").forEach(c => c.onchange = () => { c.checked ? chosen.add(c.value) : chosen.delete(c.value); });
     box.querySelector("#vnBack").onclick = () => isNew ? dlg.close() : details(r);
     const save = async (extra) => {
       const b = box.querySelector("#vnGo");
       const body = Object.assign({ action: "venueSave", id: isNew ? "" : r.id, venues: [...chosen], what: val("what"), date: val("date"), start: val("start"), end: val("end"),
-        setup: f.elements.pad.checked ? Number(val("setup")) || 1 : 0, repeats: val("repeats"), weekdays: [...wd], until: val("until"), host: val("host"), notes: val("notes"),
+        setup: f.elements.pad.checked ? Number(val("setup")) || 1 : 0, repeats: val("repeats") === "weekly" ? "days" : val("repeats"), weekdays: [...wd], until: val("until"), host: val("host"), notes: val("notes"),
         showOn: [f.elements.showRes.checked && "Residents", f.elements.showPub.checked && "Public"].filter(Boolean) }, extra || {});
       if (body.repeats === "days" && !body.weekdays.length) return errMsg(box, new Error("Pick the days of the week"));
       if (body.repeats !== "none" && !body.until) return errMsg(box, new Error("Pick when it stops repeating"));

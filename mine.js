@@ -74,7 +74,8 @@
         store.set(KEY, { token: r.token, email: r.email });
         if (window.HLNav) HLNav.setRoles({ email: r.email });
         load();
-        if (window.HLProfile) HLProfile.maybeWelcome(true); // first sign-in: the Welcome questions, straight away
+        // First sign-in: the Welcome questions, straight away (on this page only when staying here; Home asks on its own)
+        if (window.HLProfile && new URLSearchParams(location.search).has("mine")) HLProfile.maybeWelcome(true);
       } catch (err) { showErr((err.message || "Something went wrong") + "."); unbusy($("#go"), "Sign in"); input.select(); }
     };
     $("#resend").onclick = async () => {
@@ -100,14 +101,10 @@
       store.set(ME, { email: r.email, name: r.name, phone: r.phone });
       if (window.HLNav) HLNav.setRoles({ email: r.email, admin: !!r.admin, volunteer: !!r.volunteer, resident: !!r.resident, church: !!r.church, sabbath: r.sabbath || "", residency: r.residency || "" });
       // Came from another page to log in: go back there
-      const next = new URLSearchParams(location.search).get("next");
-      if (next === "profile" || next === "portal" || next === "stays" || (next === "admin" && r.admin)) { location.replace(next + ".html"); return; }
-      // Admins go straight to the Admin page (its "My events" link adds ?mine=1 to stay here)
-      if (r.admin && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
-      // Residents go to their panel
-      if (r.resident && !new URLSearchParams(location.search).has("mine")) { location.replace("admin.html"); return; }
-      // Volunteers go to their portal (it links back here if they've posted events)
-      if (r.volunteer && !new URLSearchParams(location.search).has("mine")) { location.replace("portal.html"); return; }
+      const next = (new URLSearchParams(location.search).get("next") || "").replace(/\.html$/, "");
+      if (/^(home|profile|portal|stays|church|sabbath|residency|submit)$/.test(next) || (next === "admin" && (r.admin || r.resident))) { location.replace(next + ".html"); return; }
+      // Everyone else lands on Home (the "My events" links add ?mine=1 to stay here)
+      if (!new URLSearchParams(location.search).has("mine")) { location.replace("home.html"); return; }
       render(r);
     } catch (err) {
       app.innerHTML = `<div class="empty"><h2>We couldn't load your events</h2><p>${esc(err.message || "Please try again in a minute.")}</p>

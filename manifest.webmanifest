@@ -2,7 +2,7 @@
   "name": "Heirloom Activities",
   "short_name": "Heirloom",
   "description": "Events, volunteering and church family at Heirloom, a farm and intentional community in the Castro Valley hills.",
-  "start_url": "./mine.html?mine=1&app=1",
+  "start_url": "./home.html?app=1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
