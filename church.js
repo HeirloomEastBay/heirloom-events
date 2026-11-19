@@ -423,7 +423,11 @@
         <div class="btns"><button class="btn btn-outline btn-sm" data-x>Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
       dlgIn.querySelector("[data-x]").onclick = () => dlg.close();
       $("#go").onclick = async e => { const b = e.currentTarget, x = dlgIn.querySelector("[data-x]"); b.disabled = true; if (x) x.disabled = true; b.innerHTML = `<span class="spinner"></span> Removing…`;
-        try { data = await call({ action: "churchAudioRemove", id: a.id }); dlg.close(); render(); flash("Recording removed."); }
+        try { data = await call({ action: "churchAudioRemove", id: a.id });
+          if ((data.audio || []).some(x => x.id === a.id)) throw new Error("The server didn't take it off the list. Please refresh the page and try again");
+          dlg.close(); render();
+          const twin = (data.audio || []).filter(x => x.title === a.title && x.week === a.week).length;
+          flash(twin ? "Removed. There's another copy of “" + a.title + "” for that week too; remove that one as well if it's a duplicate." : "Recording removed."); }
         catch (err) { b.disabled = false; if (x) x.disabled = false; b.textContent = "Try again"; let m = dlgIn.querySelector(".err"); if (!m) { m = document.createElement("p"); m.className = "err"; b.parentNode.before(m); } m.textContent = (err.message || "Something went wrong") + "."; } };
     });
     document.querySelectorAll("#listen [data-play] .pbtn").forEach(b => b.onclick = () => playRec(b.closest("[data-play]")));
