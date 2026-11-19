@@ -260,6 +260,7 @@
     const w = data.weekly; if (!MANAGE || !data.isAdmin || !w) return "";
     const plural = (n, a) => n + " " + (n === 1 ? a : a === "person" ? "people" : a + "s");
     const when = w.status === "Hold" ? "<b>On hold.</b> It won't go out until you pick something below."
+      : w.auto === false && !/^(Sent|Skipped)$/.test(w.status) ? `<b>Automatic sending is off.</b> Nothing goes out unless you tap <b>Send now</b>. (To send it on its own each week, set "Church weekly email: send automatically" to TRUE in Settings.)`
       : `Goes out <b>${esc(at12(w.sendAt))}</b> to ${plural(w.count, "person")} in the church family, and a summary to #church-fam.`;
     const has = w.empty ? `<span class="wk-empty">Nothing new for this week yet. It only sends once there's a note or a recording.</span>` : `So far: ${[w.notes && plural(w.notes, "note"), w.recordings && plural(w.recordings, "recording")].filter(Boolean).join(", ")}, plus Supper Church, church events and the song of the month.`;
     return `<section class="weekly" id="weekly" aria-labelledby="hW"><div class="sec-h"><div><h2 id="hW">📬 This week's email</h2><p>Week of ${esc(fmt(w.week, { month: "long", day: "numeric" }))}</p></div></div>
