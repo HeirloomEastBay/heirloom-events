@@ -73,9 +73,9 @@
     if (st === "failed") return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s">This part didn't load. <button type="button" class="dd-link" data-retry="${part}">Try again</button></p></section>`;
     return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s"><span class="spinner"></span> ${st === "slow" ? "Still loading. This one's slow today…" : "Loading…"}</p></section>`;
   }
-  const ready = p => state[p] === "done" || state[p] === "old";
+  function ready(p) { return state[p] === "done" || state[p] === "old"; }
   // One broken card can't take the page down with it
-  const sec = (fn, title) => { try { return fn(); } catch (e) { console.error(title, e); return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s">This part didn't load. <button type="button" class="dd-link" onclick="location.reload()">Reload</button></p></section>`; } };
+  function sec(fn, title) { try { return fn(); } catch (e) { console.error(title, e); return `<section class="hcard"><header><h2>${esc(title)}</h2></header><p class="empty-s">This part didn't load. <button type="button" class="dd-link" onclick="location.reload()">Reload</button></p></section>`; } }
 
   function draw() {
     const R = D.roles || {};
@@ -152,12 +152,15 @@
   }
 
   /* ---------- Shifts ---------- */
-  const when = s => (s.date ? fmt(s.date, { weekday: "short", month: "short", day: "numeric" }) + " · " : "") + s.time;
+  function when(s) { return (s.date ? fmt(s.date, { weekday: "short", month: "short", day: "numeric" }) + " · " : "") + s.time; }
   function myShifts() {
-    const m = D.shifts.mine || [];
+    const m = D.shifts.mine || [], mo = D.shifts.monthly;
+    const monthly = mo && mo.items && mo.items.length ? `<div class="hmonth"><p class="mh"><b>Monthly chore${mo.items.length > 1 ? "s" : ""} · ${esc(mo.label.split(" ")[0])}</b><a href="portal.html?tab=chores">${mo.done} of ${mo.total} done in the house</a></p>
+      <ul class="shifts">${mo.items.map(i => `<li class="mc${i.done ? " done" : ""}"><button type="button" class="mcheck" data-mdone="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
+        <span><b>${esc(i.chore)}</b><span class="md">${i.done ? "Done " + esc(fmt(i.done, { month: "short", day: "numeric" })) + ". Thank you!" : esc(i.details || "Any day this month")}</span></span></li>`).join("")}</ul></div>` : "";
     return `<section class="hcard" aria-labelledby="hS"><header><h2 id="hS">Your shifts</h2><a href="portal.html">Volunteer portal</a></header>
-      ${m.length ? `<ul class="shifts">${m.map(s => `<li><b>${esc(s.title)}</b><span>${esc(when(s))}</span><span class="n">${s.kind === "cover" ? "Covering" : s.kind === "chore" ? "Your regular" : "Signed up"}</span></li>`).join("")}</ul>`
-        : `<p class="empty-s">No shifts coming up. Pick one up below!</p>`}</section>`;
+      ${monthly}${m.length ? `<ul class="shifts">${m.map(s => `<li><b>${esc(s.title)}</b><span>${esc(when(s))}</span><span class="n">${s.kind === "cover" ? "Covering" : s.kind === "chore" ? "Your regular" : "Signed up"}</span></li>`).join("")}</ul>`
+        : `<p class="empty-s">No shifts coming up${monthly ? "" : ". Pick one up below!"}</p>`}</section>`;
   }
   function pickups() {
     const p = D.shifts.pick || [];
@@ -209,6 +212,15 @@
       try { const r = await call({ action: "homeAlertDone", id: b.dataset.done, part: "core" }); D.alerts = r.alerts; draw(); flash("Cleared for everyone."); }
       catch (err) { b.disabled = false; b.textContent = "Done"; flash(err.message, true); }
     });
+    app.querySelectorAll("[data-mdone]").forEach(b => b.onclick = async () => {
+      const it = D.shifts.monthly.items.find(i => i.id === b.dataset.mdone), on = !it.done;
+      b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      try {
+        const r = await call({ action: "volMonthlyDone", id: it.id, done: on }), M = r.monthly;
+        D.shifts.monthly = { month: M.month, label: M.label, endsOn: M.endsOn, items: M.items.filter(x => x.mine), total: M.items.length, done: M.items.filter(x => x.done).length };
+        keep(D); draw(); flash(on ? it.chore + ": done. Thank you!" : it.chore + " is unchecked.");
+      } catch (err) { b.disabled = false; b.textContent = it.done ? "✓" : ""; flash(err.message, true); }
+    });
     const pf = $("#aPrefs"); if (pf) pf.onclick = e => { e.preventDefault(); prefsDialog(); };
     app.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { state[b.dataset.retry] = "loading"; safeDraw(); load(b.dataset.retry); });
   }
@@ -234,10 +246,14 @@
         demoD.alertEmails = ["events", "volunteers", "trainings", "stays", "sabbath", "residency"]; }
       if (resident || volunteer) demoD.shifts = { mine: [{ date: plus(1), title: "Animal chores (AM)", time: "7–8am", kind: "chore" }, { date: plus(4), title: "Farm Work Day", time: "9am–12pm", kind: "signup" }],
         pick: [{ date: plus(2), title: "Collecting eggs", time: "5–5:30pm", kind: "cover", note: "Mark needs a sub", missing: [] }, { date: plus(6), title: "Goat milking", time: "6–7am", kind: "cover", note: "Needs someone", missing: volunteer ? ["Goat milking training"] : [] },
-          { date: "", title: "Garden watering", time: "Thursday 6–7pm", kind: "slot", note: "Needs a new regular", missing: [] }], pickTotal: 5 };
+          { date: "", title: "Garden watering", time: "Thursday 6–7pm", kind: "slot", note: "Needs a new regular", missing: [] }], pickTotal: 5,
+        monthly: resident ? { month: localYmd(new Date()).slice(0, 7), label: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }), total: 8, done: 3,
+          items: [{ id: "MC-4", chore: "Main Floor Bathroom", details: "Clean + restock", done: "" }] } : null };
       if (resident || volunteer) demoD.church = { sunday: { date: plus((7 - new Date().getDay()) % 7 || 7), style: "Potluck", title: "Thanksgiving potluck", main: null, bringing: [{ kind: "Side", what: "Roasted squash", name: "Martha S.", mine: false }, { kind: "Dessert", what: "", name: "Ana D.", mine: false }] },
         audio: [{ kind: "Weekly message", title: "Waiting well", seconds: 482 }, { kind: "Psalm of the week", title: "Psalm 130", seconds: 214 }], note: { id: "N1", title: "Advent is almost here", by: "Brit", posted: plus(-4), excerpt: "This Sunday we begin Advent together. Bring a candle if you have one, and come ready to sit with the waiting…", image: "images/farmhouse.jpg", themes: ["Advent"] } };
     }
+    if (b.action === "volMonthlyDone") { const it = demoD.shifts.monthly.items.find(x => x.id === b.id); it.done = b.done ? localYmd(new Date()) : ""; demoD.shifts.monthly.done += b.done ? 1 : -1;
+      return { ok: true, monthly: { month: demoD.shifts.monthly.month, label: demoD.shifts.monthly.label, items: demoD.shifts.monthly.items.map(x => Object.assign({ mine: true }, x)).concat(Array.from({ length: 7 }, (_, k) => ({ id: "x" + k, done: k < demoD.shifts.monthly.done - (it.done ? 1 : 0) ? "y" : "" }))) } }; }
     if (b.action === "homeAlertDone") demoD.alerts = demoD.alerts.filter(a => a.id !== b.id);
     if (QS.has("slow") && b.part === QS.get("slow")) return new Promise(() => {});
     if (b.action === "homeAlertPrefs") demoD.alertEmails = b.kinds;

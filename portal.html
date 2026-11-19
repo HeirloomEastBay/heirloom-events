@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<script src="theme.js?v=20261118p"></script>
-<link rel="stylesheet" href="styles.css?v=20261118p">
+<script src="theme.js?v=20261118r"></script>
+<link rel="stylesheet" href="styles.css?v=20261118r">
 <style>
   .intro { background: var(--forest-fill); color: #fff; padding-block: 36px 0; }
   .intro .kicker { color: var(--sage); }
@@ -85,6 +85,24 @@
   .slot .btn { min-height: 34px; padding: 6px 12px; font-size: 13px; }
   .slot .tag { justify-self: start; }
   .dcol .empty-day { font-size: 13px; color: var(--muted); }
+  .monthly { background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; margin: 0 0 22px; }
+  .monthly .mhead { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; justify-content: space-between; }
+  .monthly h3 { font-family: var(--f-label); font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--forest); margin: 0; }
+  .monthly .mprog { font-size: 13.5px; color: var(--ink-soft); font-weight: 600; }
+  .monthly .hint { margin: 4px 0 10px; font-size: 13.5px; color: var(--ink-soft); }
+  .mlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .mlist li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 9px 4px; border-top: 1px solid var(--line); min-width: 0; }
+  .mlist li:first-child { border-top: 0; }
+  .mlist li > div { min-width: 0; display: grid; gap: 1px; overflow-wrap: anywhere; }
+  .mlist .md { font-size: 13.5px; color: var(--ink-soft); }
+  .mlist .mw { font-size: 12.5px; font-weight: 600; color: var(--barn); }
+  .mlist li.mine .mw { color: var(--forest); }
+  .mlist li.done b, .mlist li.done .md { text-decoration: line-through; opacity: .6; }
+  .mcheck { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--forest); background: transparent; color: #fff; font-size: 17px; font-weight: 700; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .mcheck[aria-pressed="true"] { background: var(--forest); }
+  .mcheck .spinner { border-color: var(--forest); border-top-color: transparent; width: 14px; height: 14px; }
+  .dcol.monthly { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 8px; margin-top: 10px; }
+  .dcol.monthly h3 { grid-column: 1 / -1; }
   @media (max-width: 900px) { .week { grid-template-columns: 1fr; gap: 14px; } .dcol .empty-day { display: none; } .dcol:has(.empty-day) { display: none; } }
 
   .empty { background: var(--paper); border-radius: var(--radius); padding: 32px 24px; text-align: center; color: var(--ink-soft); box-shadow: var(--shadow); }
@@ -160,11 +178,11 @@
     </div>
   </footer>
 
-<script src="config.js?v=20261118p"></script>
-<script src="common.js?v=20261118p"></script>
-<script src="nav.js?v=20261118p"></script>
-<script src="install.js?v=20261118p"></script>
-<script src="welcome.js?v=20261118p"></script>
-<script src="portal.js?v=20261118p"></script>
+<script src="config.js?v=20261118r"></script>
+<script src="common.js?v=20261118r"></script>
+<script src="nav.js?v=20261118r"></script>
+<script src="install.js?v=20261118r"></script>
+<script src="welcome.js?v=20261118r"></script>
+<script src="portal.js?v=20261118r"></script>
 </body>
 </html>

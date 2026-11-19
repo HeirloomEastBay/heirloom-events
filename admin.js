@@ -437,13 +437,51 @@
      ============================================================ */
   async function chores(fresh) {
     app.innerHTML = `<div class="panel-h"><div><h2>Chore chart</h2>
-      <p>Regular weekly chores, one slot per day. Give each one a person, the general "Volunteers" pool, or leave it Open (qualified volunteers get an email and can take it).
+      <p>Regular chores, one slot per day, every week or once a month. Give each one a person, the general "Volunteers" pool, or leave it Open (qualified volunteers get an email and can take it).
       Anyone can ask for coverage on certain dates. It all lives on the Chore chart and Coverage tabs in the Sheet too.</p></div></div>
-      <div id="ch"><p class="loading">Loading the chore chart…</p></div>`;
+      <div id="mo"></div><div id="ch"><p class="loading">Loading the chore chart…</p></div>`;
     try {
-      if (fresh || !state.chores) state.chores = await call({ action: "adminChores" });
-      if (state.tab === "chores") renderChores();
+      const [c, m] = await Promise.all([fresh || !state.chores ? call({ action: "adminChores" }) : state.chores,
+        fresh || !state.monthly ? call({ action: "adminMonthly", month: state.monthly ? state.monthly.month : "" }).catch(() => null) : state.monthly]);
+      state.chores = c; state.monthly = m;
+      if (state.tab === "chores") { renderMonthly(); renderChores(); }
     } catch (err) { handle(err, $("#ch")); }
+  }
+
+  /* ---------- Monthly house chores: assign each month, check off, starts fresh on the 1st ---------- */
+  function renderMonthly() {
+    const M = state.monthly, el = $("#mo"); if (!el) return;
+    if (!M) { el.innerHTML = ""; return; }
+    const done = M.items.filter(i => i.done).length, isCur = M.month === M.current, future = M.month > M.current;
+    const shortD = ymd => H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { month: "short", day: "numeric" });
+    el.innerHTML = `<section class="mpanel" aria-labelledby="moH"><div class="mtop">
+        <h3 id="moH">Monthly chores</h3>
+        <div class="mnav"><button type="button" class="btn-quiet" data-mm="${esc(M.prev)}"${M.prev ? "" : " disabled"} aria-label="Previous month">‹</button><b>${esc(M.label)}</b><button type="button" class="btn-quiet" data-mm="${esc(M.next)}"${M.next ? "" : " disabled"} aria-label="Next month">›</button></div>
+        <span class="mprog">${future ? "Planning ahead" : done + " of " + M.items.length + " done"}</span></div>
+      <p class="hint" style="margin:2px 0 10px">Residents only. Any day of the month; people check theirs off in the volunteer portal or on Home. Each chore keeps the same person next month unless you change it.${isCur ? " Changing who has one emails them." : ""}</p>
+      <div class="mrows">${M.items.map((i, n) => `<div class="mrow${i.done ? " done" : ""}">
+        <button type="button" class="mcheck" data-mck="${n}" aria-pressed="${!!i.done}"${future ? " disabled" : ""} aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
+        <div class="mtxt"><b>${esc(i.chore)}</b>${i.details ? `<span>${esc(i.details)}</span>` : ""}${i.done ? `<span class="mdone">Done ${esc(shortD(i.done))}${i.doneBy ? " by " + esc(i.doneBy) : ""}</span>` : ""}</div>
+        <select data-mwho="${n}" aria-label="Who has ${esc(i.chore)}"${M.month < M.current ? " disabled" : ""}><option value="">Nobody yet</option>${M.residents.concat(i.who && !M.residents.some(r => r.email === i.who) ? [{ email: i.who, name: i.whoName || i.who }] : []).map(r => `<option value="${esc(r.email)}"${r.email === i.who ? " selected" : ""}>${esc(r.name)}</option>`).join("")}</select>
+        ${M.canEdit ? `<span class="medit"><button type="button" class="btn-quiet" data-med="${n}">Edit</button></span>` : ""}</div>`).join("")}</div>
+      ${M.canEdit ? `<button type="button" class="btn btn-outline btn-sm" id="mAdd" style="margin-top:10px">Add a monthly chore</button>` : ""}</section>`;
+    const go = async (body, msg) => { try { state.monthly = await call(Object.assign({ month: M.month }, body)); renderMonthly(); if (msg) flash(msg); } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); flash(err.message, true); renderMonthly(); } };
+    el.querySelectorAll("[data-mm]").forEach(b => b.onclick = async () => { b.disabled = true; try { state.monthly = await call({ action: "adminMonthly", month: b.dataset.mm }); renderMonthly(); } catch (err) { b.disabled = false; flash(err.message, true); } });
+    el.querySelectorAll("[data-mck]").forEach(b => b.onclick = () => { const i = M.items[+b.dataset.mck]; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
+      go({ action: "adminMonthlyDone", id: i.id, done: !i.done }, i.done ? i.chore + " is unchecked." : i.chore + ": done."); });
+    el.querySelectorAll("[data-mwho]").forEach(sel => sel.onchange = () => { const i = M.items[+sel.dataset.mwho]; sel.disabled = true;
+      go({ action: "adminMonthlyAssign", id: i.id, email: sel.value }, sel.value ? `${i.chore}: ${sel.selectedOptions[0].textContent} for ${M.label}${isCur ? ". We emailed them" : ""}.` : `${i.chore} has nobody for ${M.label}.`); });
+    const form = i => {
+      openDlg(`<h2>${i ? "Edit " + esc(i.chore) : "Add a monthly chore"}</h2>
+        <label class="lbl" for="mcN">Chore</label><input id="mcN" maxlength="80" value="${esc(i ? i.chore : "")}" placeholder="Laundry room" autofocus>
+        <label class="lbl" for="mcD">What it includes <span class="opt">(optional)</span></label><input id="mcD" maxlength="300" value="${esc(i ? i.details : "")}" placeholder="Clean lint traps, wipe machines, sweep">
+        <div class="btns">${i ? `<button class="btn-quiet" id="mcRm" style="margin-right:auto">Remove</button>` : ""}<button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">${i ? "Save" : "Add"}</button></div>`);
+      $("#go").onclick = async e => { const n = $("#mcN").value.trim(); if (!n) return flash("Name the chore first.", true);
+        e.currentTarget.disabled = true; await go({ action: "adminMonthlySave", id: i ? i.id : "", chore: n, details: $("#mcD").value.trim() }, "Saved."); dlg.close(); };
+      if (i) $("#mcRm").onclick = async e => { e.currentTarget.disabled = true; await go({ action: "adminMonthlyRemove", id: i.id }, `Removed ${i.chore}. Past months keep their record.`); dlg.close(); };
+    };
+    el.querySelectorAll("[data-med]").forEach(b => b.onclick = () => form(M.items[+b.dataset.med]));
+    if ($("#mAdd")) $("#mAdd").onclick = () => form(null);
   }
   function slotForm(s, d, n) {
     const opt = (list, val, blank) => (blank != null ? `<option value="">${esc(blank)}</option>` : "") + list.map(x => `<option${x === val ? " selected" : ""}>${esc(x)}</option>`).join("");
@@ -457,26 +495,29 @@
       <label>When<input name="when" maxlength="40" value="${esc(s.when || "")}" placeholder="by 10am, ~5pm, Anytime" list="whenList"></label>
       <label><span>Hours each</span><input type="number" name="hours" min="0.25" max="12" step="0.25" value="${esc(s.hours || 1)}"></label>
       <label>Training needed<select name="training">${opt(d.trainings, s.training, "None")}</select></label>
-      <label>Who<select name="volunteer"><option value="">Open (needs someone)</option><option value="Volunteers"${s.volunteer === "Volunteers" ? " selected" : ""}>Volunteers (the general pool)</option>
-        ${vols.map(v => `<option value="${esc(v.email)}"${v.email === s.volunteer ? " selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      <label>Who<select name="volunteer"><option value="">Open (needs someone)</option><option value="Volunteers"${s.volunteer === "Volunteers" ? " selected" : ""}>${s.residentsOnly ? "Residents (anyone who lives here)" : "Volunteers (the general pool)"}</option>
+        ${vols.map(v => `<option value="${esc(v.email)}"${v.email === s.volunteer ? " selected" : ""}${v.resident ? ' data-res="1"' : ""}${s.residentsOnly && !v.resident && v.email !== s.volunteer ? " hidden" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      <label>Repeats<select name="repeats">${(d.repeats || ["Every week"]).map(x => `<option${x === (s.repeats || "Every week") ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+      <label class="resonly"><input type="checkbox" name="residentsOnly"${s.residentsOnly ? " checked" : ""}> Residents only <span class="opt">(volunteers won't see it)</span></label>
       ${add ? `<fieldset class="days"><legend>Days</legend>${d.days.map(x => `<label><input type="checkbox" name="days" value="${x}">${x.slice(0, 3)}</label>`).join("")}<button type="button" class="btn-quiet" data-every>Every day</button></fieldset>` : ""}
       <label class="notes"><span>Notes <span class="opt">(shown to volunteers)</span></span><input name="notes" maxlength="500" value="${esc(s.notes || "")}" placeholder="Feed, water, collect eggs. Gate code is on the barn door."></label>
       <div class="sbtns">${s.id ? `<button type="button" class="btn-quiet" data-need>Needs coverage…</button><button type="button" class="btn-quiet" data-rm>Remove</button><button class="btn btn-forest btn-sm" disabled>Save</button>` : `<button class="btn btn-primary btn-sm">Add</button>`}</div>
-      ${s.id && d.slots.filter(x => x.chore === s.chore).length > 1 ? `<label class="alld"><input type="checkbox" name="allDays"> Also change the name, when, hours, training and notes on the other ${d.slots.filter(x => x.chore === s.chore).length - 1} days of "${esc(s.chore)}"</label>` : ""}
+      ${s.id && d.slots.filter(x => x.chore === s.chore).length > 1 ? `<label class="alld"><input type="checkbox" name="allDays"> Also change the name, when, hours, training, repeats, residents only and notes on the other ${d.slots.filter(x => x.chore === s.chore).length - 1} days of "${esc(s.chore)}"</label>` : ""}
     </form>`;
   }
   function renderChores() {
     const d = state.chores;
-    const days = d.days.filter(day => d.slots.some(s => s.day === day));
+    const days = d.days.filter(day => d.slots.some(s => s.day === day && !s.monthly)).concat(d.slots.some(s => s.monthly) ? ["Monthly"] : []);
+    const inDay = (s, day) => day === "Monthly" ? s.monthly : s.day === day && !s.monthly;
     const open = d.slots.filter(s => !s.volunteer).length, pool = d.slots.filter(s => s.volunteer === "Volunteers").length;
     const whens = [...new Set(["by 10am", "~5pm", "after 2pm", "Morning", "Evening", "Anytime"].concat(d.slots.map(s => s.when).filter(Boolean)))];
     $("#ch").innerHTML = `<datalist id="whenList">${whens.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
       <h3 class="day-h" style="font-family:var(--f-label);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--forest);margin:0 0 8px">Add a chore</h3>
       ${slotForm({}, d, -1)}
-      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile. Need a new kind of training for a chore? <button type="button" id="chTrn" style="background:none;border:0;padding:0;color:var(--forest);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer">Edit the trainings list</button></p>
-      ${days.map(day => `<section class="cday"><h3>${day}</h3>${d.slots.map((s, n) => s.day === day ? `<details class="slotd${!s.volunteer ? " open-slot" : ""}"${state.openSlot === s.id ? " open" : ""} data-id="${esc(s.id)}">
-        <summary${s.canEdit === false ? ' class="ro"' : ""}><b>${esc(s.chore)}</b><span class="w">${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
-          <span class="who${!s.volunteer ? " open" : s.volunteer === "Volunteers" ? " pool" : ""}">${!s.volunteer ? "Open" : s.volunteer === "Volunteers" ? "Volunteers" : esc((d.volunteers.find(v => v.email === s.volunteer) || { name: s.volunteer }).name)}</span>
+      <p class="hint" style="margin:-2px 0 22px">${d.slots.length} slot${d.slots.length === 1 ? "" : "s"}${open ? ` · <b>${open} open</b>` : ""}${pool ? ` · ${pool} covered by Volunteers` : ""}. Each slot is one day of the week, every week or once a month. <b>Residents only</b> chores (like kitchen duty) don't show for volunteers. "Volunteers" means the general pool has it; use <b>Needs coverage…</b> on any slot to ask for someone on certain dates. Hours per shift add up on each person's profile. Need a new kind of training for a chore? <button type="button" id="chTrn" style="background:none;border:0;padding:0;color:var(--forest);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer">Edit the trainings list</button></p>
+      ${days.map(day => `<section class="cday"><h3>${day === "Monthly" ? "Once a month" : day}</h3>${d.slots.map((s, n) => inDay(s, day) ? `<details class="slotd${!s.volunteer ? " open-slot" : ""}"${state.openSlot === s.id ? " open" : ""} data-id="${esc(s.id)}">
+        <summary${s.canEdit === false ? ' class="ro"' : ""}><b>${esc(s.chore)}${s.residentsOnly ? ` <span class="status src resb">Residents</span>` : ""}</b><span class="w">${s.monthly ? esc(s.dayText.replace(/^the /, "").replace(/ of the month$/, "")) + ", " : ""}${esc(s.when || "")}</span><span class="h">${esc(String(s.hours))} hr</span>
+          <span class="who${!s.volunteer ? " open" : s.volunteer === "Volunteers" ? " pool" : ""}">${!s.volunteer ? "Open" : s.volunteer === "Volunteers" ? (s.residentsOnly ? "Residents" : "Volunteers") : esc((d.volunteers.find(v => v.email === s.volunteer) || { name: s.volunteer }).name)}</span>
           ${d.coverage.some(c => c.slotId === s.id && c.status === "Open") ? `<span class="status pending">Needs coverage</span>` : ""}<span class="ed">${s.canEdit === false ? "" : "Edit"}</span></summary>
         ${s.canEdit === false ? `<p class="hint" style="margin:0;padding:10px 14px">${esc(s.notes || "")}${s.notes ? " · " : ""}Ask an admin to change this one.</p>` : slotForm(s, d, n)}</details>` : "").join("")}</section>`).join("")}
       <div class="panel-h" style="margin-top:26px"><div><h2 style="font-size:22px">Coverage requests</h2><p>Dates that need someone, coming up.</p></div></div>
@@ -489,12 +530,18 @@
     $("#ch").querySelectorAll(".slotf").forEach(f => {
       const n = +f.dataset.n, s = n >= 0 ? d.slots[n] : null, save = f.querySelector(".sbtns .btn");
       if (s) f.querySelectorAll("input, select").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => save.disabled = false));
+      const ro = f.querySelector('[name="residentsOnly"]'), who = f.querySelector('[name="volunteer"]');
+      if (ro) ro.addEventListener("change", () => {
+        who.querySelector('option[value="Volunteers"]').textContent = ro.checked ? "Residents (anyone who lives here)" : "Volunteers (the general pool)";
+        who.querySelectorAll("option[value*='@']").forEach(o => { o.hidden = ro.checked && !o.dataset.res; });
+        if (who.selectedOptions[0] && who.selectedOptions[0].hidden) who.value = "";
+      });
       const every = f.querySelector("[data-every]");
       if (every) every.onclick = () => { const all = [...f.querySelectorAll('[name="days"]')], on = !all.every(c => c.checked); all.forEach(c => c.checked = on); };
       f.onsubmit = async e => {
         e.preventDefault();
         const fd = new FormData(f), body = Object.fromEntries(fd.entries());
-        body.days = fd.getAll("days"); body.allDays = !!fd.get("allDays");
+        body.days = fd.getAll("days"); body.allDays = !!fd.get("allDays"); body.residentsOnly = !!fd.get("residentsOnly");
         if (!body.chore.trim()) { f.querySelector('[name="chore"]').focus(); return flash("Name the chore first.", true); }
         if (!s && !body.days.length) return flash("Pick at least one day.", true);
         const wasVol = s && s.volunteer;
@@ -508,7 +555,7 @@
       };
       const rm = f.querySelector("[data-rm]");
       if (rm) rm.onclick = () => {
-        openDlg(`<h2>Remove this slot?</h2><p>${esc(s.chore)}, ${esc(s.day)}s. It comes off the chore chart${s.volunteer && s.volunteer !== "Volunteers" ? ` and ${esc(s.volunteer)} won't see it anymore` : ""}.</p>
+        openDlg(`<h2>Remove this slot?</h2><p>${esc(s.chore)}, ${esc(s.monthly ? s.dayText : s.day + "s")}. It comes off the chore chart${s.volunteer && s.volunteer !== "Volunteers" ? ` and ${esc(s.volunteer)} won't see it anymore` : ""}.</p>
           <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep it</button><button class="btn btn-primary btn-sm" id="go">Remove</button></div>`);
         $("#go").onclick = async e => {
           const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
@@ -520,7 +567,7 @@
       if (need) need.onclick = () => {
         const taken = {}; d.coverage.forEach(c => { if (c.slotId === s.id) taken[c.date] = c.status; });
         const fmtD = ymd => H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { weekday: "short", month: "short", day: "numeric" });
-        openDlg(`<h2>Who can do ${esc(s.chore)}?</h2><p>${esc(s.day)}s, ${esc(s.when)}. Pick the dates that need someone. We'll email the volunteers who can do it, and they can grab it in their portal.</p>
+        openDlg(`<h2>Who can do ${esc(s.chore)}?</h2><p>${esc(s.monthly ? s.dayText.replace(/^t/, "T") : s.day + "s")}, ${esc(s.when)}. Pick the dates that need someone. We'll email the ${s.residentsOnly ? "residents" : "volunteers"} who can do it, and they can grab it in their portal.</p>
           <div class="checks" id="needDates">${s.next.map(x => `<label${taken[x] ? ' style="opacity:.55"' : ""}><input type="checkbox" value="${x}"${taken[x] ? " disabled" : ""}>${esc(fmtD(x))}${taken[x] ? " (" + taken[x].toLowerCase() + ")" : ""}</label>`).join("")}</div>
           <label class="lbl" for="needNote">Note <span class="opt">(optional)</span></label><textarea id="needNote" maxlength="500" placeholder="Brit's away that weekend"></textarea>
           <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Ask for coverage</button></div>`);
@@ -540,6 +587,28 @@
       catch (err) { b.disabled = false; b.textContent = "Cancel this request"; flash(err.message, true); }
     });
   }
+  let demoMo = null;
+  function demoMonthly(b) {
+    const now = new Date(), key = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"), cur = key(now);
+    const add = (mk, n) => { const [y, m] = mk.split("-").map(Number); return key(new Date(y, m - 1 + n, 1)); };
+    const lab = mk => { const [y, m] = mk.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" }); };
+    if (!demoMo) {
+      const res = [["lindsey@example.com", "Lindsey Huffman"], ["nik@example.com", "Nik"], ["brit@example.com", "Brit"], ["lisa@example.com", "Lisa Sharpe"]];
+      const MC = [["Common Room", "Tidy & sweep/vacuum/mop + windows/doors"], ["Sunroom", "Tidy & sweep/vacuum/mop + cobwebs + wipe table"], ["Basement", "Tidy + sweep/vacuum/mop"], ["Main Floor Bathroom", "Clean + restock"],
+        ["Kitchen", "Wipe appliances, cupboards and inside fridge/microwave"], ["Kitchen/Guest Hallway/Basement Stairs", "Sweep/vacuum/mop"], ["Front/Back Porch", "Shake out mats, remove items, sweep, wipe doors"], ["Garage", "Clean egg counter/sink, wipe down fridge, vacuum rugs"]];
+      demoMo = { residents: res.map(([email, name]) => ({ email, name })), chores: MC.map(([chore, details], i) => ({ id: "MC-" + (i + 1), chore, details })), who: {}, done: {} };
+      demoMo.chores.forEach((c, i) => { demoMo.who[cur + c.id] = i === 5 ? "" : res[i % 4][0]; if (i === 0 || i === 4) demoMo.done[cur + c.id] = H.dayKey(new Date(Date.now() - 3 * 86400000)); });
+    }
+    const D = demoMo, mk = /^\d{4}-\d{2}$/.test(b.month || "") ? b.month : cur;
+    const whoOf = (m, id) => { for (let k = 0; k < 24; k++) { const mm = add(m, -k); if (D.who[mm + id] !== undefined) return D.who[mm + id]; } return ""; };
+    if (b.action === "adminMonthlyAssign") D.who[mk + b.id] = b.email;
+    if (b.action === "adminMonthlyDone") D.done[mk + b.id] = b.done ? H.dayKey(new Date()) : "";
+    if (b.action === "adminMonthlySave") { if (b.id) Object.assign(D.chores.find(c => c.id === b.id), { chore: b.chore, details: b.details }); else D.chores.push({ id: "MC-" + Date.now(), chore: b.chore, details: b.details }); }
+    if (b.action === "adminMonthlyRemove") D.chores = D.chores.filter(c => c.id !== b.id);
+    const nm = e => (D.residents.find(r => r.email === e) || { name: "" }).name.split(" ")[0];
+    return { ok: true, month: mk, label: lab(mk), current: cur, prev: mk > add(cur, -12) ? add(mk, -1) : "", next: mk < add(cur, 2) ? add(mk, 1) : "", residents: D.residents, canEdit: !RES(),
+      items: D.chores.map(c => { const who = whoOf(mk, c.id), done = D.done[mk + c.id] || ""; return { id: c.id, chore: c.chore, details: c.details, who, whoName: nm(who), done, doneBy: done ? nm(who) || "Lindsey" : "" }; }) };
+  }
   let demoCh = null;
   function demoChores(b) {
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -550,17 +619,23 @@
         ["AM milking", days, "Morning", 0.5, "Goat milking"], ["Chicken feed/water refill", ["Tuesday", "Thursday", "Saturday"], "Anytime", 0.5, "Animal chores"]];
       let id = 0;
       demoCh = { days, trainings: ["Animal feeding", "Collecting eggs", "Gardening", "Power tools & woodshop", "Goat milking", "Goat milk soap making", "Event help"],
-        volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }],
+        volunteers: [{ email: "ana@example.com", name: "Ana Diaz" }, { email: "bo@example.com", name: "Bo Li" }, { email: "lindsey@example.com", name: "Lindsey Huffman", resident: true }],
+        repeats: ["Every week", "1st of the month", "2nd of the month", "3rd of the month", "4th of the month", "Last of the month"],
         slots: std.flatMap(([chore, ds, when, hours, training]) => ds.map(day => ({ id: "S-" + (++id), chore, day, when, hours, training, volunteer: chore === "PM animal chores" && day === "Tuesday" ? "ana@example.com" : "Volunteers", notes: "", next: nextOf(day), sort: sortOf(when) }))),
         coverage: [] };
+      days.forEach(day => demoCh.slots.push({ id: "S-k" + day, chore: "Kitchen duty", day, when: "after dinner", hours: 1, training: "", volunteer: "Volunteers", notes: "", next: nextOf(day), sort: "19:00", residentsOnly: true, repeats: "Every week" }));
+      demoCh.slots.push({ id: "S-m1", chore: "Deep clean the bathrooms", day: "Saturday", when: "Anytime", hours: 2, training: "", volunteer: "lindsey@example.com", notes: "", next: nextOf("Saturday").slice(0, 3), sort: "12:00", residentsOnly: true, repeats: "1st of the month", monthly: true, dayText: "the 1st Saturday of the month" });
+      demoCh.slots.sort((a, c) => (!!a.monthly - !!c.monthly) || days.indexOf(a.day) - days.indexOf(c.day) || a.sort.localeCompare(c.sort));
       demoCh.coverage.push({ id: "C-1", slotId: "S-3", chore: "AM animal chores", date: nextOf("Wednesday")[0], time: "by 10am", by: "", pool: true, status: "Open", coveredBy: "", note: "Brit's away" });
     }
-    const D = demoCh, sortAll = () => D.slots.sort((a, c) => days.indexOf(a.day) - days.indexOf(c.day) || a.sort.localeCompare(c.sort));
+    const D = demoCh, sortAll = () => D.slots.sort((a, c) => (!!a.monthly - !!c.monthly) || days.indexOf(a.day) - days.indexOf(c.day) || a.sort.localeCompare(c.sort));
     if (b.action === "adminChoreSave") {
-      const f = { chore: b.chore, when: b.when || "Anytime", hours: Number(b.hours) || 1, training: b.training, volunteer: b.volunteer, notes: b.notes, sort: sortOf(b.when || "") };
-      if (b.id) { const s = D.slots.find(x => x.id === b.id), old = s.chore; Object.assign(s, f, { day: b.day, next: nextOf(b.day) });
+      const mon = b.repeats && b.repeats !== "Every week";
+      const f = { chore: b.chore, when: b.when || "Anytime", hours: Number(b.hours) || 1, training: b.training, volunteer: b.volunteer, notes: b.notes, sort: sortOf(b.when || ""), residentsOnly: !!b.residentsOnly, repeats: b.repeats || "Every week", monthly: mon };
+      const dt = day => mon ? "the " + b.repeats.split(" ")[0] + " " + day + " of the month" : day + "s";
+      if (b.id) { const s = D.slots.find(x => x.id === b.id), old = s.chore; Object.assign(s, f, { day: b.day, next: nextOf(b.day), dayText: dt(b.day) });
         if (b.allDays) D.slots.forEach(x => { if (x !== s && x.chore === old) Object.assign(x, f, { volunteer: x.volunteer }); }); }
-      else b.days.forEach(day => D.slots.push(Object.assign({ id: "S-" + Date.now() + day, day, next: nextOf(day) }, f)));
+      else b.days.forEach(day => D.slots.push(Object.assign({ id: "S-" + Date.now() + day, day, next: nextOf(day), dayText: dt(day) }, f)));
       sortAll();
     }
     if (b.action === "adminChoreRemove") D.slots = D.slots.filter(x => x.id !== b.id);
@@ -788,7 +863,7 @@
     const stages = [NOT_VOL].concat(R.statuses);
     const field = (k, label, val, type, opt, ph) => `<label class="lbl">${label}${opt ? ` <span class="opt">(optional)</span>` : ""}<input type="${type || "text"}" data-k="${k}" value="${esc(val || "")}" maxlength="${k === "address" ? 300 : 200}"${ph ? ` placeholder="${esc(ph)}"` : ""} autocomplete="off"></label>`;
     const mine = R.slots.filter(s => s.volunteer === p.email);
-    const free = R.slots.filter(s => s.volunteer !== p.email);
+    const free = R.slots.filter(s => s.volunteer !== p.email && (!s.residentsOnly || res));
     const since = p.firstText ? `Helping since ${esc(p.firstText)}` : "";
     $("#prof").innerHTML = `
       ${p.removed ? `<div class="removed-bar"><p><b>Removed from People on ${esc(dateLong(p.removed))}.</b> Their info and hours are kept. They don't count as a volunteer and aren't on any chores or permission lists.</p><button type="button" class="btn btn-forest btn-sm" id="restore">Restore</button></div>` : ""}
@@ -881,9 +956,9 @@
       <section class="pcard">
         <h3>Chore chart</h3>
         <p class="hint" style="margin:0">Their regular weekly chores. These show up for ${esc(p.first || "them")} when they log in, with an "I need coverage" button for each date.</p>
-        ${mine.length ? `<ul class="clist">${mine.map(s => `<li><span><b>${esc(s.day)}s · ${esc(s.chore)}</b><span class="hint">${esc(s.time)}${s.since ? " · since " + esc(dateLong(s.since)) : ""}${s.reminders ? " · reminders on" : ""}</span></span>
+        ${mine.length ? `<ul class="clist">${mine.map(s => `<li><span><b>${esc(s.dayText || s.day + "s")} · ${esc(s.chore)}</b><span class="hint">${esc(s.time)}${s.since ? " · since " + esc(dateLong(s.since)) : ""}${s.reminders ? " · reminders on" : ""}</span></span>
             <button type="button" class="btn-quiet" data-off="${esc(s.id)}">Take off</button></li>`).join("")}</ul>` : `<p class="hint" style="margin:0"><i>Not on any chores yet.</i></p>`}
-        ${res || stage !== NOT_VOL ? `<div class="addslot"><select id="slotPick" aria-label="Chore slot"><option value="">Add to a chore slot…</option>${free.map(s => `<option value="${esc(s.id)}">${esc(s.day)} · ${esc(s.chore)} · ${esc(s.time)}${s.who ? " (now " + esc(s.who) + ")" : " (open)"}</option>`).join("")}</select><button type="button" class="btn btn-forest btn-sm" id="slotAdd" disabled>Add</button></div>`
+        ${res || stage !== NOT_VOL ? `<div class="addslot"><select id="slotPick" aria-label="Chore slot"><option value="">Add to a chore slot…</option>${free.map(s => `<option value="${esc(s.id)}">${esc(s.monthly ? s.dayText : s.day)} · ${esc(s.chore)} · ${esc(s.time)}${s.who ? " (now " + esc(s.who) + ")" : " (open)"}</option>`).join("")}</select><button type="button" class="btn btn-forest btn-sm" id="slotAdd" disabled>Add</button></div>`
           : `<p class="hint" style="margin:0">Set them as a resident or a volunteer to add chores.</p>`}
       </section>
 
@@ -1040,7 +1115,7 @@ ${(p.feedback || []).length ? `<section class="pcard wide"><h3>Resident feedback
       add.onclick = () => {
         const s = R.slots.find(x => x.id === pick.value); if (!s) return;
         if (s.who && s.who !== "Volunteers") {
-          openDlg(`<h2>Move ${esc(p.first || "them")} onto this slot?</h2><p>${esc(s.day)}s · ${esc(s.chore)} is ${esc(s.who)}'s right now. ${esc(s.who)} comes off it (their hours so far are kept).</p>
+          openDlg(`<h2>Move ${esc(p.first || "them")} onto this slot?</h2><p>${esc(s.dayText || s.day + "s")} · ${esc(s.chore)} is ${esc(s.who)}'s right now. ${esc(s.who)} comes off it (their hours so far are kept).</p>
             <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Move</button></div>`);
           $("#go").onclick = e => { dlg.close(); chore({ slotId: s.id, on: true, replace: true }, add, `Added. We emailed ${p.first || "them"} the details.`); };
         } else chore({ slotId: s.id, on: true }, add, `Added. We emailed ${p.first || "them"} the details.`);
@@ -1088,6 +1163,7 @@ ${(p.feedback || []).length ? `<section class="pcard wide"><h3>Resident feedback
     if (/^adminLibrary/.test(b.action)) return { ok: true, photos: demoLib };
     if (/^adminPerson|^adminTrainings/.test(b.action)) return demoPeople(b);
     if (/^adminChore|^adminCover/.test(b.action)) return demoChores(b);
+    if (/^adminMonthly/.test(b.action)) return demoMonthly(b);
     return { ok: true };
   }
 

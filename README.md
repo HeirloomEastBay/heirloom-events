@@ -514,3 +514,17 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - **Brit's controls** (Admin → Church → This week's email, or church.html?manage=1): Preview, Send now, Send later (any time that week), Hold, Back to Monday morning, Skip this week. The tab "Church weekly email" keeps a row per week.
 - **Who gets it:** residents and church family. Each person can turn it off in their Profile ("Send me the Monday church email") or with "Stop these emails" in the email.
 - The check runs inside warmFeed (every 10 minutes), so no new trigger is needed.
+
+## Residents-only and monthly chores (Nov 18, 2026)
+- Chore chart tab: two new columns, **Residents only** (Yes) and **Repeats** (Every week, or 1st/2nd/3rd/4th/Last of the month). Run `setup` once to add them.
+- Residents-only chores (and their coverage requests) only show for residents and admins. Open-slot and coverage emails only go to residents. Only residents can be put on them; "Volunteers" on one shows as "Residents" (anyone who lives here).
+- Monthly chores sit in a "Once a month" group on the chore chart, with dates on that weekday of each month for coverage, reminders and Home.
+- Also fixed: setup adds new columns by name (duplicate "Removed" on Church audio).
+
+## Monthly chore checklist (Nov 18, 2026)
+- New tabs: **Monthly chores** (the list: Chore, Details, Order; setup fills in the 8 house chores) and **Monthly chore log** (one row per chore per month: who has it, when it was done).
+- Admin → Chore chart → Monthly chores: pick who has each chore (residents only), flip between months to plan ahead, check off, and add/edit/remove chores (admins). Residents can assign and check off too.
+- Each chore keeps the same person the next month until someone changes it; the checkmarks start fresh on the 1st.
+- Residents see the whole list (with names) at the top of the portal's Chore chart, and their own on Home under Your shifts, with a checkbox.
+- Emails: on the 1st, each resident gets their chore(s) for the month; a week before the month ends, anyone who hasn't checked theirs off gets a reminder. Changing who has a chore this month emails them.
+- Fixed: Home now shows the saved copy right away while it refreshes (the first draw was failing).

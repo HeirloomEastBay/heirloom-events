@@ -252,18 +252,20 @@
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   function renderChores() {
     const ch = data.chores;
-    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular weekly chores. Open ones are up for grabs, first come, first served. "Volunteers" means the volunteer pool shares it; if you'd like to own one every week, you can take it. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
+    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular chores, weekly${ch.some(c => c.monthly) ? " and monthly" : ""}. Open ones are up for grabs, first come, first served. "Volunteers" means the volunteer pool shares it; if you'd like to own one every week, you can take it. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
+    html += monthlyHtml();
     if (!ch.length) html += `<div class="empty"><h2>The chore chart is empty</h2><p>Once slots are added, they'll show up here.</p></div>`;
-    else html += `<div class="week">${DAYS.map(d => {
-      const slots = ch.filter(c => c.day === d);
-      return `<section class="dcol" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
+    else html += `<div class="week">${DAYS.concat(ch.some(c => c.monthly) ? ["Once a month"] : []).map(d => {
+      const slots = ch.filter(c => d === "Once a month" ? c.monthly : c.day === d && !c.monthly);
+      return `<section class="dcol${d === "Once a month" ? " monthly" : ""}" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
         const i = ch.indexOf(c);
-        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Needs a new regular</span>` : `<span class="who">${esc(c.who || "Covered")}</span>`;
+        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Needs a new regular</span>` : `<span class="who">${esc(c.pool && c.residentsOnly ? "Residents" : c.who || "Covered")}</span>`;
         const canTake = (c.open || c.pool) && !c.missing.length;
         const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>${remBtn(!!c.reminders, `data-rem-slot="${esc(c.id)}"`)}<button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
           : c.open ? (c.missing.length ? needs(c.missing, c.training) : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`)
           : canTake ? `<button class="btn-quiet" data-claim="${i}" style="justify-self:start;padding:2px 0">Make it my regular slot</button>` : "";
-        return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}${c.open && c.missing.length ? " locked" : ""}"><b>${esc(c.chore)}</b><span class="t">${esc(c.time)}</span>
+        return `<div class="slot${c.mine ? " mine" : c.open ? " open" : ""}${c.open && c.missing.length ? " locked" : ""}"><b>${esc(c.chore)}</b><span class="t">${c.monthly ? esc(c.dayText.replace(/^the /, "").replace(/ of the month$/, "")) + ", " : ""}${esc(c.time)}</span>
+          ${c.residentsOnly ? `<span class="tag plain">Residents</span>` : ""}
           ${c.training ? `<span class="tag plain">${esc(c.training)}</span>` : ""}${who}${act}</div>`;
       }).join("") : `<p class="empty-day">No slots</p>`}</section>`;
     }).join("")}</div>`;
@@ -271,12 +273,42 @@
     app.innerHTML = html;
     wireRem(app);
     app.querySelectorAll("[data-claim]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.claim];
-      confirmDlg(`Take ${c.day}s, ${c.time}?`, `${c.chore}, every week${c.pool ? ", as your own regular slot" : ""}. If you can't make a date, you can ask for coverage here.`, "Take this slot",
-        btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.day}s ${c.time}. Thank you! Want an email the day before? Turn on reminders in My shifts.`)); });
+      confirmDlg(`Take ${c.monthly ? c.dayText.replace(/^the /, "") : c.day + "s"}, ${c.time}?`, `${c.chore}, ${c.monthly ? "once a month" : "every week"}${c.pool ? ", as your own regular slot" : ""}. If you can't make a date, you can ask for coverage here.`, "Take this slot",
+        btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.monthly ? c.dayText.replace(/^the /, "") : c.day + "s"} ${c.time}. Thank you! Want an email the day before? Turn on reminders in My shifts.`)); });
     app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.drop];
-      confirmDlg(`Give up ${c.day}s?`, `${c.chore}, ${c.time}. We'll let the other volunteers know it's open. If you only need a date or two off, ask for coverage instead.`, "Give it up",
+      confirmDlg(`Give up ${c.monthly ? "this one" : c.day + "s"}?`, `${c.chore}, ${c.time}. We'll let the other ${c.residentsOnly ? "residents" : "volunteers"} know it's open. If you only need a date or two off, ask for coverage instead.`, "Give it up",
         btn => run(btn, { action: "volDrop", slotId: c.id }, "Thanks for letting us know. The slot is open for someone else now.")); });
     app.querySelectorAll("[data-cover]").forEach(b => b.onclick = () => coverDlg(ch[+b.dataset.cover]));
+    wireMonthly(app);
+  }
+
+  /* ---------- Monthly house chores (residents): a checklist that starts fresh each month ---------- */
+  function monthlyHtml() {
+    const M = data.monthly; if (!M || !M.items.length) return "";
+    const done = M.items.filter(i => i.done).length, left = Math.max(0, Math.round((new Date(M.endsOn + "T12:00:00") - new Date()) / 86400000));
+    const order = M.items.slice().sort((a, b) => (b.mine - a.mine) || (!!a.done - !!b.done));
+    return `<section class="monthly" aria-labelledby="mH"><div class="mhead"><h3 id="mH">Monthly chores · ${esc(M.label)}</h3><span class="mprog">${done} of ${M.items.length} done${left ? ` · ${left} day${left === 1 ? "" : "s"} left` : " · last day"}</span></div>
+      <p class="hint">Any day this month. Check yours off when it's done; the list starts fresh on the 1st.</p>
+      <ul class="mlist">${order.map(i => `<li class="${i.done ? "done" : ""}${i.mine ? " mine" : ""}">
+        <button type="button" class="mcheck" data-mdone="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
+        <div><b>${esc(i.chore)}</b>${i.details ? `<span class="md">${esc(i.details)}</span>` : ""}
+        <span class="mw">${i.mine ? "Yours" : i.whoName ? esc(i.whoName) : "Nobody yet"}${i.done ? ` · done ${esc(shortDay(i.done))}${i.doneBy && !i.mine ? " by " + esc(i.doneBy) : ""}` : ""}</span></div></li>`).join("")}</ul></section>`;
+  }
+  function wireMonthly(root) {
+    root.querySelectorAll("[data-mdone]").forEach(b => b.onclick = async () => {
+      const it = data.monthly.items.find(i => i.id === b.dataset.mdone), on = !it.done;
+      const go = async btn => {
+        btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>`;
+        try {
+          const r = await call({ action: "volMonthlyDone", id: it.id, done: on });
+          if (dlg.open) dlg.close();
+          data.monthly = r.monthly; renderChores();
+          flash(on ? `${it.chore}: done. Thank you!` : `${it.chore} is unchecked.`);
+        } catch (err) { btn.disabled = false; btn.textContent = btn === b ? (it.done ? "✓" : "") : "Check it off"; showErr(err.message + "."); }
+      };
+      if (!it.mine && on) confirmDlg(`Check off ${it.chore}?`, it.whoName ? `It's ${it.whoName}'s this month. Check it off if it's done (thank you for pitching in!).` : "Check it off if it's done for this month.", "Check it off", go);
+      else go(b);
+    });
   }
 
   /* ---------- Coverage ---------- */
@@ -311,7 +343,7 @@
   }
   function coverDlg(slot, preselect) {
     const taken = {}; data.myRequests.forEach(r => { if (r.slotId === slot.id) taken[r.date] = r.status; });
-    dlgIn.innerHTML = `<h2>Coverage for ${esc(slot.chore)}</h2><p>${esc(slot.day)}s, ${esc(slot.time)}. Pick the dates you need covered. We'll email the volunteers who can do it.</p>
+    dlgIn.innerHTML = `<h2>Coverage for ${esc(slot.chore)}</h2><p>${esc(slot.monthly ? slot.dayText.replace(/^t/, "T") : slot.day + "s")}, ${esc(slot.time)}. Pick the dates you need covered. We'll email the ${slot.residentsOnly ? "residents" : "volunteers"} who can do it.</p>
       <div class="dates">${slot.next.map(d => `<label class="${taken[d] ? "off" : ""}"><input type="checkbox" value="${d}"${taken[d] ? " disabled" : d === preselect ? " checked" : ""}>${esc(shortDay(d))}${taken[d] ? ` <small>(${taken[d] === "Covered" ? "covered" : "asked"})</small>` : ""}</label>`).join("")}</div>
       <label class="lbl" for="cnote">Note <span class="opt">(optional)</span></label><textarea id="cnote" maxlength="500" placeholder="Out of town that weekend. Thanks so much!"></textarea>
       <div class="btns"><button class="btn btn-outline btn-sm" id="no">Never mind</button><button class="btn btn-primary btn-sm" id="yes">Ask for coverage</button></div>`;
@@ -390,11 +422,22 @@
     stats: { hours: 10.5, shifts: 9, first: dIn(-70), last: dIn(-5) }
   };
   demoData.mySignups = demoData.opps.filter(o => o.mine);
+  // A resident's view (portal.html?resident) shows the monthly house chores too
+  if (qs.has("resident")) {
+    const now = new Date(), end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const MC = [["Common Room", "Tidy & sweep/vacuum/mop + windows/doors", "Ana", 1], ["Sunroom", "Tidy & sweep/vacuum/mop + cobwebs + wipe table", "Nik", 0], ["Basement", "Tidy + sweep/vacuum/mop", "Brit", 0],
+      ["Main Floor Bathroom", "Clean + restock", "Ana", 0], ["Kitchen", "Wipe appliances, cupboards and inside fridge/microwave", "Lisa", 1], ["Kitchen/Guest Hallway/Basement Stairs", "Sweep/vacuum/mop", "", 0],
+      ["Front/Back Porch", "Shake out mats, remove items, sweep, wipe doors", "Nik", 0], ["Garage", "Clean egg counter/sink, wipe down fridge, vacuum rugs", "Brit", 0]];
+    demoData.me.resident = true;
+    demoData.monthly = { month: H.dayKey(now).slice(0, 7), label: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }), endsOn: H.dayKey(end),
+      items: MC.map(([chore, details, who, d], i) => ({ id: "MC-" + (i + 1), chore, details, who: who ? who.toLowerCase() + "@example.com" : "", whoName: who === "Ana" ? "Ana" : who, mine: who === "Ana", done: d ? dIn(-3) : "", doneBy: d ? who : "" })) };
+  }
   async function demo(b) {
     await new Promise(r => setTimeout(r, 300));
     if (b.action === "volPortal") return JSON.parse(JSON.stringify(demoData));
     if (b.action === "volPrefs") { demoData.prefs = Object.assign({ cover: true, open: true }, demoData.prefs, b.cover !== undefined ? { cover: b.cover } : {}, b.open !== undefined ? { open: b.open } : {}); return { ok: true, prefs: demoData.prefs }; }
     if (b.action === "volLearn") { demoData.asked = (demoData.asked || []).concat(b.training); return { ok: true, asked: demoData.asked }; }
+    if (b.action === "volMonthlyDone") { const i = demoData.monthly.items.find(x => x.id === b.id); i.done = b.done ? H.dayKey(new Date()) : ""; i.doneBy = b.done ? "Ana" : ""; return { ok: true, monthly: demoData.monthly }; }
     if (b.action === "volReminder") { demoData.chores.forEach(c => { if (c.id === b.slotId) c.reminders = b.on; }); demoData.myCovers.forEach(r => { if (r.id === b.coverId) r.reminder = b.on; }); }
     return { ok: true };
   }
