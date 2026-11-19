@@ -260,13 +260,14 @@
     const w = data.weekly; if (!MANAGE || !data.isAdmin || !w) return "";
     const plural = (n, a) => n + " " + (n === 1 ? a : a === "person" ? "people" : a + "s");
     const when = w.status === "Hold" ? "<b>On hold.</b> It won't go out until you pick something below."
-      : w.auto === false && !/^(Sent|Skipped)$/.test(w.status) ? `<b>Automatic sending is off.</b> Nothing goes out unless you tap <b>Send now</b>. (To send it on its own each week, set "Church weekly email: send automatically" to TRUE in Settings.)`
+      : w.auto === false && w.status === "Auto" ? `<b>Nothing goes out on its own.</b> When it's ready, tap <b>Send now</b> (or <b>Send later…</b> to pick a time).`
       : `Goes out <b>${esc(at12(w.sendAt))}</b> to ${plural(w.count, "person")} in the church family, and a summary to #church-fam.`;
     const has = w.empty ? `<span class="wk-empty">Nothing new for this week yet. It only sends once there's a note or a recording.</span>` : `So far: ${[w.notes && plural(w.notes, "note"), w.recordings && plural(w.recordings, "recording")].filter(Boolean).join(", ")}, plus Supper Church, church events and the song of the month.`;
     return `<section class="weekly" id="weekly" aria-labelledby="hW"><div class="sec-h"><div><h2 id="hW">📬 This week's email</h2><p>Week of ${esc(fmt(w.week, { month: "long", day: "numeric" }))}</p></div></div>
       <p class="wk-when">${when}</p><p class="wk-has">${has}</p>
       <div class="wk-btns"><button class="btn btn-outline btn-sm" id="wkPrev">Preview</button><button class="btn btn-forest btn-sm" id="wkNow"${w.empty ? " disabled" : ""}>Send now</button>
-        <button class="btn btn-outline btn-sm" id="wkLater">Send later…</button>${w.status === "Auto" ? `<button class="quiet" id="wkHold">Hold</button>` : `<button class="quiet" id="wkAuto">Back to Monday morning</button>`}<button class="quiet del" id="wkSkip">Skip this week</button></div>
+        <button class="btn btn-outline btn-sm" id="wkLater">Send later…</button>${w.auto === false ? (w.status === "Later" ? `<button class="quiet" id="wkAuto">Cancel the scheduled time</button>` : "") : w.status === "Auto" ? `<button class="quiet" id="wkHold">Hold</button>` : `<button class="quiet" id="wkAuto">Back to Monday morning</button>`}<button class="quiet del" id="wkSkip">Skip this week</button></div>
+      <label class="wk-auto"><input type="checkbox" id="wkAutoOn"${w.auto ? " checked" : ""}><span><b>Send it automatically every Monday morning</b><small>Off for now, so nothing goes out unless you send it. Once you're comfortable with the routine, tick this and it goes out on its own with whatever you've added that week. You can still skip, hold or send later any week.</small></span></label>
       ${w.last ? `<p class="wk-last">Last sent: week of ${esc(fmt(w.last.week, { month: "short", day: "numeric" }))}, to ${w.last.to} ${w.last.to === 1 ? "person" : "people"}.</p>` : ""}
     </section>`;
   }
@@ -280,7 +281,13 @@
       dlgIn.querySelector("[data-x]").onclick = () => dlg.close(); $("#go").onclick = ev => { dlg.close(); act("now", null, "Sent! It's on its way to the church family."); }; };
     $("#wkSkip").onclick = () => act("skip", null, "Skipped. Next week's email is up next.");
     if ($("#wkHold")) $("#wkHold").onclick = () => act("hold", null, "On hold. It won't send until you pick a time or send it.");
-    if ($("#wkAuto")) $("#wkAuto").onclick = () => act("auto", null, "Back to Monday morning.");
+    if ($("#wkAuto")) $("#wkAuto").onclick = () => act("auto", null, data.weekly.auto ? "Back to Monday morning." : "Cancelled. Nothing goes out until you send it.");
+    $("#wkAutoOn").onchange = e => { const on = e.currentTarget.checked;
+      if (!on) return act("autosend", { on: false }, "Automatic sending is off. Nothing goes out unless you send it.");
+      e.currentTarget.checked = false;
+      openDlg(`<h2>Send it automatically?</h2><p>Every Monday morning, the email goes out on its own to the church family with whatever notes and recordings you've added that week. Weeks with nothing new don't send.</p><p>You can still skip, hold or send later any week, or untick this any time.</p>
+        <div class="btns"><button class="btn btn-outline btn-sm" data-x>Not yet</button><button class="btn btn-forest btn-sm" id="go">Yes, send it automatically</button></div>`);
+      dlgIn.querySelector("[data-x]").onclick = () => dlg.close(); $("#go").onclick = () => { dlg.close(); act("autosend", { on: true }, "Done. It'll go out on its own each Monday morning."); }; };
     $("#wkLater").onclick = () => {
       const w = data.weekly.week, end = addDaysYmd(w, 6), def = (data.weekly.sendAt || w + " 07:00").replace(" ", "T");
       openDlg(`<h2>Send later</h2><p>Pick a day and time this week (by ${esc(fmt(end, { weekday: "long", month: "short", day: "numeric" }))}).</p>
@@ -812,7 +819,7 @@
         songs: [], events: [{ id: "EV-1", title: "Advent candle-making night", next: suns[1], date: suns[1], until: "", repeats: "", start: "18:30", end: "20:00", allDay: false, location: "Farmhouse", description: "Bring a jar. We'll make Advent candles together.", link: "", public: true },
           { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
         eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
-        weekly: { week: "", status: "Auto", sendAt: "", count: 18, notes: 1, recordings: 2, empty: false, last: null },
+        weekly: { week: "", status: "Auto", sendAt: "", auto: false, count: 18, notes: 1, recordings: 2, empty: false, last: null },
         audioKinds: ["Weekly message", "Psalm of the week", "Proverb of the week", "Kids Bible story", "Other"], bookFor: ["Psalms & Proverbs", "Kids Bible stories", "Other books"],
         books: [{ id: "BK-1", title: "Sample Psalms & Proverbs book", author: "An author", for: "Psalms & Proverbs", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-09-01", finished: "", note: "Our book for the Psalm and Proverb of the week.", current: true },
           { id: "BK-2", title: "Sample kids' story Bible", author: "Another author", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-11-01", finished: "", note: "", current: true },
@@ -865,7 +872,7 @@
     if (!S.weekly.week) { S.weekly.week = S.thisWeek; S.weekly.sendAt = S.thisWeek + " 07:00"; }
     if (b.action === "churchWeekly") { const W = S.weekly;
       if (b.op === "now" || b.op === "skip") { W.last = b.op === "now" ? { week: W.week, to: W.count } : W.last; W.week = addDaysYmd(W.week, 7); W.sendAt = W.week + " 07:00"; W.status = "Auto"; W.notes = 0; W.recordings = 0; W.empty = true; }
-      if (b.op === "later") { W.status = "Later"; W.sendAt = b.at.replace("T", " "); } if (b.op === "hold") { W.status = "Hold"; } if (b.op === "auto") { W.status = "Auto"; W.sendAt = W.week + " 07:00"; } }
+      if (b.op === "later") { W.status = "Later"; W.sendAt = b.at.replace("T", " "); } if (b.op === "hold") { W.status = "Hold"; } if (b.op === "auto") { W.status = "Auto"; W.sendAt = W.week + " 07:00"; } if (b.op === "autosend") W.auto = !!b.on; }
     if (b.action === "churchWeeklyPreview") return Promise.resolve({ ok: true, subject: "This week at Heirloom church · " + fmt(S.weekly.week, { month: "long", day: "numeric" }), empty: S.weekly.empty,
       html: `<h1 style="font-family:Georgia,serif">This week at church</h1><div style="background:#fff;border-radius:12px;padding:16px">A sample note from Pastor Brit…</div><h2 style="font-family:Georgia,serif;color:#2e4a36">Listen this week</h2><div style="background:#fff;border-radius:12px;padding:16px">🎙️ Weekly message: Waiting well</div>` });
     if (b.action === "churchDay") { const sd = S.sundays.find(x => x.date === b.sunday); const all2 = [sd.main].concat(sd.bringing).filter(Boolean);
