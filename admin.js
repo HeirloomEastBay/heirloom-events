@@ -253,22 +253,22 @@
   function act(which, kind, i) {
     if (kind === "dates") return HLDates.open(i.kind === "form" ? i.id : { cal: which, eventId: i.eventId }, { onChange: () => calendar(which, true) });
     if (kind === "approve") {
-      openDlg(`<h2>Approve “${esc(i.title)}”?</h2><p>It goes on the calendar now, and we email ${esc(i.poster || "them")} that it's live.</p>
+      openDlg(`<h2>Approve “${esc(i.title)}”?</h2><p>It goes on the calendar now.</p><label class="chk" style="display:flex;gap:8px;align-items:center;margin:4px 0 10px"><input type="checkbox" id="notify"> Email ${esc(i.poster || "them")} that it's live</label>
         <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Not yet</button><button class="btn btn-forest btn-sm" id="go">Approve and publish</button></div>`);
-      $("#go").onclick = e => run(e.currentTarget, { action: "adminDecide", id: i.id, decision: "approve" }, `“${i.title}” is on the calendar.`);
+      $("#go").onclick = e => run(e.currentTarget, { action: "adminDecide", id: i.id, decision: "approve", notify: $("#notify").checked }, `“${i.title}” is on the calendar.`);
     }
     if (kind === "decline") {
-      openDlg(`<h2>Decline “${esc(i.title)}”?</h2><p>It won't go on the calendar. We send ${esc(i.poster || "them")} a kind note saying we can't add it.</p>
+      openDlg(`<h2>Decline “${esc(i.title)}”?</h2><p>It won't go on the calendar.</p><label class="chk" style="display:flex;gap:8px;align-items:center;margin:4px 0 10px"><input type="checkbox" id="notify"> Email ${esc(i.poster || "them")} a kind note saying we can't add it</label>
         <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep it</button><button class="btn btn-primary btn-sm" id="go">Decline</button></div>`);
-      $("#go").onclick = e => run(e.currentTarget, { action: "adminDecide", id: i.id, decision: "decline" }, `Declined “${i.title}”.`);
+      $("#go").onclick = e => run(e.currentTarget, { action: "adminDecide", id: i.id, decision: "decline", notify: $("#notify").checked }, `Declined “${i.title}”.`);
     }
     if (kind === "cancel") {
       openDlg(`<h2>Cancel “${esc(i.title)}”?</h2>
-        <p>It comes off ${/public/i.test(i.calendars) && /resident/i.test(i.calendars) ? "both calendars" : "the calendar"}. We email ${esc(i.poster || "the person who submitted it")}${i.rsvp ? " and everyone who RSVP'd" : ""}.</p>
+        <p>It comes off ${/public/i.test(i.calendars) && /resident/i.test(i.calendars) ? "both calendars" : "the calendar"}.</p><label class="chk" style="display:flex;gap:8px;align-items:center;margin:4px 0 10px"><input type="checkbox" id="notify"> Email ${esc(i.poster || "the person who submitted it")}${i.rsvp ? " and everyone who RSVP'd" : ""}, with your note</label>
         <label class="lbl" for="note">Note to ${esc((i.poster || "them").split(" ")[0])} <span class="opt">(optional)</span></label>
         <textarea id="note" maxlength="2000" placeholder="Sorry, we need the farmhouse that night."></textarea>
         <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Keep it</button><button class="btn btn-primary btn-sm" id="go">Cancel the event</button></div>`);
-      $("#go").onclick = e => run(e.currentTarget, { action: "adminCancelSheet", id: i.id, note: $("#note").value.trim() }, `“${i.title}” is cancelled.`);
+      $("#go").onclick = e => run(e.currentTarget, { action: "adminCancelSheet", id: i.id, note: $("#note").value.trim(), notify: $("#notify").checked }, `“${i.title}” is cancelled.`);
     }
     if (kind === "delete") {
       const day = H.fmt(new Date(i.start), { weekday: "short", month: "short", day: "numeric" });
@@ -437,7 +437,7 @@
      ============================================================ */
   async function chores(fresh) {
     app.innerHTML = `<div class="panel-h"><div><h2>Chore chart</h2>
-      <p>Regular chores, one slot per day, every week or once a month. Give each one a person, the general "Volunteers" pool, All Play (anyone can do it), or leave it Open (qualified volunteers get an email and can take it).
+      <p>Regular chores, one slot per day, every week or once a month. Give each one a person, the general "Volunteers" pool, All Play (anyone can do it), or leave it Open (anyone qualified can take it in their portal).
       Anyone can ask for coverage on certain dates. It all lives on the Chore chart and Coverage tabs in the Sheet too.</p></div></div>
       <div id="mo"></div><div id="ch"><p class="loading">Loading the chore chart…</p></div>`;
     try {
@@ -458,7 +458,7 @@
         <h3 id="moH">Monthly chores</h3>
         <div class="mnav"><button type="button" class="btn-quiet" data-mm="${esc(M.prev)}"${M.prev ? "" : " disabled"} aria-label="Previous month">‹</button><b>${esc(M.label)}</b><button type="button" class="btn-quiet" data-mm="${esc(M.next)}"${M.next ? "" : " disabled"} aria-label="Next month">›</button></div>
         <span class="mprog">${future ? "Planning ahead" : done + " of " + M.items.length + " done"}</span></div>
-      <p class="hint" style="margin:2px 0 10px">Residents only. Any day of the month; people check theirs off in the volunteer portal or on Home. Each chore keeps the same person next month unless you change it.${isCur ? " Changing who has one emails them." : ""}</p>
+      <p class="hint" style="margin:2px 0 10px">Residents only. Any day of the month; people check theirs off in the volunteer portal or on Home. Each chore keeps the same person next month unless you change it.</p>
       <div class="mrows">${M.items.map((i, n) => `<div class="mrow${i.done ? " done" : ""}">
         <button type="button" class="mcheck" data-mck="${n}" aria-pressed="${!!i.done}"${future ? " disabled" : ""} aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
         <div class="mtxt"><b>${esc(i.chore)}</b>${i.details ? `<span>${esc(i.details)}</span>` : ""}${i.done ? `<span class="mdone">Done ${esc(shortD(i.done))}${i.doneBy ? " by " + esc(i.doneBy) : ""}</span>` : ""}</div>
@@ -476,7 +476,7 @@
     el.querySelectorAll("[data-mck]").forEach(b => b.onclick = () => { const i = M.items[+b.dataset.mck]; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
       go({ action: "adminMonthlyDone", id: i.id, done: !i.done }, i.done ? i.chore + " is unchecked." : i.chore + ": done."); });
     el.querySelectorAll("[data-mwho]").forEach(sel => sel.onchange = () => { const i = M.items[+sel.dataset.mwho]; sel.disabled = true;
-      go({ action: "adminMonthlyAssign", id: i.id, email: sel.value }, sel.value ? `${i.chore}: ${sel.selectedOptions[0].textContent} for ${M.label}${isCur ? ". We emailed them" : ""}.` : `${i.chore} has nobody for ${M.label}.`); });
+      go({ action: "adminMonthlyAssign", id: i.id, email: sel.value }, sel.value ? `${i.chore}: ${sel.selectedOptions[0].textContent} for ${M.label}.` : `${i.chore} has nobody for ${M.label}.`); });
     const form = i => {
       openDlg(`<h2>${i ? "Edit " + esc(i.chore) : "Add a monthly chore"}</h2>
         <label class="lbl" for="mcN">Chore</label><input id="mcN" maxlength="80" value="${esc(i ? i.chore : "")}" placeholder="Laundry room" autofocus>
@@ -558,7 +558,7 @@
           state.chores = await call(Object.assign({ action: "adminChoreSave", id: s ? s.id : "" }, body));
           state.ppl = null; state.person = null;
           renderChores();
-          flash(!body.volunteer && (!s || wasVol) ? "Saved. We emailed qualified volunteers that it's open." : "Saved.");
+          flash("Saved.");
         } catch (err) { if (err.signedOut || err.notAdmin) return handle(err); save.disabled = false; save.innerHTML = label; flash(err.message, true); }
       };
       const rm = f.querySelector("[data-rm]");
@@ -1125,8 +1125,8 @@ ${(p.feedback || []).length ? `<section class="pcard wide"><h3>Resident feedback
         if (s.who && s.who !== "Volunteers" && s.who !== "All Play") {
           openDlg(`<h2>Move ${esc(p.first || "them")} onto this slot?</h2><p>${esc(s.dayText || s.day + "s")} · ${esc(s.chore)} is ${esc(s.who)}'s right now. ${esc(s.who)} comes off it (their hours so far are kept).</p>
             <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Move</button></div>`);
-          $("#go").onclick = e => { dlg.close(); chore({ slotId: s.id, on: true, replace: true }, add, `Added. We emailed ${p.first || "them"} the details.`); };
-        } else chore({ slotId: s.id, on: true }, add, `Added. We emailed ${p.first || "them"} the details.`);
+          $("#go").onclick = e => { dlg.close(); chore({ slotId: s.id, on: true, replace: true }, add, "Added."); };
+        } else chore({ slotId: s.id, on: true }, add, "Added.");
       };
     }
     $("#prof").querySelectorAll("[data-off]").forEach(b => b.onclick = () => chore({ slotId: b.dataset.off, on: false }, b, "Taken off. We let qualified volunteers know the slot is open."));

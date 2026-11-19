@@ -183,11 +183,12 @@
   function errMsg(box, err) { let el = box.querySelector(".dd-err"); if (!el) { el = document.createElement("p"); el.className = "dd-err"; box.querySelector(".dd-btns").before(el); } el.textContent = err.message + "."; }
 
   function decline(s) {
-    const box = openDlg(`<h2>Decline ${esc(s.guest.split(" ")[0])}'s dates?</h2><p>${esc(short(s.checkin))} → ${esc(short(s.checkout))}. We'll email ${esc(s.guest.split(" ")[0])} that those dates won't work, with a link to pick others.</p>
+    const box = openDlg(`<h2>Decline ${esc(s.guest.split(" ")[0])}'s dates?</h2><p>${esc(short(s.checkin))} → ${esc(short(s.checkout))}.</p>
+      <label class="dd-chk"><input type="checkbox" id="stTell"> Email ${esc(s.guest.split(" ")[0])} that those dates won't work, with a link to pick others</label>
       <label class="dd-f">A note for them <span class="opt">(optional)</span><textarea id="stWhy" maxlength="1000" placeholder="We have a work week then. Could you come the week after?"></textarea></label>
       <div class="dd-btns"><button class="btn btn-outline btn-sm" data-close>Keep it</button><button class="btn btn-primary btn-sm" id="stYes">Decline</button></div>`);
     box.querySelector("#stYes").onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-      try { D = await call({ action: "stayCancel", id: s.id, reason: box.querySelector("#stWhy").value }); keep(D); dlg.close(); draw(D.message); } catch (err) { b.disabled = false; b.textContent = "Try again"; errMsg(box, err); } };
+      try { D = await call({ action: "stayCancel", id: s.id, reason: box.querySelector("#stWhy").value, notify: box.querySelector("#stTell").checked }); keep(D); dlg.close(); draw(D.message); } catch (err) { b.disabled = false; b.textContent = "Try again"; errMsg(box, err); } };
   }
   function form(s, room, day) {
     const isNew = !s, confirming = !!(s && s.status === "Requested");
@@ -214,7 +215,7 @@
             <label class="dd-f">Host<input name="host" maxlength="80" value="${esc(s.host)}" placeholder="Who's hosting them"></label></div>
           <div class="dd-two"><label class="dd-f">Guest email <span class="opt">(optional)</span><input type="email" name="email" maxlength="120" value="${esc(s.email)}"></label>
             <label class="dd-f">Guest phone <span class="opt">(optional)</span><input type="tel" name="phone" maxlength="40" value="${esc(s.phone)}"></label></div>
-          <label class="dd-chk st-notify" hidden><input type="checkbox" name="notifyGuest"${isNew ? " checked" : ""}> Email them a confirmation with the dates and arrival info</label>
+          <label class="dd-chk st-notify" hidden><input type="checkbox" name="notifyGuest"> Email them a confirmation with the dates and arrival info</label>
         </div>
         <label class="dd-chk g-only"><input type="checkbox" name="sabbath"${s.sabbath ? " checked" : ""}> 🌿 This is a Sabbath 365 stay <span class="opt">(counts toward the ${esc(String((D.sabbath || {}).goal || 365))} nights)</span></label>
         <label class="dd-f">Notes <span class="opt">(optional)</span><textarea name="notes" maxlength="1000" placeholder="Allergic to cats. Bringing a dog.">${esc(s.notes)}</textarea></label>

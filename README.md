@@ -537,3 +537,9 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Home has a **Your chores** card: every regular chore you're on by day ("Tuesday · Kitchen duty"), set-day monthly ones ("1st Saturday … · monthly"), and your monthly house chores with checkboxes. Your shifts now only lists dated sign-ups and covers.
 - **All Play** (anyone can do it) is a new choice next to "Volunteers" (the pool) on the chore chart. On residents-only chores it replaces the pool ("All Play (any resident)"); setup switches any residents-only chore marked "Volunteers" to All Play. Monthly chores can be All Play too (no reminder emails for those; anyone can check them off).
 - A **Church fam** button at the top of Home (for church family, residents and admins) opens the church page.
+
+## Quiet by default (Nov 18, 2026)
+- Nothing done from the Admin page, the church page's admin tools, an approve/decline email link, or edits in the Sheet emails anyone, unless it's a button for emailing:
+  - **Ask for coverage** (chore chart), Brit's **Send now** on the Monday email, and the new **Email …** checkboxes (approve, decline, cancel an event; edit an event; change a date for RSVPs; decline Sabbath dates; confirm a guest stay). All of these start unticked.
+- Settings: **Admin changes email people** (FALSE) turns the old behaviour back on. **Monthly chores: reminder emails** (FALSE) controls the 1st-of-month and week-left emails.
+- Still sent: things people do themselves (their own forms, sign-ups, coverage requests, login codes), the reminders they turned on, and the Monday church email.

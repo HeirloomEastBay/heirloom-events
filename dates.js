@@ -63,7 +63,7 @@
     let el = box.querySelector(".dd-err"); if (!el) { el = document.createElement("p"); el.className = "dd-err"; box.querySelector(".dd-btns").before(el); }
     el.textContent = err.message + ".";
   }
-  const guestsBit = d => d.going ? `<label class="dd-chk"><input type="checkbox" id="ddNotify" checked> Email the ${d.going} ${d.going === 1 ? "person" : "people"} who RSVP'd for this date</label>
+  const guestsBit = d => d.going ? `<label class="dd-chk"><input type="checkbox" id="ddNotify"> Email the ${d.going} ${d.going === 1 ? "person" : "people"} who RSVP'd for this date</label>
       <label class="dd-f">Message to them <span class="opt">(optional)</span><textarea id="ddMsg" maxlength="1000" placeholder="So sorry for the change!"></textarea></label>` : "";
 
   function cancel(d) {
