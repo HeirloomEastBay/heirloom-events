@@ -76,6 +76,7 @@
         <p class="msg err" id="err" hidden></p>
         <div class="saverow"><button class="btn btn-primary" id="save">Save</button><span class="note" id="ok" aria-live="polite"></span></div>
       </form>
+      ${emailsCard(r)}
       <section class="card">
         <h2>Your access</h2>
         <ul class="access">${access.map(([t, on]) => `<li class="${on ? "" : "no"}">${esc(t)}</li>`).join("")}</ul>
@@ -84,6 +85,9 @@
       </section>
       <p style="text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn btn-forest btn-sm" data-install hidden>Add to Home Screen</button><button type="button" class="btn btn-outline btn-sm" id="out">Sign out</button></p>`;
     if (window.HLInstall) HLInstall.refresh();
+    // The Monday church email lives in the Emails card here (so saving the form can't undo it)
+    const ce = $("#pf .church-email"); if (ce) ce.remove();
+    wireEmails(r);
     if ($("#agree")) $("#agree").onclick = () => HLProfile.powerDialog(r, res => { render(res); $("#ok").textContent = "Thank you! You're all set for power tools and the woodshop."; });
     const f = $("#pf");
     f.addEventListener("input", () => { $("#ok").textContent = ""; });
@@ -102,14 +106,48 @@
     $("#out").onclick = () => { try { localStorage.removeItem("heirloom-session"); } catch (e) { /* fine */ } if (window.HLNav) HLNav.signedOut(); location.href = "index.html"; };
   }
 
+  /* ---------- Emails: all off, or pick which to keep ---------- */
+  function emailsCard(r) {
+    const E = r.emails || { none: false, kinds: {}, labels: [] }, k = E.kinds || {};
+    const row = (key, label, show) => show === false ? "" : `<label class="chk"><input type="checkbox" data-ek="${key}"${k[key] !== false ? " checked" : ""}${E.none ? " disabled" : ""}><span>${esc(label)}</span></label>`;
+    const volish = r.volunteer || r.resident;
+    return `<section class="card" id="emails"><h2>Emails</h2>
+      <p class="lock" style="margin-top:-4px">Pick which emails you'd like from Heirloom. Sign-in codes always come, so you can log in.</p>
+      <label class="chk eall"><input type="checkbox" id="eNone"${E.none ? " checked" : ""}><span><b>No emails at all</b> <small>(except sign-in codes)</small></span></label>
+      <div class="ekinds"${E.none ? ' aria-disabled="true"' : ""}>
+        ${(E.labels || []).map(([key, label]) => row(key, label)).join("")}
+        ${row("church", "The Monday church email (Pastor Brit's notes and recordings, plus Supper Church)", !!(r.resident || r.church))}
+        ${row("cover", "Requests to cover someone's chore", !!volish)}
+        ${row("open", "When a regular chore slot opens up", !!volish)}
+      </div>
+      ${r.admin ? `<p class="lock">Admin alert emails (new events to review, new volunteers…) are picked on Home → Alerts → "Email me about…". "No emails at all" turns those off too.</p>` : ""}
+      <p class="note" id="eOk" aria-live="polite"></p></section>`;
+  }
+  function wireEmails(r) {
+    const box = $("#emails"); if (!box) return;
+    let t = null;
+    const save = () => { clearTimeout(t); t = setTimeout(async () => {
+      const none = $("#eNone").checked, kinds = {};
+      box.querySelectorAll("[data-ek]").forEach(c => { kinds[c.dataset.ek] = c.checked; c.disabled = none; });
+      $("#eOk").textContent = "Saving…";
+      try { const res = await call({ action: "profileEmails", none, kinds }); if (!res.ok) throw new Error(res.error); r.emails = res.emails;
+        $("#eOk").textContent = none ? "Saved. No more emails from Heirloom, except sign-in codes." : "Saved."; }
+      catch (x) { $("#eOk").textContent = (x.message || "Couldn't save") + ". Please try again."; }
+    }, 400); };
+    box.addEventListener("change", save);
+  }
+
   // Preview mode
   let demoMe = { ok: true, email: "you@example.com", first: "Ana", last: "Diaz", phone: "510-555-0142", address: "", emergency: "", news: true,
     role: "Volunteer", member: "Community member", status: "Active volunteer", admin: false, approver: false, trusted: false, volunteer: true, bg: "Cleared", trainings: ["Animal feeding", "Power tools & woodshop"],
     preferred: "", pronouns: "", birthday: "", dietary: "Vegetarian", allergies: "", about: "", interests: ["Animals", "Garden"], greet: "Ana", church: false, partner: "", powerPending: true, powerAccepted: "", done: true,
     interestOptions: ["Animals", "Garden", "Land & trails", "Hospitality & meals", "Workshops & classes", "Woodshop & building", "Events", "Supper Church"],
-    stats: { hours: 12, shifts: 11, last: "2026-11-04", lastText: "Wed, Nov 4" } };
+    stats: { hours: 12, shifts: 11, last: "2026-11-04", lastText: "Wed, Nov 4" },
+    emails: { none: false, kinds: { receipts: true, reminders: true, updates: true, church: true, cover: true, open: false },
+      labels: [["receipts", "Confirmations of things you send or sign up for (forms, RSVPs, chore sign-ups)"], ["reminders", "Reminders the day before (shifts and events you turned reminders on for)"], ["updates", "Changes to events you RSVP'd to or posted, and notes from the Heirloom team"]] } };
   async function demo(b) {
     await new Promise(r => setTimeout(r, 350));
+    if (b.action === "profileEmails") demoMe.emails = Object.assign({}, demoMe.emails, { none: b.none, kinds: b.kinds });
     if (b.action === "profileSave") { const keep = Object.assign({}, b); delete keep.action; delete keep.done; delete keep.volunteer; Object.assign(demoMe, keep, { greet: b.preferred || b.first }); }
     return JSON.parse(JSON.stringify(Object.assign({ email: session.email }, demoMe, { email: session.email })));
   }

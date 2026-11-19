@@ -548,3 +548,8 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 ## Other books (Nov 18, 2026)
 - Church books have a third kind, **Other books**: a standing list shown as "More books we love" on the church page and the public books page. No reading dates, and adding one doesn't finish the current Psalms/Proverbs or Kids book.
 - The Monday church email's Supper Church section now lists the sides and desserts signed up so far (with names), under the main dish (or "still needed"), with buttons to make the main or bring a side. Fifth Sundays say there's no Supper Church. The #church-fam summary gets the sides too.
+
+## Email choices on Profile (Nov 18, 2026)
+- Profile has an **Emails** card: "No emails at all" (sign-in codes still come), or keep/drop each kind: confirmations, reminders, updates, the Monday church email (residents/church family), coverage requests and open chore slots (volunteers/residents). It saves as you tick.
+- People tab columns: **Email: none** (Yes) and **Email: off** (receipts, reminders, updates); church/coverage/open use their existing columns.
+- Every email is tagged with its kind by the function that sends it, and checked against the person's choices right before it goes out.
