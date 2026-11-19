@@ -7,14 +7,16 @@
   document.getElementById("footLine").textContent = `${C.ADDRESS} · ${C.EMAIL}`;
   const SAMPLE = [{ title: "Sample Psalms & Proverbs book", author: "An author", for: "Psalms & Proverbs", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-09-01", finished: "", note: "Our book for the Psalm and Proverb of the week.", current: true },
     { title: "Sample kids' story Bible", author: "Another author", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-11-01", finished: "", note: "", current: true },
+    { title: "A book we recommend", author: "Someone wise", for: "Other books", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-11-01", finished: "", note: "Pastor Brit's pick for Advent.", current: true },
     { title: "An earlier kids' book", author: "", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-09-15", finished: "2026-10-31", note: "", current: false }];
   const card = (b, past) => `<article class="book">${b.cover ? `<img src="${esc(b.cover)}" alt="Cover of ${esc(b.title)}" loading="lazy">` : `<div class="nocover" aria-hidden="true">📚</div>`}
-    <div class="bi"><span class="bfor">${esc(b.for)}</span><h3>${esc(b.title)}</h3>${b.author ? `<p>${esc(b.author)}</p>` : ""}
+    <div class="bi">${b.for === "Other books" ? "" : `<span class="bfor">${esc(b.for)}</span>`}<h3>${esc(b.title)}</h3>${b.author ? `<p>${esc(b.author)}</p>` : ""}
       ${past ? `<p>${esc(fmt(b.started))}${b.finished ? " – " + esc(fmt(b.finished)) : ""}</p>` : b.note ? `<p>${esc(b.note)}</p>` : ""}
       ${b.buy ? `<p class="bact"><a class="btn btn-${past ? "outline" : "primary"} btn-sm" href="${esc(b.buy)}" target="_blank" rel="noopener">${esc(b.buyLabel ? "Buy at " + b.buyLabel : "Get the book")} ↗</a></p>` : ""}</div></article>`;
   function draw(books) {
-    const now = books.filter(b => b.current), past = books.filter(b => !b.current && b.finished);
+    const OTHER = "Other books", more = books.filter(b => b.for === OTHER), now = books.filter(b => b.current && b.for !== OTHER), past = books.filter(b => !b.current && b.finished && b.for !== OTHER);
     app.innerHTML = `<section class="sec"><h2>Reading now</h2>${now.length ? `<div class="books">${now.map(b => card(b)).join("")}</div>` : `<p class="empty-s">We'll post our books here soon.</p>`}</section>
+      ${more.length ? `<section class="sec"><h2>More books we love</h2><div class="books">${more.map(b => card(b)).join("")}</div></section>` : ""}
       ${past.length ? `<section class="sec past"><h2>Books we've read</h2><div class="books">${past.map(b => card(b, true)).join("")}</div></section>` : ""}`;
   }
   if (!C.API_URL) { draw(SAMPLE); return; }

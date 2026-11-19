@@ -306,18 +306,20 @@
   function bookCard(b, small) {
     return `<article class="book${small ? " small" : ""}" id="book-${esc(b.id)}">
       ${b.cover ? `<img src="${esc(b.cover)}" alt="Cover of ${esc(b.title)}" loading="lazy">` : `<div class="nocover" aria-hidden="true">📚</div>`}
-      <div class="bi"><span class="bfor">${esc(b.for)}</span><h3>${esc(b.title)}</h3>${b.author ? `<p class="bau">${esc(b.author)}</p>` : ""}
+      <div class="bi">${b.for === "Other books" ? "" : `<span class="bfor">${esc(b.for)}</span>`}<h3>${esc(b.title)}</h3>${b.author ? `<p class="bau">${esc(b.author)}</p>` : ""}
         ${small ? `<p class="bdates">${esc(shortDate(b.started))}${b.finished ? " – " + esc(shortDate(b.finished)) : ""}</p>` : b.note ? `<p class="bnote">${esc(b.note)}</p>` : ""}
         <p class="bact">${b.buy ? `<a class="btn btn-${small ? "outline" : "primary"} btn-sm" href="${esc(b.buy)}" target="_blank" rel="noopener">${esc(b.buyLabel ? "Buy at " + b.buyLabel : "Get the book")} ↗</a>` : ""}
           ${data.admin ? `<button class="quiet" data-bkedit="${esc(b.id)}">Edit</button><button class="quiet del" data-bkdel="${esc(b.id)}">Remove</button>` : ""}</p></div>
     </article>`;
   }
   function booksHtml() {
-    const books = data.books || [], now = books.filter(b => b.current), past = books.filter(b => !b.current && b.finished);
+    const books = data.books || [], OTHER = "Other books", more = books.filter(b => b.for === OTHER),
+      now = books.filter(b => b.current && b.for !== OTHER), past = books.filter(b => !b.current && b.finished && b.for !== OTHER);
     if (!books.length && !data.admin) return "";
     return `<section aria-labelledby="hB" id="books"><div class="sec-h"><div><h2 id="hB">Books we're reading</h2><p>The Psalms &amp; Proverbs and Kids Bible story readings come from these. <a href="books.html">All our books ↗</a></p></div>
         ${data.admin ? `<button class="btn btn-forest btn-sm" id="bkNew">Add a book</button>` : ""}</div>
-      ${now.length ? `<div class="books">${now.map(b => bookCard(b)).join("")}</div>` : `<p class="empty-s">No books added yet.</p>`}
+      ${now.length ? `<div class="books">${now.map(b => bookCard(b)).join("")}</div>` : more.length ? "" : `<p class="empty-s">No books added yet.</p>`}
+      ${more.length ? `<h3 class="bk-more">More books we love</h3><div class="books">${more.map(b => bookCard(b)).join("")}</div>` : ""}
       ${past.length ? `<details class="older"><summary>Books we've read (${past.length})</summary><div class="books past">${past.map(b => bookCard(b, true)).join("")}</div></details>` : ""}
     </section>`;
   }
@@ -332,14 +334,17 @@
         ${b && b.cover ? `<img class="bkprev" src="${esc(b.cover)}" alt="">` : `<img class="bkprev" alt="" hidden>`}</div>
       <div class="two"><label class="f">Buy link <span class="opt">(optional)</span><input id="bk_buy" inputmode="url" value="${esc(b ? b.buy : "")}" placeholder="https://…"></label>
         <label class="f">Store <span class="opt">(optional)</span><input id="bk_label" maxlength="60" value="${esc(b ? b.buyLabel : "")}" placeholder="Books on Bee"></label></div>
-      <div class="two"><label class="f">Started<input type="date" id="bk_start" value="${esc(b ? b.started : today())}"></label>
+      <div class="two bk-dates"><label class="f">Started<input type="date" id="bk_start" value="${esc(b ? b.started : today())}"></label>
         <label class="f">Finished <span class="opt">(leave empty while reading)</span><input type="date" id="bk_end" value="${esc(b ? b.finished : "")}"></label></div>
       <label class="f">A note <span class="opt">(optional)</span><textarea id="bk_note" rows="2" maxlength="600">${esc(b ? b.note : "")}</textarea></label>
-      ${b ? "" : `<p class="opt" style="margin:0;font-size:13.5px">Adding a new book finishes the current one of the same kind, so it moves to "Books we've read".</p>`}
+      ${b ? "" : `<p class="opt bk-hint" style="margin:0;font-size:13.5px">Adding a new book finishes the current one of the same kind, so it moves to "Books we've read".</p>`}
+      <p class="opt bk-ohint" style="margin:0;font-size:13.5px" hidden>Other books stay on the list under "More books we love" until you remove them. No dates needed.</p>
       <p class="err" id="bkErr" hidden></p>
       <div class="btns"><button class="btn btn-outline btn-sm" data-x>Cancel</button><button class="btn btn-primary btn-sm" id="bkGo">${b ? "Save" : "Add the book"}</button></div>`);
     const q = k => dlgIn.querySelector(k), err = q("#bkErr");
     q("[data-x]").onclick = () => dlg.close();
+    const kind = () => { const o = q("#bk_for").value === "Other books"; q(".bk-dates").hidden = o; if (q(".bk-hint")) q(".bk-hint").hidden = o; q(".bk-ohint").hidden = !o; };
+    q("#bk_for").onchange = kind; kind();
     q("#bk_cover").onchange = async () => {
       const f = q("#bk_cover").files[0]; if (!f) return;
       try { const img = await loadImage(f), scale = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement("canvas");
@@ -808,7 +813,7 @@
           { id: "EV-2", title: "Prayer walk", next: suns[0], date: suns[0], until: "", repeats: "Weekly", start: "07:00", end: "07:45", allDay: false, location: "Orchard", description: "", link: "", public: false }],
         eventsDiscord: false, locations: ["Farmhouse", "Orchard", "Yurt", "Barn"],
         weekly: { week: "", status: "Auto", sendAt: "", count: 18, notes: 1, recordings: 2, empty: false, last: null },
-        audioKinds: ["Weekly message", "Psalm of the week", "Proverb of the week", "Kids Bible story", "Other"], bookFor: ["Psalms & Proverbs", "Kids Bible stories"],
+        audioKinds: ["Weekly message", "Psalm of the week", "Proverb of the week", "Kids Bible story", "Other"], bookFor: ["Psalms & Proverbs", "Kids Bible stories", "Other books"],
         books: [{ id: "BK-1", title: "Sample Psalms & Proverbs book", author: "An author", for: "Psalms & Proverbs", cover: "", buy: "https://example.com", buyLabel: "Books on Bee", started: "2026-09-01", finished: "", note: "Our book for the Psalm and Proverb of the week.", current: true },
           { id: "BK-2", title: "Sample kids' story Bible", author: "Another author", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-11-01", finished: "", note: "", current: true },
           { id: "BK-3", title: "An earlier kids' book", author: "", for: "Kids Bible stories", cover: "", buy: "", buyLabel: "", started: "2026-09-15", finished: "2026-10-31", note: "", current: false }], thisWeek: (() => { const t = dateOf(today()), wd = t.getUTCDay(); t.setUTCDate(t.getUTCDate() + (wd === 0 ? 1 : 1 - wd)); return t.toISOString().slice(0, 10); })(),
@@ -853,8 +858,8 @@
       const f = { title: b.title, author: b.author, for: b.for, buy: b.buy, buyLabel: b.buyLabel, started: b.started, finished: b.finished, note: b.note };
       if (b._demoCover) f.cover = b._demoCover;
       if (b.id) Object.assign(S.books.find(x => x.id === b.id), f);
-      else { S.books.forEach(x => { if (x.for === b.for && !x.finished) { x.finished = addDaysYmd(b.started, -1); } }); S.books.unshift(Object.assign({ id: "BK-" + Math.random().toString(36).slice(2, 6), cover: "" }, f)); }
-      S.books.forEach(x => { x.current = (!x.started || x.started <= today()) && (!x.finished || x.finished >= today()); });
+      else { S.books.forEach(x => { if (b.for !== "Other books" && x.for === b.for && !x.finished) { x.finished = addDaysYmd(b.started, -1); } }); S.books.unshift(Object.assign({ id: "BK-" + Math.random().toString(36).slice(2, 6), cover: "" }, f)); }
+      S.books.forEach(x => { x.current = x.for === "Other books" || ((!x.started || x.started <= today()) && (!x.finished || x.finished >= today())); });
     }
     if (b.action === "churchBookRemove") S.books = S.books.filter(x => x.id !== b.id);
     if (!S.weekly.week) { S.weekly.week = S.thisWeek; S.weekly.sendAt = S.thisWeek + " 07:00"; }

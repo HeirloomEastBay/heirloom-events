@@ -544,3 +544,7 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Settings: **Admin changes email people** (FALSE) turns the old behaviour back on. **Monthly chores: reminder emails** (FALSE) controls the 1st-of-month and week-left emails.
 - Still sent: things people do themselves (their own forms, sign-ups, coverage requests, login codes), the reminders they turned on, and the Monday church email.
 - **Church weekly email: send automatically** (FALSE): the Monday email only goes out on its own once this is TRUE, and then only in the 3 hours after its send time (it never catches up later in the week). Brit's Send now works either way.
+
+## Other books (Nov 18, 2026)
+- Church books have a third kind, **Other books**: a standing list shown as "More books we love" on the church page and the public books page. No reading dates, and adding one doesn't finish the current Psalms/Proverbs or Kids book.
+- The Monday church email's Supper Church section now lists the sides and desserts signed up so far (with names), under the main dish (or "still needed"), with buttons to make the main or bring a side. Fifth Sundays say there's no Supper Church. The #church-fam summary gets the sides too.
