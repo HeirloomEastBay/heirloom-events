@@ -532,3 +532,8 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 ## BK + Pastor Brit (Nov 18, 2026)
 - Setup adds Brit Keeton (britkeeton@gmail.com, goes by BK) as a resident and church family, and sets Brit's (staff@) preferred name to "Pastor Brit" so the two Brits are easy to tell apart in lists.
 - New setting **Song of the month: who else can post it (emails)** (BK by default): those people see Edit / New song on the Song of the month card on the church page.
+
+## Home: Your chores, All Play, Church fam (Nov 18, 2026)
+- Home has a **Your chores** card: every regular chore you're on by day ("Tuesday · Kitchen duty"), set-day monthly ones ("1st Saturday … · monthly"), and your monthly house chores with checkboxes. Your shifts now only lists dated sign-ups and covers.
+- **All Play** (anyone can do it) is a new choice next to "Volunteers" (the pool) on the chore chart. On residents-only chores it replaces the pool ("All Play (any resident)"); setup switches any residents-only chore marked "Volunteers" to All Play. Monthly chores can be All Play too (no reminder emails for those; anyone can check them off).
+- A **Church fam** button at the top of Home (for church family, residents and admins) opens the church page.

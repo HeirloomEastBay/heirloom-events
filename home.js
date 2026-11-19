@@ -81,12 +81,13 @@
     const R = D.roles || {};
     if (window.HLNav) HLNav.setRoles({ email: D.email, admin: !!R.admin, resident: !!R.resident, volunteer: !!R.volunteer || !!R.resident, church: !!R.church, sabbath: R.sabbath || "", residency: R.residency || "" });
     $("#hHi").textContent = D.first ? `Hi, ${D.first}!` : "Hi there!";
+    const cf = $("#hChurch"); if (cf) cf.hidden = !(R.church || R.resident || R.admin);
     const insider = R.resident || R.admin;
     const parts = [], volish = R.volunteer || R.resident || R.admin;
     if (R.admin || R.approver) parts.push(ready("core") ? sec(() => D.alerts ? alertsCard() : "", "Alerts") : waiting("core", "Alerts"));
     parts.push(quick(insider, R));
     const week = ready("week") ? sec(() => weekCard(insider), "This week") : waiting("week", "This week");
-    const shifts = ready("shifts") ? (D.shifts ? [sec(myShifts, "Your shifts"), sec(pickups, "Shifts to pick up")] : []) : volish ? [waiting("shifts", insider ? "Your shifts" : "Volunteer opportunities")] : [];
+    const shifts = ready("shifts") ? (D.shifts ? [sec(yourChores, "Your chores"), sec(myShifts, "Your shifts"), sec(pickups, "Shifts to pick up")] : []) : volish ? [waiting("shifts", insider ? "Your shifts" : "Volunteer opportunities")] : [];
     // Residents: the week first. Volunteers (community members): volunteer opportunities right after Submit an event.
     if (insider) { parts.push(week); parts.push(...shifts); }
     else { parts.push(...shifts.slice().reverse()); parts.push(week); }
@@ -153,14 +154,24 @@
 
   /* ---------- Shifts ---------- */
   function when(s) { return (s.date ? fmt(s.date, { weekday: "short", month: "short", day: "numeric" }) + " · " : "") + s.time; }
+  // Every chore you're on, by day (not dates), and this month's house chores to check off
+  function yourChores() {
+    const reg = D.shifts.regular || [], mo = D.shifts.monthly, mi = mo && mo.items ? mo.items : [];
+    if (!reg.length && !mi.length) return "";
+    return `<section class="hcard" aria-labelledby="hC"><header><h2 id="hC">Your chores</h2><a href="portal.html?tab=chores">Chore chart</a></header>
+      ${reg.length ? `<ul class="shifts chores">${reg.map(c => `<li><b>${esc(c.dayText)}</b><span class="cw">${esc(c.chore)}</span><span class="n">${esc(c.time)}</span></li>`).join("")}</ul>` : ""}
+      ${mi.length ? `<div class="hmonth"><p class="mh"><b>Monthly · ${esc(mo.label.split(" ")[0])}</b><a href="portal.html?tab=chores">${mo.done} of ${mo.total} done in the house</a></p>
+      <ul class="shifts">${mi.map(i => `<li class="mc${i.done ? " done" : ""}"><button type="button" class="mcheck" data-mdone="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
+        <span><b>${esc(i.chore)}</b><span class="md">${i.done ? "Done " + esc(fmt(i.done, { month: "short", day: "numeric" })) + ". Thank you!" : esc(i.details || "Any day this month")}</span></span></li>`).join("")}</ul></div>` : ""}
+    </section>`;
+  }
   function myShifts() {
-    const m = D.shifts.mine || [], mo = D.shifts.monthly;
-    const monthly = mo && mo.items && mo.items.length ? `<div class="hmonth"><p class="mh"><b>Monthly chore${mo.items.length > 1 ? "s" : ""} · ${esc(mo.label.split(" ")[0])}</b><a href="portal.html?tab=chores">${mo.done} of ${mo.total} done in the house</a></p>
-      <ul class="shifts">${mo.items.map(i => `<li class="mc${i.done ? " done" : ""}"><button type="button" class="mcheck" data-mdone="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
-        <span><b>${esc(i.chore)}</b><span class="md">${i.done ? "Done " + esc(fmt(i.done, { month: "short", day: "numeric" })) + ". Thank you!" : esc(i.details || "Any day this month")}</span></span></li>`).join("")}</ul></div>` : "";
+    const m = D.shifts.mine || [];
+    const hasChores = (D.shifts.regular || []).length || (D.shifts.monthly && (D.shifts.monthly.items || []).length);
+    if (!m.length && hasChores) return "";
     return `<section class="hcard" aria-labelledby="hS"><header><h2 id="hS">Your shifts</h2><a href="portal.html">Volunteer portal</a></header>
-      ${monthly}${m.length ? `<ul class="shifts">${m.map(s => `<li><b>${esc(s.title)}</b><span>${esc(when(s))}</span><span class="n">${s.kind === "cover" ? "Covering" : s.kind === "chore" ? "Your regular" : "Signed up"}</span></li>`).join("")}</ul>`
-        : `<p class="empty-s">No shifts coming up${monthly ? "" : ". Pick one up below!"}</p>`}</section>`;
+      ${m.length ? `<ul class="shifts">${m.map(s => `<li><b>${esc(s.title)}</b><span>${esc(when(s))}</span><span class="n">${s.kind === "cover" ? "Covering" : "Signed up"}</span></li>`).join("")}</ul>`
+        : `<p class="empty-s">No shifts coming up. Pick one up below!</p>`}</section>`;
   }
   function pickups() {
     const p = D.shifts.pick || [];
@@ -247,6 +258,7 @@
       if (resident || volunteer) demoD.shifts = { mine: [{ date: plus(1), title: "Animal chores (AM)", time: "7–8am", kind: "chore" }, { date: plus(4), title: "Farm Work Day", time: "9am–12pm", kind: "signup" }],
         pick: [{ date: plus(2), title: "Collecting eggs", time: "5–5:30pm", kind: "cover", note: "Mark needs a sub", missing: [] }, { date: plus(6), title: "Goat milking", time: "6–7am", kind: "cover", note: "Needs someone", missing: volunteer ? ["Goat milking training"] : [] },
           { date: "", title: "Garden watering", time: "Thursday 6–7pm", kind: "slot", note: "Needs a new regular", missing: [] }], pickTotal: 5,
+        regular: resident ? [{ dayText: "Tuesday", day: "Tuesday", chore: "Kitchen duty", time: "after dinner" }, { dayText: "Thursday", day: "Thursday", chore: "AM animal chores", time: "by 10am" }] : [],
         monthly: resident ? { month: localYmd(new Date()).slice(0, 7), label: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }), total: 8, done: 3,
           items: [{ id: "MC-4", chore: "Main Floor Bathroom", details: "Clean + restock", done: "" }] } : null };
       if (resident || volunteer) demoD.church = { sunday: { date: plus((7 - new Date().getDay()) % 7 || 7), style: "Potluck", title: "Thanksgiving potluck", main: null, bringing: [{ kind: "Side", what: "Roasted squash", name: "Martha S.", mine: false }, { kind: "Dessert", what: "", name: "Ana D.", mine: false }] },

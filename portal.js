@@ -252,14 +252,14 @@
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   function renderChores() {
     const ch = data.chores;
-    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular chores, weekly${ch.some(c => c.monthly) ? " and monthly" : ""}. Open ones are up for grabs, first come, first served. "Volunteers" means the volunteer pool shares it; if you'd like to own one every week, you can take it. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
+    let html = statusNote() + `<div class="panel-h"><div><h2>Chore chart</h2><p>Regular chores, weekly${ch.some(c => c.monthly) ? " and monthly" : ""}. Open ones are up for grabs, first come, first served. "Volunteers" means the volunteer pool shares it and "All Play" means anyone can do it; if you'd like to own one, you can take it. If you can't make one of your dates, ask for coverage and we'll let the other volunteers know.</p></div></div>`;
     html += monthlyHtml();
     if (!ch.length) html += `<div class="empty"><h2>The chore chart is empty</h2><p>Once slots are added, they'll show up here.</p></div>`;
     else html += `<div class="week">${DAYS.concat(ch.some(c => c.monthly) ? ["Once a month"] : []).map(d => {
       const slots = ch.filter(c => d === "Once a month" ? c.monthly : c.day === d && !c.monthly);
       return `<section class="dcol${d === "Once a month" ? " monthly" : ""}" aria-label="${d}"><h3>${d}</h3>${slots.length ? slots.map(c => {
         const i = ch.indexOf(c);
-        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Needs a new regular</span>` : `<span class="who">${esc(c.pool && c.residentsOnly ? "Residents" : c.who || "Covered")}</span>`;
+        const who = c.mine ? `<span class="who">You</span>` : c.open ? `<span class="who open">Needs a new regular</span>` : `<span class="who">${esc(c.who || "Covered")}</span>`;
         const canTake = (c.open || c.pool) && !c.missing.length;
         const act = c.mine ? `<button class="btn btn-outline btn-sm" data-cover="${i}">I need coverage</button>${remBtn(!!c.reminders, `data-rem-slot="${esc(c.id)}"`)}<button class="btn-quiet" data-drop="${i}" style="justify-self:start;padding:2px 0">Give up this slot</button>`
           : c.open ? (c.missing.length ? needs(c.missing, c.training) : `<button class="btn btn-primary btn-sm" data-claim="${i}">Take this slot</button>`)
@@ -292,7 +292,7 @@
       <ul class="mlist">${order.map(i => `<li class="${i.done ? "done" : ""}${i.mine ? " mine" : ""}">
         <button type="button" class="mcheck" data-mdone="${esc(i.id)}" aria-pressed="${!!i.done}" aria-label="${i.done ? "Uncheck" : "Check off"} ${esc(i.chore)}">${i.done ? "✓" : ""}</button>
         <div><b>${esc(i.chore)}</b>${i.details ? `<span class="md">${esc(i.details)}</span>` : ""}
-        <span class="mw">${i.mine ? "Yours" : i.whoName ? esc(i.whoName) : "Nobody yet"}${i.done ? ` · done ${esc(shortDay(i.done))}${i.doneBy && !i.mine ? " by " + esc(i.doneBy) : ""}` : ""}</span></div></li>`).join("")}</ul></section>`;
+        <span class="mw">${i.mine ? "Yours" : i.allPlay ? "All Play · anyone can do it" : i.whoName ? esc(i.whoName) : "Nobody yet"}${i.done ? ` · done ${esc(shortDay(i.done))}${i.doneBy && !i.mine ? " by " + esc(i.doneBy) : ""}` : ""}</span></div></li>`).join("")}</ul></section>`;
   }
   function wireMonthly(root) {
     root.querySelectorAll("[data-mdone]").forEach(b => b.onclick = async () => {
@@ -306,7 +306,7 @@
           flash(on ? `${it.chore}: done. Thank you!` : `${it.chore} is unchecked.`);
         } catch (err) { btn.disabled = false; btn.textContent = btn === b ? (it.done ? "✓" : "") : "Check it off"; showErr(err.message + "."); }
       };
-      if (!it.mine && on) confirmDlg(`Check off ${it.chore}?`, it.whoName ? `It's ${it.whoName}'s this month. Check it off if it's done (thank you for pitching in!).` : "Check it off if it's done for this month.", "Check it off", go);
+      if (!it.mine && !it.allPlay && on) confirmDlg(`Check off ${it.chore}?`, it.whoName ? `It's ${it.whoName}'s this month. Check it off if it's done (thank you for pitching in!).` : "Check it off if it's done for this month.", "Check it off", go);
       else go(b);
     });
   }
