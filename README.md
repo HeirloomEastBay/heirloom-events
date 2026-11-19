@@ -528,3 +528,7 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Residents see the whole list (with names) at the top of the portal's Chore chart, and their own on Home under Your shifts, with a checkbox.
 - Emails: on the 1st, each resident gets their chore(s) for the month; a week before the month ends, anyone who hasn't checked theirs off gets a reminder. Changing who has a chore this month emails them.
 - Fixed: Home now shows the saved copy right away while it refreshes (the first draw was failing).
+
+## BK + Pastor Brit (Nov 18, 2026)
+- Setup adds Brit Keeton (britkeeton@gmail.com, goes by BK) as a resident and church family, and sets Brit's (staff@) preferred name to "Pastor Brit" so the two Brits are easy to tell apart in lists.
+- New setting **Song of the month: who else can post it (emails)** (BK by default): those people see Edit / New song on the Song of the month card on the church page.

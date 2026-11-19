@@ -569,13 +569,13 @@
   const nextMonth = m => { const [y, mo] = m.split("-").map(Number); return mo === 12 ? (y + 1) + "-01" : y + "-" + String(mo + 1).padStart(2, "0"); };
   function songHtml() {
     const s = data.song;
-    if (!s) return data.admin ? `<section class="song" aria-labelledby="hSong"><div class="sec-h"><div><h2 id="hSong">Song of the month</h2><p>The song we're learning together at Supper Church. Nothing posted yet.</p></div>
+    if (!s) return data.admin || data.canSong ? `<section class="song" aria-labelledby="hSong"><div class="sec-h"><div><h2 id="hSong">Song of the month</h2><p>The song we're learning together at Supper Church. Nothing posted yet.</p></div>
       <button class="btn btn-forest btn-sm" id="songNew">Add the song of the month</button></div></section>` : "";
     const lyrics = s.lyricsOk && s.lyrics ? `<details class="lyrics"><summary>Lyrics</summary><div class="ly">${esc(s.lyrics)}</div></details>`
       : s.lyricsLink ? `<p><a class="btn btn-outline btn-sm" href="${esc(s.lyricsLink)}" target="_blank" rel="noopener">Lyrics ↗</a></p>` : "";
     return `<section class="song" aria-labelledby="hSong">
       <div class="sec-h"><div><span class="kick">Song of the month · ${esc(monthName(s.month))}</span><h2 id="hSong">${esc(s.title)}</h2>${s.writers ? `<p>${esc(s.writers)}</p>` : ""}</div>
-        ${data.admin ? `<div class="sbtns"><button class="btn btn-outline btn-sm" id="songEdit">Edit</button><button class="btn btn-forest btn-sm" id="songNew">New song</button></div>` : ""}</div>
+        ${data.admin || data.canSong ? `<div class="sbtns"><button class="btn btn-outline btn-sm" id="songEdit">Edit</button><button class="btn btn-forest btn-sm" id="songNew">New song</button></div>` : ""}</div>
       ${s.youtube ? `<div class="yt"><iframe src="https://www.youtube-nocookie.com/embed/${esc(s.youtube)}" title="${esc(s.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
       ${s.note ? `<p class="snote">${esc(s.note)}</p>` : ""}
       ${lyrics}
