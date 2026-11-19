@@ -553,3 +553,10 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Profile has an **Emails** card: "No emails at all" (sign-in codes still come), or keep/drop each kind: confirmations, reminders, updates, the Monday church email (residents/church family), coverage requests and open chore slots (volunteers/residents). It saves as you tick.
 - People tab columns: **Email: none** (Yes) and **Email: off** (receipts, reminders, updates); church/coverage/open use their existing columns.
 - Every email is tagged with its kind by the function that sends it, and checked against the person's choices right before it goes out.
+
+## Church email from staff@ (Nov 18, 2026)
+- Settings: **Church weekly email: send from** (staff@heirloomeastbay.com) and **from name** (Heirloom Church).
+- Google only sends "from" another address if it's a **Send mail as** address on the Google account that owns this script (Gmail → Settings → See all settings → Accounts → Send mail as → Add another email address; Gmail emails a confirmation code to staff@). Until then the email comes from the script's account, named "Heirloom Church", and replies go to staff@. Running `setup` logs which one applies.
+- First run after this update asks for one new permission (Gmail), needed to use the Send-mail-as address.
+- Open chore slot emails are now **opt-in**: nobody gets them unless they turn them on (Profile → Emails, or the volunteer portal). Open slots still show on Home and the chore chart. People who had already ticked them on keep them.
+- Coverage requests now go through the app by default (Home "Shifts to pick up", the portal's Coverage tab). The "I need coverage" and admin "Needs coverage…" dialogs have an unticked **Also email the volunteer pool** box for when an email is really needed; then people who haven't turned off coverage emails get one.

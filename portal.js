@@ -276,7 +276,7 @@
       confirmDlg(`Take ${c.monthly ? c.dayText.replace(/^the /, "") : c.day + "s"}, ${c.time}?`, `${c.chore}, ${c.monthly ? "once a month" : "every week"}${c.pool ? ", as your own regular slot" : ""}. If you can't make a date, you can ask for coverage here.`, "Take this slot",
         btn => run(btn, { action: "volClaim", slotId: c.id }, `It's yours: ${c.chore}, ${c.monthly ? c.dayText.replace(/^the /, "") : c.day + "s"} ${c.time}. Thank you! Want an email the day before? Turn on reminders in My shifts.`)); });
     app.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => { const c = ch[+b.dataset.drop];
-      confirmDlg(`Give up ${c.monthly ? "this one" : c.day + "s"}?`, `${c.chore}, ${c.time}. We'll let the other ${c.residentsOnly ? "residents" : "volunteers"} know it's open. If you only need a date or two off, ask for coverage instead.`, "Give it up",
+      confirmDlg(`Give up ${c.monthly ? "this one" : c.day + "s"}?`, `${c.chore}, ${c.time}. It'll show as open in the app for ${c.residentsOnly ? "other residents" : "others"} to take. If you only need a date or two off, ask for coverage instead.`, "Give it up",
         btn => run(btn, { action: "volDrop", slotId: c.id }, "Thanks for letting us know. The slot is open for someone else now.")); });
     app.querySelectorAll("[data-cover]").forEach(b => b.onclick = () => coverDlg(ch[+b.dataset.cover]));
     wireMonthly(app);
@@ -343,17 +343,19 @@
   }
   function coverDlg(slot, preselect) {
     const taken = {}; data.myRequests.forEach(r => { if (r.slotId === slot.id) taken[r.date] = r.status; });
-    dlgIn.innerHTML = `<h2>Coverage for ${esc(slot.chore)}</h2><p>${esc(slot.monthly ? slot.dayText.replace(/^t/, "T") : slot.day + "s")}, ${esc(slot.time)}. Pick the dates you need covered. We'll email the ${slot.residentsOnly ? "residents" : "volunteers"} who can do it.</p>
+    dlgIn.innerHTML = `<h2>Coverage for ${esc(slot.chore)}</h2><p>${esc(slot.monthly ? slot.dayText.replace(/^t/, "T") : slot.day + "s")}, ${esc(slot.time)}. Pick the dates you need covered. It shows up in the app for ${slot.residentsOnly ? "the residents" : "everyone"} who can do it.</p>
       <div class="dates">${slot.next.map(d => `<label class="${taken[d] ? "off" : ""}"><input type="checkbox" value="${d}"${taken[d] ? " disabled" : d === preselect ? " checked" : ""}>${esc(shortDay(d))}${taken[d] ? ` <small>(${taken[d] === "Covered" ? "covered" : "asked"})</small>` : ""}</label>`).join("")}</div>
       <label class="lbl" for="cnote">Note <span class="opt">(optional)</span></label><textarea id="cnote" maxlength="500" placeholder="Out of town that weekend. Thanks so much!"></textarea>
+      <label class="cpool"><input type="checkbox" id="cpool"> Also email the ${slot.residentsOnly ? "residents" : "volunteer pool"} with this request <small>(for last-minute ones)</small></label>
       <div class="btns"><button class="btn btn-outline btn-sm" id="no">Never mind</button><button class="btn btn-primary btn-sm" id="yes">Ask for coverage</button></div>`;
     dlg.showModal();
     $("#no").onclick = () => dlg.close();
     $("#yes").onclick = e => {
       const dates = [...dlgIn.querySelectorAll(".dates input:checked")].map(i => i.value);
       if (!dates.length) return showErr("Pick at least one date.");
-      run(e.currentTarget, { action: "volCover", slotId: slot.id, dates, note: $("#cnote").value.trim() },
-        `We asked the other volunteers to cover ${dates.map(shortDay).join(", ")}. We'll email you when someone does.`);
+      const pool = $("#cpool").checked;
+      run(e.currentTarget, { action: "volCover", slotId: slot.id, dates, note: $("#cnote").value.trim(), notify: pool },
+        `Asked for coverage on ${dates.map(shortDay).join(", ")}. It's in the app${pool ? ", and we emailed the " + (slot.residentsOnly ? "residents" : "volunteers") : " for others to pick up"}. We'll let you know when someone takes it.`);
     };
   }
   function showErr(m) {

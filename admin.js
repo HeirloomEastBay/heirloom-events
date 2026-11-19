@@ -575,15 +575,17 @@
       if (need) need.onclick = () => {
         const taken = {}; d.coverage.forEach(c => { if (c.slotId === s.id) taken[c.date] = c.status; });
         const fmtD = ymd => H.fmt(H.zoned(...ymd.split("-").map(Number), 12), { weekday: "short", month: "short", day: "numeric" });
-        openDlg(`<h2>Who can do ${esc(s.chore)}?</h2><p>${esc(s.monthly ? s.dayText.replace(/^t/, "T") : s.day + "s")}, ${esc(s.when)}. Pick the dates that need someone. We'll email the ${s.residentsOnly ? "residents" : "volunteers"} who can do it, and they can grab it in their portal.</p>
+        openDlg(`<h2>Who can do ${esc(s.chore)}?</h2><p>${esc(s.monthly ? s.dayText.replace(/^t/, "T") : s.day + "s")}, ${esc(s.when)}. Pick the dates that need someone. It shows up in the app (Home and the portal) for ${s.residentsOnly ? "the residents" : "everyone"} who can do it.</p>
           <div class="checks" id="needDates">${s.next.map(x => `<label${taken[x] ? ' style="opacity:.55"' : ""}><input type="checkbox" value="${x}"${taken[x] ? " disabled" : ""}>${esc(fmtD(x))}${taken[x] ? " (" + taken[x].toLowerCase() + ")" : ""}</label>`).join("")}</div>
           <label class="lbl" for="needNote">Note <span class="opt">(optional)</span></label><textarea id="needNote" maxlength="500" placeholder="Brit's away that weekend"></textarea>
+          <label class="chk" style="display:flex;gap:8px;align-items:center;margin:10px 0 0"><input type="checkbox" id="needPool"> Also email the ${s.residentsOnly ? "residents" : "volunteer pool"} with this request</label>
           <div class="btns"><button class="btn btn-outline btn-sm" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-forest btn-sm" id="go">Ask for coverage</button></div>`);
         $("#go").onclick = async e => {
           const dates = [...dlgIn.querySelectorAll("#needDates input:checked")].map(i => i.value);
+          const pool = $("#needPool").checked;
           if (!dates.length) return flash("Pick at least one date.", true);
           const b = e.currentTarget; b.disabled = true; b.innerHTML = `<span class="spinner"></span>`;
-          try { state.chores = await call({ action: "adminCoverNeed", slotId: s.id, dates, note: $("#needNote").value.trim() }); dlg.close(); renderChores(); flash("Done. We emailed the volunteers who can do it."); }
+          try { state.chores = await call({ action: "adminCoverNeed", slotId: s.id, dates, note: $("#needNote").value.trim(), notify: pool }); dlg.close(); renderChores(); flash(pool ? "Done. It's in the app, and we emailed the people who can do it." : "Done. It's in the app for people to pick up."); }
           catch (err) { if (err.signedOut || err.notAdmin) { dlg.close(); return handle(err); } b.disabled = false; b.textContent = "Ask for coverage"; flash(err.message, true); }
         };
       };
