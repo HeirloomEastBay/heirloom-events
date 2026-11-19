@@ -439,6 +439,7 @@
       volunteer: $("#volunteer").checked, volArea: $("#volArea").value, volWho: fd.get("volWho") || "anyone",
       volBg: $("#volBg").checked, volTraining: $("#volTraining").value,
       spots: fd.get("spots") || "",
+      rsvpReminders: !!fd.get("rsvpReminders"),
       link: fd.get("rsvpMode") === "link" ? (fd.get("link") || "").trim() : "",
       linkLabel: fd.get("linkLabel"),
       imageMode: $("#multi").checked && multi.length ? "multi" : fd.get("imageMode"),
@@ -682,7 +683,7 @@
     const mode = ["none", "form", "link"].includes(e.rsvpMode) ? e.rsvpMode : "none";
     $("#r-" + mode).checked = true;
     document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== mode);
-    set("spots", e.spots); set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
+    set("spots", e.spots); if ($("#rsvpReminders")) $("#rsvpReminders").checked = !!e.rsvpReminders; set("link", e.link); if (e.linkLabel) set("linkLabel", e.linkLabel);
     form.querySelectorAll('input[name="calendars"]').forEach(c => c.checked = (e.calendars || []).includes(c.value));
     $("#volunteer").checked = !!e.volunteer;
     if (e.volunteer) {
