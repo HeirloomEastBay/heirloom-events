@@ -13,6 +13,7 @@
   const QS = new URLSearchParams(location.search);
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   let session = read("heirloom-session"), D = null, demoD = null;
+  const MORE = { list: [], done: false, busy: false }; // "Show 8 more" on This week
   if (DEMO && QS.get("demo")) session = { token: "demo", email: "you@example.com" };
   $("#footLine").textContent = `${C.ADDRESS} · ${C.EMAIL}`;
   const p2 = n => String(n).padStart(2, "0");
@@ -135,19 +136,21 @@
 
   /* ---------- This week ---------- */
   function weekCard(insider) {
-    const evs = D.week || [], today = localYmd(new Date()), tmr = localYmd(new Date(Date.now() + 86400000));
+    const extra = (MORE.list || []), evs = (D.week || []).concat(extra.filter(x => !(D.week || []).some(w => w.id === x.id))), today = localYmd(new Date()), tmr = localYmd(new Date(Date.now() + 86400000));
     const byDay = {};
     evs.forEach(e => { const s = new Date(e.start), day = e.allDay ? e.start.slice(0, 10) : localYmd(s); const k = day < today ? today : day; (byDay[k] = byDay[k] || []).push(e); });
-    const days = Object.keys(byDay).sort().slice(0, 7);
+    const days = Object.keys(byDay).sort();
     const label = d => d === today ? "Today" : d === tmr ? "Tomorrow" : fmt(d, { weekday: "long", month: "short", day: "numeric" });
     const row = e => {
       const time = e.allDay ? "All day" : t12(new Date(e.start));
-      const inner = `<span class="tm">${esc(time)}</span><span><b>${esc(e.title)}</b>${e.residents ? `<span class="tag">Residents</span>` : ""}${e.location ? `<span class="loc">${esc(e.location)}</span>` : ""}</span>`;
+      const inner = `<span class="tm">${esc(time)}</span><span class="ev-t"><b>${esc(e.title)}</b>${e.residents ? `<span class="tag">Residents</span>` : ""}${e.location ? `<span class="loc">${esc(e.location)}</span>` : ""}</span>${e.photo ? `<img class="thumb" src="${esc(e.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ""}`;
       return e.residents ? `<li><div>${inner}</div></li>` : `<li><a href="index.html?event=${encodeURIComponent(String(e.id).split("_")[0])}">${inner}</a></li>`;
     };
-    return `<section class="hcard" aria-labelledby="hW"><header><h2 id="hW">This week</h2><a href="index.html">Full calendar</a></header>
+    return `<section class="hcard" aria-labelledby="hW"><header><h2 id="hW">${extra.length ? "Coming up" : "This week"}</h2><a href="index.html">Full calendar</a></header>
       ${days.length ? `<div class="days">${days.map(d => `<div class="day${d === today ? " today" : ""}"><h3>${esc(label(d))}</h3><ul class="evs">${byDay[d].map(row).join("")}</ul></div>`).join("")}</div>`
         : `<p class="empty-s">Nothing on the calendar this week yet.</p>`}
+      ${MORE.done ? `<p class="empty-s" style="font-size:13.5px">That's everything for the next two months. <a href="index.html">See the full calendar</a></p>`
+        : `<button type="button" class="btn btn-outline btn-sm" id="hMore" style="margin-top:12px">${MORE.busy ? `<span class="spinner"></span> Loading…` : "Show 8 more"}</button>`}
       ${insider ? `<p class="empty-s" style="font-size:13px">Public and residents' calendars together. <span class="tag" style="margin:0">Residents</span> = residents' calendar only.</p>` : ""}
     </section>`;
   }
@@ -232,6 +235,14 @@
         keep(D); draw(); flash(on ? it.chore + ": done. Thank you!" : it.chore + " is unchecked.");
       } catch (err) { b.disabled = false; b.textContent = it.done ? "✓" : ""; flash(err.message, true); }
     });
+    // "Show 8 more": the next events after the last one shown (kept for this visit only)
+    const hm = $("#hMore"); if (hm) hm.onclick = async () => {
+      if (MORE.busy) return; MORE.busy = true; draw();
+      const all = (D.week || []).concat(MORE.list), last = all.length ? all.reduce((m, e) => e.start > m ? e.start : m, "") : new Date().toISOString();
+      try { const r = await call({ action: "homeMore", after: last, n: 8 }); MORE.list = MORE.list.concat(r.events || []); MORE.done = !r.more; }
+      catch (err) { flash(err.message, true); }
+      MORE.busy = false; draw();
+    };
     const pf = $("#aPrefs"); if (pf) pf.onclick = e => { e.preventDefault(); prefsDialog(); };
     app.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { state[b.dataset.retry] = "loading"; safeDraw(); load(b.dataset.retry); });
   }
@@ -245,7 +256,7 @@
       const admin = who === "admin", resident = admin || who === "resident", volunteer = who === "volunteer";
       demoD = { ok: true, email: "you@example.com", first: admin ? "Brit" : resident ? "Lindsey" : volunteer ? "Ana" : "Erin", today: t,
         roles: { admin, approver: admin, resident, volunteer, church: resident || volunteer, partner: who === "other" ? "Soundbird" : "", sabbath: who === "other" ? "Interview" : "", residency: "" },
-        week: [{ id: "e1_1", title: "Farm Work Day", start: at(0, 9), end: at(0, 12), location: "Garden" }, { id: "r1", title: "House meeting", start: at(1, 18, 45), end: at(1, 20), location: "Farmhouse", residents: true },
+        week: [{ id: "e1_1", title: "Farm Work Day", start: at(0, 9), end: at(0, 12), location: "Garden", photo: "images/chickens.jpg" }, { id: "r1", title: "House meeting", start: at(1, 18, 45), end: at(1, 20), location: "Farmhouse", residents: true },
           { id: "e2_1", title: "Sound Bath at the Sanctuary", start: at(2, 19), end: at(2, 20, 30), location: "Yurt", source: "soundbird" }, { id: "r2", title: "Room 2: Kim Lee (Lindsey's sister)", start: plus(3) + "T00:00:00.000Z", end: plus(5) + "T00:00:00.000Z", allDay: true, residents: true },
           { id: "e3_1", title: "Supper Church", start: at(5, 17, 30), end: at(5, 19), location: "Farmhouse" }].filter(e => resident || !e.residents),
         mine: { upcoming: who === "other" ? 3 : 1, waiting: who === "other" ? 1 : 0 } };
@@ -266,6 +277,9 @@
     }
     if (b.action === "volMonthlyDone") { const it = demoD.shifts.monthly.items.find(x => x.id === b.id); it.done = b.done ? localYmd(new Date()) : ""; demoD.shifts.monthly.done += b.done ? 1 : -1;
       return { ok: true, monthly: { month: demoD.shifts.monthly.month, label: demoD.shifts.monthly.label, items: demoD.shifts.monthly.items.map(x => Object.assign({ mine: true }, x)).concat(Array.from({ length: 7 }, (_, k) => ({ id: "x" + k, done: k < demoD.shifts.monthly.done - (it.done ? 1 : 0) ? "y" : "" }))) } }; }
+    if (b.action === "homeMore") { const base = new Date(b.after); const n = MORE.list.length;
+      return { ok: true, more: n < 8, events: Array.from({ length: 8 }, (_, i) => { const d = new Date(base.getTime() + (i + 1) * 86400000 * 1.5); d.setHours(10, 0, 0, 0);
+        return { id: "m" + n + "_" + i, title: ["Chicken Tractor build", "Knit night", "Garden workday", "Sound Bath", "Potluck", "Bee walk", "Kids craft hour", "Prayer walk"][i], start: d.toISOString(), end: new Date(d.getTime() + 7200000).toISOString(), location: "Event Barn", photo: i % 3 === 0 ? "images/chickens.jpg" : "" }; }) }; }
     if (b.action === "homeAlertDone") demoD.alerts = demoD.alerts.filter(a => a.id !== b.id);
     if (QS.has("slow") && b.part === QS.get("slow")) return new Promise(() => {});
     if (b.action === "homeAlertPrefs") demoD.alertEmails = b.kinds;

@@ -563,3 +563,7 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Admin → Church → This week's email has Brit's checkbox **Send it automatically every Monday morning** (off). Until she ticks it, nothing goes out unless she taps Send now or picks a time with Send later. Ticking it asks to confirm and sets the Settings line for her.
 - Fewer emails: hosts aren't emailed about each RSVP (they check My events); day-before RSVP reminders only go for events where the poster or an admin ticked **Email everyone who RSVPs a reminder the day before** on the event form; someone covering a chore date no longer gets a day-before reminder unless they turn it on. Setup switches the two Settings lines over once.
 - "FYI emails when trusted people post" is FALSE (setup switches it over once).
+
+## Nov 19, 2026
+- Tab rows (calendar filters, List/Month…) wrap onto another line on phones instead of breaking words mid-word; buttons and chips never break mid-word.
+- Home "This week": events with the poster's own photo (uploaded or linked, not a library picture) show a small thumbnail. **Show 8 more** loads the next 8 events at a time (up to two months out) right on Home.

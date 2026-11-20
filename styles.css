@@ -539,6 +539,12 @@ html[data-theme="dark"] .site-footer { background: #0d140f; }
 /* ---------- Long words and links wrap instead of running off the screen (phones) ---------- */
 body { overflow-wrap: anywhere; }
 :where(h1, h2, h3, h4, p, li, a, b, strong, em, span, label, legend, td, th, dd, dt, small, summary) { overflow-wrap: anywhere; min-width: 0; }
+/* …but buttons, tabs and chips only ever break between words, never mid-word */
+button, .btn, [role="tab"], .seg, .seg *, .tabs *, .chip, .tag, .status, .pill, .tabbar *, nav a { overflow-wrap: normal; word-break: normal; }
+/* Segmented tab rows (calendar filters, List/Month…) wrap onto another line instead of squashing words */
+.seg { flex-wrap: wrap; max-width: 100%; row-gap: 2px; }
+.seg button { white-space: nowrap; flex: 0 0 auto; }
+@media (max-width: 480px) { .seg button { padding-left: 11px; padding-right: 11px; font-size: 12.5px; } }
 :where(section, article, li, .card, .hcard, fieldset, .field, .form-col) { min-width: 0; }
 img, video, iframe, svg { max-width: 100%; }
 .pill, .tag, .chip { white-space: normal; max-width: 100%; }
