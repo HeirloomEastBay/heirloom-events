@@ -13,7 +13,7 @@
   const QS = new URLSearchParams(location.search);
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   let session = read("heirloom-session"), D = null, demoD = null;
-  const MORE = { list: [], done: false, busy: false }; // "Show 8 more" on This week
+  const MORE = { list: [], done: false, busy: false, picking: false, through: "" }; // "Show 8 more" / "Show through…" on This week
   if (DEMO && QS.get("demo")) session = { token: "demo", email: "you@example.com" };
   $("#footLine").textContent = `${C.ADDRESS} · ${C.EMAIL}`;
   const p2 = n => String(n).padStart(2, "0");
@@ -149,8 +149,12 @@
     return `<section class="hcard" aria-labelledby="hW"><header><h2 id="hW">${extra.length ? "Coming up" : "This week"}</h2><a href="index.html">Full calendar</a></header>
       ${days.length ? `<div class="days">${days.map(d => `<div class="day${d === today ? " today" : ""}"><h3>${esc(label(d))}</h3><ul class="evs">${byDay[d].map(row).join("")}</ul></div>`).join("")}</div>`
         : `<p class="empty-s">Nothing on the calendar this week yet.</p>`}
+      ${MORE.through ? `<p class="empty-s" style="font-size:13.5px">Showing everything through ${esc(fmt(MORE.through, { weekday: "short", month: "short", day: "numeric" }))}.</p>` : ""}
       ${MORE.done ? `<p class="empty-s" style="font-size:13.5px">That's everything for the next two months. <a href="index.html">See the full calendar</a></p>`
-        : `<button type="button" class="btn btn-outline btn-sm" id="hMore" style="margin-top:12px">${MORE.busy ? `<span class="spinner"></span> Loading…` : "Show 8 more"}</button>`}
+        : `<div class="hmore">${MORE.busy ? `<span class="btn btn-outline btn-sm" aria-live="polite"><span class="spinner"></span> Loading…</span>`
+          : `<button type="button" class="btn btn-outline btn-sm" id="hMore">Show 8 more</button>
+             ${MORE.picking ? `<span class="thru"><label for="hThru">Show through</label><input type="date" id="hThru" min="${today}" max="${localYmd(new Date(Date.now() + 183 * 86400000))}" value="${MORE.through || localYmd(new Date(Date.now() + 30 * 86400000))}"><button type="button" class="btn btn-forest btn-sm" id="hThruGo">Show</button></span>`
+               : `<button type="button" class="btn btn-outline btn-sm" id="hThruOpen">Show through…</button>`}`}</div>`}
       ${insider ? `<p class="empty-s" style="font-size:13px">Public and residents' calendars together. <span class="tag" style="margin:0">Residents</span> = residents' calendar only.</p>` : ""}
     </section>`;
   }
@@ -243,6 +247,16 @@
       catch (err) { flash(err.message, true); }
       MORE.busy = false; draw();
     };
+    const ho = $("#hThruOpen"); if (ho) ho.onclick = () => { MORE.picking = true; draw(); const i = $("#hThru"); if (i) { i.focus(); try { i.showPicker && i.showPicker(); } catch (e) { /* not supported: fine */ } } };
+    const hg = $("#hThruGo"); if (hg) hg.onclick = async () => {
+      const until = $("#hThru").value; if (!until) return flash("Pick a date first.", true);
+      MORE.busy = true; MORE.picking = false; draw();
+      const all = (D.week || []).concat(MORE.list), last = all.length ? all.reduce((m, e) => e.start > m ? e.start : m, "") : new Date().toISOString();
+      try { const r = await call({ action: "homeMore", after: last, until }); MORE.list = MORE.list.concat(r.events || []); MORE.through = r.through || until; MORE.done = false;
+        if (r.capped) flash("Home shows up to 6 months ahead. For further out, use the full calendar."); }
+      catch (err) { flash(err.message, true); }
+      MORE.busy = false; draw();
+    };
     const pf = $("#aPrefs"); if (pf) pf.onclick = e => { e.preventDefault(); prefsDialog(); };
     app.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { state[b.dataset.retry] = "loading"; safeDraw(); load(b.dataset.retry); });
   }
@@ -277,6 +291,10 @@
     }
     if (b.action === "volMonthlyDone") { const it = demoD.shifts.monthly.items.find(x => x.id === b.id); it.done = b.done ? localYmd(new Date()) : ""; demoD.shifts.monthly.done += b.done ? 1 : -1;
       return { ok: true, monthly: { month: demoD.shifts.monthly.month, label: demoD.shifts.monthly.label, items: demoD.shifts.monthly.items.map(x => Object.assign({ mine: true }, x)).concat(Array.from({ length: 7 }, (_, k) => ({ id: "x" + k, done: k < demoD.shifts.monthly.done - (it.done ? 1 : 0) ? "y" : "" }))) } }; }
+    if (b.action === "homeMore" && b.until) { const out = [], base = new Date(b.after), end = new Date(b.until + "T23:59:00");
+      for (let d = new Date(base.getTime() + 86400000), i = 0; d <= end && i < 60; d = new Date(d.getTime() + 2 * 86400000), i++) { const x = new Date(d); x.setHours(10, 0, 0, 0);
+        out.push({ id: "t" + i + "_" + b.until, title: ["Garden workday", "Knit night", "Bee walk", "Potluck"][i % 4], start: x.toISOString(), end: new Date(x.getTime() + 7200000).toISOString(), location: "Event Barn", photo: i % 4 === 0 ? "images/chickens.jpg" : "" }); }
+      return { ok: true, events: out, more: true, through: b.until }; }
     if (b.action === "homeMore") { const base = new Date(b.after); const n = MORE.list.length;
       return { ok: true, more: n < 8, events: Array.from({ length: 8 }, (_, i) => { const d = new Date(base.getTime() + (i + 1) * 86400000 * 1.5); d.setHours(10, 0, 0, 0);
         return { id: "m" + n + "_" + i, title: ["Chicken Tractor build", "Knit night", "Garden workday", "Sound Bath", "Potluck", "Bee walk", "Kids craft hour", "Prayer walk"][i], start: d.toISOString(), end: new Date(d.getTime() + 7200000).toISOString(), location: "Event Barn", photo: i % 3 === 0 ? "images/chickens.jpg" : "" }; }) }; }

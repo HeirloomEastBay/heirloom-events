@@ -567,3 +567,4 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 ## Nov 19, 2026
 - Tab rows (calendar filters, List/Month…) wrap onto another line on phones instead of breaking words mid-word; buttons and chips never break mid-word.
 - Home "This week": events with the poster's own photo (uploaded or linked, not a library picture) show a small thumbnail. **Show 8 more** loads the next 8 events at a time (up to two months out) right on Home.
+- Home: **Show through…** opens a date picker and loads everything up to that date (up to 6 months out); Show 8 more keeps going after it.
