@@ -548,3 +548,13 @@ button, .btn, [role="tab"], .seg, .seg *, .tabs *, .chip, .tag, .status, .pill, 
 :where(section, article, li, .card, .hcard, fieldset, .field, .form-col) { min-width: 0; }
 img, video, iframe, svg { max-width: 100%; }
 .pill, .tag, .chip { white-space: normal; max-width: 100%; }
+
+/* Share panel (calendar) */
+.share-dlg { border: 0; border-radius: 16px; padding: 20px 20px 18px; width: min(420px, calc(100vw - 32px)); background: var(--paper, #fbf8f1); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.share-dlg::backdrop { background: rgba(20, 30, 22, .45); }
+.share-dlg h3 { margin: 0 0 6px; font-size: 20px; }
+.share-dlg .x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 26px; line-height: 1; color: var(--ink-soft); cursor: pointer; padding: 4px 8px; }
+.share-dlg .st { margin: 0 0 12px; font-weight: 600; } .share-dlg .st span { font-weight: 400; color: var(--ink-soft); font-size: 14px; }
+.share-dlg .sl { display: flex; gap: 8px; margin-bottom: 12px; }
+.share-dlg .sl input { flex: 1; min-width: 0; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 9px; font: inherit; font-size: 13.5px; background: var(--surface, #fff); color: var(--ink); }
+.share-dlg .sa { display: flex; flex-wrap: wrap; gap: 8px; }

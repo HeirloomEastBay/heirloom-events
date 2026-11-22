@@ -38,8 +38,47 @@
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
     left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
-    right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>'
+    right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
   };
+
+  /* ---------- Share an event ----------
+     Phones: the phone's own share sheet. Elsewhere (computers, or inside the website's frame where
+     that's blocked): a small panel with Copy link, Email, Text and Facebook. The link opens that event. */
+  function shareUrl(e) {
+    const u = new URL("index.html", location.href);
+    u.search = ""; u.hash = "";
+    u.searchParams.set("event", e.ref || String(e.id).split("_")[0]);
+    return u.toString();
+  }
+  async function shareEvent(e, btn) {
+    const url = shareUrl(e), when = H.fmt(e.start, { weekday: "short", month: "short", day: "numeric" }) + (e.allDay ? "" : ", " + H.fmtTimeRange(e.start, e.end, e.allDay));
+    const text = e.title + " · " + when + " at Heirloom";
+    if (navigator.share) {
+      try { await navigator.share({ title: e.title, text, url }); return; }
+      catch (err) { if (err && err.name === "AbortError") return; /* blocked (e.g. in the website frame): use the panel */ }
+    }
+    let dlg = $("#shareDlg");
+    if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "shareDlg"; dlg.className = "share-dlg"; document.body.appendChild(dlg);
+      dlg.addEventListener("click", ev => { if (ev.target === dlg) dlg.close(); }); }
+    const enc = encodeURIComponent, top = EMBED ? ' target="_top"' : "";
+    dlg.innerHTML = `<button type="button" class="x" aria-label="Close">×</button><h3>Share this event</h3><p class="st">${esc(e.title)}<br><span>${esc(when)}</span></p>
+      <div class="sl"><input type="text" readonly value="${esc(url)}" aria-label="Link to this event"><button type="button" class="btn btn-primary btn-sm" id="shCopy">Copy link</button></div>
+      <div class="sa"><a class="btn btn-outline btn-sm" href="mailto:?subject=${enc(e.title)}&body=${enc(text + "\n\n" + url)}"${top}>Email</a>
+        <a class="btn btn-outline btn-sm" href="sms:?&body=${enc(text + " " + url)}"${top}>Text</a>
+        <a class="btn btn-outline btn-sm" href="https://www.facebook.com/sharer/sharer.php?u=${enc(url)}" target="_blank" rel="noopener">Facebook</a></div>`;
+    dlg.querySelector(".x").onclick = () => dlg.close();
+    const inp = dlg.querySelector("input");
+    inp.onfocus = () => inp.select();
+    $("#shCopy").onclick = async ev => {
+      const b = ev.currentTarget; let done = false;
+      try { await navigator.clipboard.writeText(url); done = true; } catch (x) { inp.focus(); inp.select(); try { done = document.execCommand("copy"); } catch (y) { /* select it so they can copy */ } }
+      b.textContent = done ? "Copied!" : "Select & copy"; setTimeout(() => { b.textContent = "Copy link"; }, 2000);
+    };
+    if (EMBED && btn) { dlg.style.position = "absolute"; dlg.style.margin = "0 auto"; dlg.style.top = Math.max(8, btn.getBoundingClientRect().top + window.scrollY - 120) + "px"; }
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+    resize();
+  }
 
   let events = [];
   let view = params.get("view") === "month" ? "month" : "list";
@@ -224,6 +263,7 @@
           ${link ? `<a class="btn ${e.rsvp && !past ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
           ${past ? "" : `<a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>`}
           <a class="btn btn-ghost btn-sm" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
+          ${past ? "" : `<button type="button" class="btn btn-ghost btn-sm" data-share="${esc(e.id)}">${ICON.share} Share</button>`}
         </div>
       </div>
     </article>`;
@@ -232,6 +272,7 @@
   function wireCards(root) {
     root.querySelectorAll("[data-rsvp]").forEach(b => b.onclick = () => openRsvp(byId[b.dataset.rsvp], b));
     root.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openEvent(byId[b.dataset.open], b));
+    root.querySelectorAll("[data-share]").forEach(b => b.onclick = () => shareEvent(byId[b.dataset.share], b));
     root.querySelectorAll(".desc").forEach(d => {
       const btn = d.nextElementSibling;
       if (btn && btn.classList.contains("more") && d.scrollHeight > d.clientHeight + 2) btn.hidden = false;
@@ -472,7 +513,9 @@
         : `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : e.volunteer ? "Sign up to help" : "RSVP"}</button>`) : ""}
       ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
       <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
-      <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>`;
+      <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
+      <button type="button" class="btn btn-ghost" id="popShareBtn">${ICON.share} Share</button>`;
+    if ($("#popShareBtn")) $("#popShareBtn").onclick = ev => shareEvent(e, ev.currentTarget);
     if ($("#popRsvp")) $("#popRsvp").onclick = () => { closePop(); openRsvp(e, fromButton); };
     // Flyer + social images (flyer.js)
     const share = $("#popShare");
