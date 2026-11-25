@@ -499,7 +499,9 @@
     $("#popTitle").textContent = e.title;
     $("#popMeta").innerHTML = e.location ? `<span>${ICON.pin}${esc(e.address && e.address !== C.ADDRESS && e.address !== e.location ? e.location + " · " + e.address : e.location)}</span>` : "";
     // Prices stay off the cards, but show here once someone taps in (donations, tickets, fees)
-    if (e.cost && !H.publicCost(e.cost)) $("#popMeta").innerHTML += `<span class="pop-cost"><b>Cost:</b> ${esc(e.cost)}</span>`;
+    // …only for our own events (and community members' through our form): partners' prices never show here (Brit)
+    const ours = (e.source || "heirloom") === "heirloom" || e.source === "community";
+    if (ours && e.cost && !H.publicCost(e.cost)) $("#popMeta").innerHTML += `<span class="pop-cost"><b>Cost:</b> ${esc(e.cost)}</span>`;
     // Same chips as the card
     const tmp = document.createElement("div"); tmp.innerHTML = cardHTML(e);
     const chips = tmp.querySelector(".chips"), also = tmp.querySelector(".also");

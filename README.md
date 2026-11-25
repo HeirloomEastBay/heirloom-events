@@ -574,3 +574,4 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 
 ## Pastor Home card (Nov 24, 2026)
 - Settings: **Pastor (emails)** (staff@heirloomeastbay.com). Those people get **This week at church** at the top of Home: a checklist for the week the Monday email is for (note, weekly message, Psalm/Proverb, kids story, song of the month when the month has none), Sunday supper status, and the Monday email's status with Preview & send. Each button opens the right form in Admin → Church (recordings come pre-set to the kind and week). Shrinks to "All set for this week 🎉" once everything's in and the email is sent.
+- Partner events (Soundbird, Plantify, any community partner) never show a price anywhere: no cost, no sentences with $ amounts in their description or More details, "More info" instead of "Get tickets". Only our own events (and community members posting through our form) show "Cost: …" in the popup.
