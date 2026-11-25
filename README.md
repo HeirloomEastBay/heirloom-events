@@ -571,3 +571,6 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Calendar: **Share** on every upcoming event card and in the event popup (also on the website embed). Phones get their share sheet; elsewhere a panel with Copy link, Email, Text and Facebook. The link (index.html?event=…) opens that event.
 - No ticket prices on the calendar (cards, popup, flyers, Google Calendar notes): only "Free" or wording without amounts shows. "Get tickets" buttons are now "More info" everywhere, including Soundbird/Eventbrite imports.
 - The event popup (after tapping a card) shows "Cost: …" for events posted through our form with a price or donation. Cards and flyers stay price-free. Eventbrite imports (Soundbird) bring no price in, so theirs only shows on their own page.
+
+## Pastor Home card (Nov 24, 2026)
+- Settings: **Pastor (emails)** (staff@heirloomeastbay.com). Those people get **This week at church** at the top of Home: a checklist for the week the Monday email is for (note, weekly message, Psalm/Proverb, kids story, song of the month when the month has none), Sunday supper status, and the Monday email's status with Preview & send. Each button opens the right form in Admin → Church (recordings come pre-set to the kind and week). Shrinks to "All set for this week 🎉" once everything's in and the email is sent.

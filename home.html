@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
-<script src="theme.js?v=20261124b"></script>
-<link rel="stylesheet" href="styles.css?v=20261124b">
+<script src="theme.js?v=20261124c"></script>
+<link rel="stylesheet" href="styles.css?v=20261124c">
 <style>
   .hero { background: var(--forest-fill); color: #fff; padding-block: 26px 22px; }
   .hero .kicker { color: var(--sage); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
@@ -60,6 +60,19 @@
   .evs a, .evs > li > div { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 9px 11px; border-radius: 10px; background: var(--surface); border: 1.5px solid var(--line); color: inherit; text-decoration: none; }
   .evs a:hover { border-color: var(--forest); }
   .evs .tm { font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-soft); font-weight: 600; }
+  .hcard.pastor { border-top: 4px solid var(--wheat, #d8b56a); }
+  .pastor .psub { margin: -4px 0 10px; color: var(--ink-soft); font-size: 14px; }
+  .plist { list-style: none; margin: 0; padding: 0; display: grid; }
+  .plist li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .plist li:first-child { border-top: 0; }
+  .plist .pk { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; }
+  .plist li.ok .pk { background: var(--forest); border-color: var(--forest); }
+  .plist li.info .pk { border: 0; font-size: 18px; }
+  .plist .pt { display: grid; gap: 1px; min-width: 0; } .plist .pt small { color: var(--ink-soft); font-size: 13px; overflow-wrap: anywhere; }
+  .plist li.ok .pt b { color: var(--ink-soft); font-weight: 600; }
+  .plist .pl { font-size: 13.5px; font-weight: 600; color: var(--forest); white-space: nowrap; }
+  .plist .need { color: #8e2f27; }
+  .pastor .pdone { margin: 0; font-weight: 600; } .pastor .pdone span { display: block; font-weight: 400; color: var(--ink-soft); font-size: 14px; margin-top: 2px; }
   .hmore { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
   .hmore .thru { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 14px; font-weight: 600; }
   .hmore .thru input { min-height: 36px; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 400; }
@@ -111,11 +124,11 @@
   <main class="wrap page" id="app" aria-live="polite"><p class="loading">Loading…</p></main>
   <footer class="site-footer"><div class="wrap"><div class="footer-small" style="border:0;margin:0;padding:0"><p><img src="images/logo-wordmark-white.svg" alt="Heirloom East Bay" style="width:170px;margin-bottom:12px"></p><p id="footLine"></p></div></div></footer>
 
-<script src="config.js?v=20261124b"></script>
-<script src="common.js?v=20261124b"></script>
-<script src="nav.js?v=20261124b"></script>
-<script src="install.js?v=20261124b"></script>
-<script src="welcome.js?v=20261124b"></script>
-<script src="home.js?v=20261124b"></script>
+<script src="config.js?v=20261124c"></script>
+<script src="common.js?v=20261124c"></script>
+<script src="nav.js?v=20261124c"></script>
+<script src="install.js?v=20261124c"></script>
+<script src="welcome.js?v=20261124c"></script>
+<script src="home.js?v=20261124c"></script>
 </body>
 </html>

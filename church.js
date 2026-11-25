@@ -471,11 +471,14 @@
     const used = (data.audio || []).filter(x => x.week === wk).map(x => x.kind);
     // Psalm and Proverb share a slot: usually one or the other each week
     const slot = k => /Psalm|Proverb/.test(k) ? "pp" : k, usedSlots = used.map(slot);
-    const kind0 = a ? a.kind : (data.audioKinds || []).find(k => k !== "Other" && usedSlots.indexOf(slot(k)) === -1) || "Other";
+    // From the pastor's Home checklist: ?kind=…&week=… picks the right ones
+    const qk = QS.get("kind"), qw = QS.get("week");
+    const kind0 = a ? a.kind : (qk && (data.audioKinds || []).indexOf(qk) !== -1 ? qk : (data.audioKinds || []).find(k => k !== "Other" && usedSlots.indexOf(slot(k)) === -1) || "Other");
+    const week0 = a ? a.week : (qw && weeks.indexOf(qw) !== -1 ? qw : wk);
     let file = null;
     openDlg(`<h2>${a ? "Edit recording" : "Add a recording"}</h2>
       <div class="two"><label class="f">Which<select id="au_kind">${(data.audioKinds || []).map(k => `<option${k === kind0 ? " selected" : ""}>${esc(k)}</option>`).join("")}</select></label>
-        <label class="f">Week<select id="au_week">${weeks.map(w => `<option value="${w}"${w === (a ? a.week : wk) ? " selected" : ""}>${esc(weekText(w))}${w === wk ? " (this week)" : w > wk ? " (next week)" : ""}</option>`).join("")}</select></label></div>
+        <label class="f">Week<select id="au_week">${weeks.map(w => `<option value="${w}"${w === week0 ? " selected" : ""}>${esc(weekText(w))}${w === wk ? " (this week)" : w > wk ? " (next week)" : ""}</option>`).join("")}</select></label></div>
       <div class="f"><span>${a ? "Replace the recording <span class=\"opt\">(optional)</span>" : "The recording"}</span>
         <label class="pickfile"><input type="file" id="au_file" accept="audio/*,.m4a,.mp3,.aac,.wav,.caf"><span id="au_fname">${a ? "Keep the current one" : "Choose a voice memo"}</span></label>
         <small class="opt">On iPhone: in Voice Memos, tap ⋯ → Save to Files, then pick it here. Up to ${MAX_MB} MB (about an hour).</small></div>

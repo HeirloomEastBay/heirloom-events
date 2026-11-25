@@ -57,7 +57,7 @@
       const r = await call({ action: "homeGet", part });
       clearTimeout(slow);
       ["first", "roles", "email", "today"].forEach(k => { if (r[k] !== undefined) D[k] = r[k]; });
-      ({ core: ["alerts", "mine", "alertKinds", "alertEmails"], week: ["week"], shifts: ["shifts"], church: ["church"] })[part].forEach(k => { D[k] = r[k] === undefined ? null : r[k]; });
+      ({ core: ["alerts", "mine", "alertKinds", "alertEmails"], week: ["week"], shifts: ["shifts"], church: ["church", "pastor"] })[part].forEach(k => { D[k] = r[k] === undefined ? null : r[k]; });
       state[part] = (r.failed || []).length ? "failed" : "done";
       if (PARTS.every(p => state[p] === "done")) keep(D);
     } catch (err) {
@@ -85,6 +85,8 @@
     const cf = $("#hChurch"); if (cf) cf.hidden = !(R.church || R.resident || R.admin);
     const insider = R.resident || R.admin;
     const parts = [], volish = R.volunteer || R.resident || R.admin;
+    // Pastor: "This week at church" comes first
+    if (R.pastor) parts.push(ready("church") ? sec(() => D.pastor ? pastorCard() : "", "This week at church") : waiting("church", "This week at church"));
     if (R.admin || R.approver) parts.push(ready("core") ? sec(() => D.alerts ? alertsCard() : "", "Alerts") : waiting("core", "Alerts"));
     parts.push(quick(insider, R));
     const week = ready("week") ? sec(() => weekCard(insider), "This week") : waiting("week", "This week");
@@ -161,6 +163,27 @@
 
   /* ---------- Shifts ---------- */
   function when(s) { return (s.date ? fmt(s.date, { weekday: "short", month: "short", day: "numeric" }) + " · " : "") + s.time; }
+  /* ---------- Pastor: this week's church checklist ---------- */
+  function pastorCard() {
+    const P = D.pastor, done = P.items.filter(i => i.done).length, E = P.email || {};
+    const t = s => { if (!s) return ""; const d = new Date(s.replace(" ", "T")); return isNaN(d) ? s : fmt(d, { weekday: "short", month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "").replace(" ", "").toLowerCase(); };
+    const email = E.status === "Sent" ? `✅ Sent` : E.status === "Skipped" ? "Skipped this week" : E.status === "Hold" ? "On hold"
+      : E.status === "Later" ? `Scheduled for ${esc(t(E.sendAt))}` : E.auto ? `Goes out ${esc(t(E.sendAt))}` : "Not sent yet";
+    const S = P.supper;
+    const supperLine = !S ? "" : S.style === "No Supper Church" ? `No Supper Church ${esc(fmt(S.day, { weekday: "long" }) === "Sunday" ? "this Sunday" : "")}`
+      : S.style === "Potluck" ? `Potluck${S.title ? ": " + esc(S.title) : ""}`
+      : S.main ? `Main: ${esc(S.main)}${S.sides ? ` · ${S.sides} side${S.sides === 1 ? "" : "s"}/dessert${S.sides === 1 ? "" : "s"}` : ""}` : `<b class="need">Main still needed</b>${S.sides ? ` · ${S.sides} side${S.sides === 1 ? "" : "s"} so far` : ""}`;
+    if (P.done && E.status === "Sent") return `<section class="hcard pastor done" aria-labelledby="hP"><header><h2 id="hP">This week at church</h2><a href="admin.html?tab=church">Admin → Church</a></header>
+      <p class="pdone">All set for this week 🎉 <span>${esc(P.weekText)}${supperLine ? " · " + supperLine : ""}</span></p></section>`;
+    return `<section class="hcard pastor" aria-labelledby="hP"><header><h2 id="hP">This week at church</h2><a href="admin.html?tab=church">Admin → Church</a></header>
+      <p class="psub">${esc(P.weekText)} · ${done} of ${P.items.length} ready</p>
+      <ul class="plist">${P.items.map(i => `<li class="${i.done ? "ok" : ""}"><span class="pk" aria-hidden="true">${i.done ? "✓" : ""}</span>
+        <span class="pt"><b>${esc(i.label)}</b>${i.detail ? `<small>${esc(i.detail)}</small>` : ""}</span>
+        ${i.done ? `<a class="pl" href="${esc(i.href)}">Add another</a>` : `<a class="btn btn-outline btn-sm" href="${esc(i.href)}">${esc(i.cta)}</a>`}</li>`).join("")}
+        ${S ? `<li class="info"><span class="pk" aria-hidden="true">🍲</span><span class="pt"><b>Supper Church · ${esc(fmt(S.day, { month: "short", day: "numeric" }))}</b><small>${supperLine}</small></span><a class="pl" href="church.html#sun-${esc(S.day)}">See it</a></li>` : ""}
+        <li class="info"><span class="pk" aria-hidden="true">✉️</span><span class="pt"><b>Monday email</b><small>${email}${E.status !== "Sent" && E.count ? ` · ${E.count} people` : ""}</small></span>
+          <a class="${E.status === "Sent" ? "pl" : "btn btn-forest btn-sm"}" href="${esc(E.href)}">${E.status === "Sent" ? "See it" : "Preview & send"}</a></li></ul></section>`;
+  }
   // Every chore you're on, by day (not dates), and this month's house chores to check off
   function yourChores() {
     const reg = D.shifts.regular || [], mo = D.shifts.monthly, mi = mo && mo.items ? mo.items : [];
@@ -267,9 +290,16 @@
     const at = (days, h, m) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, m || 0, 0, 0); return d.toISOString(); };
     const plus = n => localYmd(new Date(Date.now() + n * 86400000));
     if (!demoD) {
-      const admin = who === "admin", resident = admin || who === "resident", volunteer = who === "volunteer";
-      demoD = { ok: true, email: "you@example.com", first: admin ? "Brit" : resident ? "Lindsey" : volunteer ? "Ana" : "Erin", today: t,
-        roles: { admin, approver: admin, resident, volunteer, church: resident || volunteer, partner: who === "other" ? "Soundbird" : "", sabbath: who === "other" ? "Interview" : "", residency: "" },
+      const pastor = who === "pastor", admin = who === "admin" || pastor, resident = admin || who === "resident", volunteer = who === "volunteer";
+      demoD = { ok: true, email: "you@example.com", pastor: pastor ? { week: t, weekText: "Week of " + fmt(plus(5), { month: "long", day: "numeric" }),
+          items: [{ key: "note", label: "A note for this week", done: true, detail: "Advent begins", href: "church.html?manage=1&do=note", cta: "Write a note" },
+            { key: "Weekly message", label: "Weekly message", done: false, detail: "", href: "church.html?manage=1&do=audio&kind=Weekly%20message", cta: "Add a recording" },
+            { key: "Psalm of the week", label: "Psalm or Proverb of the week", done: true, detail: "Psalm 23 · Psalm 23:1-6 · pp. 41-43", href: "church.html?manage=1&do=audio", cta: "Add a recording" },
+            { key: "Kids Bible story", label: "Kids Bible story", done: false, detail: "", href: "church.html?manage=1&do=audio&kind=Kids%20Bible%20story", cta: "Add a recording" },
+            { key: "song", label: "Song of the month (December)", done: false, detail: "", href: "church.html?manage=1&do=song", cta: "Add the song" }],
+          supper: { day: plus(5), style: "Usual", title: "", main: "", sides: 2 }, email: { status: "Auto", auto: false, count: 24, href: "church.html?manage=1&do=weekly" }, done: false } : null,
+        first: admin ? (pastor ? "Pastor Brit" : "Brit") : resident ? "Lindsey" : volunteer ? "Ana" : "Erin", today: t,
+        roles: { admin, approver: admin, resident, volunteer, pastor, church: resident || volunteer, partner: who === "other" ? "Soundbird" : "", sabbath: who === "other" ? "Interview" : "", residency: "" },
         week: [{ id: "e1_1", title: "Farm Work Day", start: at(0, 9), end: at(0, 12), location: "Garden", photo: "images/chickens.jpg" }, { id: "r1", title: "House meeting", start: at(1, 18, 45), end: at(1, 20), location: "Farmhouse", residents: true },
           { id: "e2_1", title: "Sound Bath at the Sanctuary", start: at(2, 19), end: at(2, 20, 30), location: "Yurt", source: "soundbird" }, { id: "r2", title: "Room 2: Kim Lee (Lindsey's sister)", start: plus(3) + "T00:00:00.000Z", end: plus(5) + "T00:00:00.000Z", allDay: true, residents: true },
           { id: "e3_1", title: "Supper Church", start: at(5, 17, 30), end: at(5, 19), location: "Farmhouse" }].filter(e => resident || !e.residents),
