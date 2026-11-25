@@ -306,7 +306,7 @@
   $("#host").addEventListener("change", () => {
     $("#hostNameField").hidden = $("#host").value !== "community";
     if ($("#host").value && $("#host").value !== "community" && $("#r-none").checked) {
-      $("#r-link").checked = true; $("#linkLabel").value = "Get tickets";
+      $("#r-link").checked = true; $("#linkLabel").value = "More info";
       document.querySelectorAll("[data-rsvp]").forEach(p => p.hidden = p.dataset.rsvp !== "link");
     }
     update();
@@ -484,7 +484,7 @@
     if (hp) chips.push(`<span class="chip partner" style="--c:${esc(hp.color)}">With ${esc(hp.label)}</span>`);
     if (v.host === "community") chips.push(`<span class="chip partner" style="--c:#4f7a64">Hosted by ${esc(v.hostName || "a community member")}</span>`);
     const rt = repeatText(v); if (rt) chips.push(`<span class="chip">${esc(rt)}</span>`);
-    if (v.cost) chips.push(`<span class="chip cost">${esc(v.cost)}</span>`);
+    if (window.HL && HL.publicCost(v.cost)) chips.push(`<span class="chip cost">${esc(HL.publicCost(v.cost))}</span>`);
     if (v.volunteer) chips.unshift(`<span class="chip vol">Volunteer · ${esc(v.volArea)}</span>`);
     if (v.rsvpMode === "form" && v.spots) chips.push(`<span class="chip spots">${esc(v.spots)} ${v.volunteer ? "needed" : "spots"}</span>`);
     $("#preview").innerHTML = `<article class="card">

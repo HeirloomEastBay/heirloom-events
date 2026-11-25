@@ -192,7 +192,7 @@
     y += 90;
     metaLine(ctx, "clock", t.when + (e.recurring ? " · " + e.recurring : ""), M, y, 46, W - M * 2, COL.forest); y += 76;
     metaLine(ctx, "pin", t.place, M, y, 46, W - M * 2, COL.forest); y += 50;
-    if (e.cost) { y += 26; chip(ctx, e.cost, M, y, 30, COL.wheat, COL.deep); y += 63; }
+    if (H.publicCost(e.cost)) { y += 26; chip(ctx, H.publicCost(e.cost), M, y, 30, COL.wheat, COL.deep); y += 63; }
     const room = bandTop - 60 - y;
     if (e.description && room > 100) {
       ctx.font = font(F.body(), 42); ctx.fillStyle = COL.muted;
@@ -234,7 +234,7 @@
     y += 62;
     metaLine(ctx, "clock", t.when, M, y, 32, S - M * 2, COL.forest); y += 52;
     metaLine(ctx, "pin", t.place, M, y, 32, S - M * 2, COL.forest); y += 26;
-    if (e.cost && y + 44 < S - 92) chip(ctx, e.cost, M, y, 19, COL.wheat, COL.deep);
+    if (H.publicCost(e.cost) && y + 44 < S - 92) chip(ctx, H.publicCost(e.cost), M, y, 19, COL.wheat, COL.deep);
     // Footer line
     ctx.fillStyle = COL.forest; ctx.fillRect(0, S - 76, S, 76);
     ctx.fillStyle = COL.cream; ctx.font = font(F.body(600), 26); ctx.textBaseline = "middle";
@@ -265,7 +265,7 @@
     metaLine(ctx, "clock", t.when, M, y, 38, W - M * 2, COL.forest); y += 64;
     if (e.recurring) { ctx.fillStyle = COL.muted; ctx.font = font(F.body(600), 32); ctx.fillText(e.recurring, M + 57, y - 6); y += 54; }
     metaLine(ctx, "pin", t.place, M, y, 38, W - M * 2, COL.forest); y += 40;
-    if (e.cost) { y += 26; chip(ctx, e.cost, M, y, 24, COL.wheat, COL.deep); y += 50; }
+    if (H.publicCost(e.cost)) { y += 26; chip(ctx, H.publicCost(e.cost), M, y, 24, COL.wheat, COL.deep); y += 50; }
     const footTop = Hh - 230;
     if (e.description && footTop - y > 110) {
       ctx.font = font(F.body(), 34); ctx.fillStyle = COL.muted;

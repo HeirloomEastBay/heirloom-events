@@ -174,7 +174,7 @@
     [["Full Moon Sound Bath", 19, 18, 30, 20, 0, "From $35"], ["Sound Healing for Beginners", 12, 10, 0, 11, 30, "From $25"]].forEach(([t, d, h1, m1, h2, m2, cost]) => add({
       id: "soundbird_" + d, source: "soundbird-sanctuary", title: t, start: at(d, h1, m1), end: at(d, h2, m2),
       description: "Lie back and let gongs, crystal bowls and chimes wash over you in the farmhouse. Bring a mat and a blanket.",
-      location: "Heirloom", cost, link: "https://www.eventbrite.com/o/the-soundbird-sanctuary-121418754117", linkLabel: "Get tickets"
+      location: "Heirloom", cost, link: "https://www.eventbrite.com/o/the-soundbird-sanctuary-121418754117", linkLabel: "More info"
     }));
 
     out.forEach(e => { if (e.rsvp) e.occurrence = dayKey(e.start); });
@@ -182,5 +182,9 @@
     return out.sort((a, b) => a.start - b.start);
   }
 
-  window.HL = { parts, zoned, dayKey, fmt, fmtTimeRange, matchImage, addToGoogleLink, directionsLink, sanitize, subscribeLink, icsLink, sampleEvents, pad };
+  // No prices on the calendar (Brit): show "Free" and wording without amounts; anything with a $ or a number stays off
+  const publicCost = c => { c = String(c || "").trim(); return !c || /\$|\d|£|€/.test(c) ? "" : c; };
+  // "Get tickets" is now "More info" everywhere
+  const buttonLabel = l => !l || /^get tickets$/i.test(String(l).trim()) ? "More info" : l;
+  window.HL = { parts, zoned, dayKey, fmt, fmtTimeRange, matchImage, addToGoogleLink, directionsLink, sanitize, subscribeLink, icsLink, sampleEvents, pad, publicCost, buttonLabel };
 })();

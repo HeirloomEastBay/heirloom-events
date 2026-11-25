@@ -229,7 +229,7 @@
       if (e.volunteer.training) chips.push(`<span class="chip">${esc(e.volunteer.training)} training needed</span>`);
     }
     if (e.recurring) chips.push(`<span class="chip">${esc(e.recurring)}</span>`);
-    if (e.cost) chips.push(`<span class="chip cost">${esc(e.cost)}</span>`);
+    if (H.publicCost(e.cost)) chips.push(`<span class="chip cost">${esc(H.publicCost(e.cost))}</span>`);
     if (e.rsvp && e.spotsLeft != null) chips.push(e.spotsLeft > 0
       ? `<span class="chip spots">${e.spotsLeft} spot${e.spotsLeft === 1 ? "" : "s"} left</span>`
       : `<span class="chip full">Full · waitlist open</span>`);
@@ -260,7 +260,7 @@
         <div class="card-actions">
           ${e.rsvp && !past ? (needsLogin(e) ? `<a class="btn btn-primary btn-sm" href="mine.html"${EMBED ? ' target="_top"' : ""}>Volunteers: log in to sign up</a>`
             : `<button type="button" class="btn btn-primary btn-sm" data-rsvp="${esc(e.id)}">${e.spotsLeft === 0 ? "Join the waitlist" : e.volunteer ? "Sign up to help" : "RSVP"}</button>`) : ""}
-          ${link ? `<a class="btn ${e.rsvp && !past ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
+          ${link ? `<a class="btn ${e.rsvp && !past ? "btn-outline" : "btn-primary"} btn-sm" href="${esc(link)}" target="_blank" rel="noopener">${esc(H.buttonLabel(e.linkLabel))} ${ICON.arrow}</a>` : ""}
           ${past ? "" : `<a class="btn btn-outline btn-sm" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>`}
           <a class="btn btn-ghost btn-sm" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
           ${past ? "" : `<button type="button" class="btn btn-ghost btn-sm" data-share="${esc(e.id)}">${ICON.share} Share</button>`}
@@ -498,6 +498,8 @@
     $("#popWhen").textContent = `${H.fmt(e.start, { weekday: "long", month: "long", day: "numeric" })} · ${H.fmtTimeRange(e.start, e.end, e.allDay)}`;
     $("#popTitle").textContent = e.title;
     $("#popMeta").innerHTML = e.location ? `<span>${ICON.pin}${esc(e.address && e.address !== C.ADDRESS && e.address !== e.location ? e.location + " · " + e.address : e.location)}</span>` : "";
+    // Prices stay off the cards, but show here once someone taps in (donations, tickets, fees)
+    if (e.cost && !H.publicCost(e.cost)) $("#popMeta").innerHTML += `<span class="pop-cost"><b>Cost:</b> ${esc(e.cost)}</span>`;
     // Same chips as the card
     const tmp = document.createElement("div"); tmp.innerHTML = cardHTML(e);
     const chips = tmp.querySelector(".chips"), also = tmp.querySelector(".also");
@@ -511,7 +513,7 @@
     $("#popActions").innerHTML = past ? `<a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>` : `
       ${e.rsvp ? (needsLogin(e) ? `<a class="btn btn-primary" href="mine.html"${EMBED ? ' target="_top"' : ""}>Volunteers: log in to sign up</a>`
         : `<button type="button" class="btn btn-primary" id="popRsvp">${e.spotsLeft === 0 ? "Join the waitlist" : e.volunteer ? "Sign up to help" : "RSVP"}</button>`) : ""}
-      ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(e.linkLabel || "Learn more")} ${ICON.arrow}</a>` : ""}
+      ${link ? `<a class="btn ${e.rsvp ? "btn-outline" : "btn-primary"}" href="${esc(link)}" target="_blank" rel="noopener">${esc(H.buttonLabel(e.linkLabel))} ${ICON.arrow}</a>` : ""}
       <a class="btn btn-outline" href="${esc(H.addToGoogleLink(e))}" target="_blank" rel="noopener">${ICON.plus} Add to calendar</a>
       <a class="btn btn-ghost" href="${esc(H.directionsLink(e))}" target="_blank" rel="noopener">${ICON.pin} Directions</a>
       <button type="button" class="btn btn-ghost" id="popShareBtn">${ICON.share} Share</button>`;

@@ -569,3 +569,5 @@ Volunteer (the usual steps), Church family, Community partner, Post events witho
 - Home "This week": events with the poster's own photo (uploaded or linked, not a library picture) show a small thumbnail. **Show 8 more** loads the next 8 events at a time (up to two months out) right on Home.
 - Home: **Show through…** opens a date picker and loads everything up to that date (up to 6 months out); Show 8 more keeps going after it.
 - Calendar: **Share** on every upcoming event card and in the event popup (also on the website embed). Phones get their share sheet; elsewhere a panel with Copy link, Email, Text and Facebook. The link (index.html?event=…) opens that event.
+- No ticket prices on the calendar (cards, popup, flyers, Google Calendar notes): only "Free" or wording without amounts shows. "Get tickets" buttons are now "More info" everywhere, including Soundbird/Eventbrite imports.
+- The event popup (after tapping a card) shows "Cost: …" for events posted through our form with a price or donation. Cards and flyers stay price-free. Eventbrite imports (Soundbird) bring no price in, so theirs only shows on their own page.
